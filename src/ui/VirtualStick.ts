@@ -38,6 +38,7 @@ export class VirtualStick {
   private readonly knob: Phaser.GameObjects.Image;
   private pointerId: number | null = null;
   private everEngaged = false;
+  private enabled = true;
   private readonly center = new Phaser.Math.Vector2();
 
   constructor(
@@ -61,6 +62,14 @@ export class VirtualStick {
       scene.input.off(I.POINTER_UP_OUTSIDE, this.onUp, this);
       scene.scale.off(Phaser.Scale.Events.RESIZE, this.onResize, this);
     });
+  }
+
+  /** Accende o spegne lo stick (spento: invisibile e non risponde ai tocchi). */
+  setEnabled(on: boolean): void {
+    this.enabled = on;
+    this.reset();
+    this.base.setVisible(on);
+    this.knob.setVisible(on);
   }
 
   /** Un dito sta usando lo stick. */
@@ -103,7 +112,7 @@ export class VirtualStick {
   }
 
   private onDown(pointer: Phaser.Input.Pointer): void {
-    if (this.active || !this.inZone(pointer.x)) return;
+    if (!this.enabled || this.active || !this.inZone(pointer.x)) return;
     this.pointerId = pointer.id;
     const r = this.opt.radius;
     const x = Phaser.Math.Clamp(pointer.x, r, this.scene.scale.width - r);

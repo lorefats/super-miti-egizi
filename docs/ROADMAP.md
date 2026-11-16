@@ -23,7 +23,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
   > tocco veloce = colpo automatico verso il nemico più vicino). 3 colpi con ricarica, mostrati sotto la barra vita.
   > Aggiungi 3 bersagli fermi con vita, numeri di danno e animazione di sconfitta (diventano sabbia).
 
-- [ ] **Passo 3 — I bot**
+- [x] **Passo 3 — I bot**
   > Crea i bot seguendo la sezione 11 di GAME_DESIGN.md. Per ora i bot sono altri Anubi di colore diverso.
   > Partita Solo: tu + 5 bot su una mappa media. Quando resti solo tu appare "VITTORIA!", se vieni
   > sconfitto "Sconfitto — 4° posto" con il posto giusto.

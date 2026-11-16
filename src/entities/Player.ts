@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { TEX, characterTexture, weaponTexture, getHeldWeapon } from '../art';
-import { dustPuff } from '../art/effects';
-import { PALETTE } from '../art/palette';
+import { dustPuff, turnToSand } from '../art/effects';
+import { PALETTE, type ColorVariant } from '../art/palette';
+import { REGEN } from '../data/combat';
 import { getCharacter, SPEED_VALUES, type CharacterData } from '../data/characters';
 import { getCharacterModule } from '../characters';
 import type { CharacterModule } from '../characters/types';
@@ -23,8 +24,23 @@ const WEAPON_STRIKE = 1.9;
 /** Leggera inclinazione dell'arma quando si è fermi. */
 const WEAPON_REST = 0.08;
 
+export interface FighterOptions {
+  characterId: string;
+  team: number;
+  combat: Combat;
+  /** Colore del personaggio (i bot usano colori diversi). */
+  variant?: ColorVariant;
+  /** Nome sopra la testa (vuoto = nessun nome). */
+  name?: string;
+  /** È il personaggio controllato dal giocatore? */
+  isHuman?: boolean;
+}
+
+/** Evento emesso quando il personaggio viene sconfitto. */
+export const DEFEATED_EVENT = 'sconfitto';
+
 /**
- * Un personaggio sulla mappa. La posizione (x, y) è il punto dei piedi:
+ * Un personaggio sulla mappa (sia il giocatore sia i bot). La posizione (x, y) è il punto dei piedi:
  * serve per l'ordinamento per Y (chi è più in basso viene disegnato sopra).
  * Munizioni, ricarica e vita sono qui; cosa fa l'attacco lo decide il modulo del personaggio.
  */
@@ -33,6 +49,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
   readonly stats: CharacterData;
   readonly team: number;
   readonly hitRadius = 26;
+  readonly isHuman: boolean;
+  readonly displayName: string;
   health: number;
   ammo: number;
 
@@ -51,16 +69,17 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
   private attackAngle = 0;
   private attackFired = false;
   private facing = 1; // 1 = destra, -1 = sinistra
+  /** Secondi dall'ultima volta che ha colpito o è stato colpito (per la rigenerazione). */
+  private sinceCombat = 0;
+  protected readonly combat: Combat;
 
-  constructor(
-    scene: Phaser.Scene,
-    x: number,
-    y: number,
-    characterId: string,
-    team: number,
-    private readonly combat: Combat,
-  ) {
+  constructor(scene: Phaser.Scene, x: number, y: number, opt: FighterOptions) {
     super(scene, x, y);
+    const { characterId, team, combat } = opt;
+    const variant = opt.variant ?? 'base';
+    this.combat = combat;
+    this.isHuman = opt.isHuman ?? false;
+    this.displayName = opt.name ?? '';
     this.stats = getCharacter(characterId);
     this.module = getCharacterModule(characterId);
     this.team = team;
@@ -68,17 +87,17 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
     this.ammo = this.stats.weapon.maxAmmo;
 
     this.shadow = scene.add.image(0, 0, TEX.ombra);
-    this.sprite = scene.add.image(0, 2, characterTexture(characterId)).setOrigin(0.5, 1);
+    this.sprite = scene.add.image(0, 2, characterTexture(characterId, variant)).setOrigin(0.5, 1);
     this.add([this.shadow, this.sprite]);
     const held = getHeldWeapon(characterId);
     if (held) {
       this.hand.x = held.hand.x;
       this.hand.y = held.hand.y + 2;
       this.weaponOriginX = held.originX;
-      this.weapon = scene.add.image(0, 0, weaponTexture(characterId)).setOrigin(held.originX, held.originY);
+      this.weapon = scene.add.image(0, 0, weaponTexture(characterId, variant)).setOrigin(held.originX, held.originY);
       this.add(this.weapon);
     }
-    this.bar = new HealthBar(scene, PALETTE.verdeNilo, true);
+    this.bar = new HealthBar(scene, this.isHuman ? PALETTE.verdeNilo : PALETTE.rossoDeserto, this.isHuman, this.displayName);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -94,11 +113,12 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
 
   /** Il personaggio può sparare adesso? */
   canAttack(): boolean {
-    return this.ammo >= 1 && this.attackCooldown <= 0;
+    return this.isAlive() && this.ammo >= 1 && this.attackCooldown <= 0;
   }
 
   /** Muove il personaggio. dir ha lunghezza 0 (fermo) oppure 1. */
   move(dir: Phaser.Math.Vector2): void {
+    if (!this.isAlive()) return;
     const speed = SPEED_VALUES[this.stats.speed];
     this.body.setVelocity(dir.x * speed, dir.y * speed);
     this.moving = dir.lengthSq() > 0;
@@ -115,6 +135,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
       return false;
     }
     this.ammo -= 1;
+    this.sinceCombat = 0;
     this.attackCooldown = this.stats.weapon.attackDelay;
     this.attackTime = 0;
     this.attackAngle = angle;
@@ -133,12 +154,34 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
   takeDamage(amount: number): void {
     if (!this.isAlive()) return;
     this.health = Math.max(0, this.health - amount);
-    showDamageNumber(this.scene, this.x, this.y - BAR_OFFSET_Y + 20, amount, '#FFB3B8');
+    this.sinceCombat = 0;
+    showDamageNumber(this.scene, this.x, this.y - BAR_OFFSET_Y + 20, amount, this.isHuman ? '#FFB3B8' : '#FFFFFF');
     this.sprite.setTintFill(0xffffff);
-    this.scene.time.delayedCall(70, () => this.sprite.clearTint());
+    this.scene.time.delayedCall(70, () => {
+      if (this.isAlive()) this.sprite.clearTint();
+    });
+    if (this.health <= 0) this.defeat();
+  }
+
+  /** Sconfitto: diventa sabbia e sparisce. Avvisa la partita con l'evento DEFEATED_EVENT. */
+  private defeat(): void {
+    this.combat.remove(this);
+    this.body.stop();
+    this.body.enable = false;
+    this.bar.setVisible(false);
+    const images = this.weapon ? [this.sprite, this.weapon] : [this.sprite];
+    this.shadow.setVisible(false);
+    turnToSand(this.scene, images, this.x, this.y, () => this.setVisible(false));
+    this.emit(DEFEATED_EVENT, this);
+  }
+
+  /** Il personaggio sta guardando a destra (1) o a sinistra (-1). */
+  get facingSign(): number {
+    return this.facing;
   }
 
   preUpdate(_time: number, delta: number): void {
+    if (!this.isAlive()) return;
     const dt = delta / 1000;
     this.animTime += dt;
     this.setDepth(this.y);
@@ -147,6 +190,12 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
     const w = this.stats.weapon;
     if (this.ammo < w.maxAmmo) this.ammo = Math.min(w.maxAmmo, this.ammo + dt / w.reloadSeconds);
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
+
+    // rigenerazione lenta se lontano dai combattimenti
+    this.sinceCombat += dt;
+    if (this.sinceCombat > REGEN.delaySeconds && this.health < this.stats.maxHealth) {
+      this.health = Math.min(this.stats.maxHealth, this.health + this.stats.maxHealth * REGEN.fractionPerSecond * dt);
+    }
 
     this.sprite.setFlipX(this.facing < 0);
     let weaponRot = WEAPON_REST;

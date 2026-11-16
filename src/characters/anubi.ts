@@ -61,6 +61,7 @@ export const anubi: CharacterModule = {
     // danno e impatto
     const hits = combat.hitArc(user, angle, w.range, w.arcDegrees, w.damage);
     for (const h of hits) hitSpark(scene, h.x, h.y - 60, h.y + 2);
-    if (hits.length > 0) scene.cameras.main.shake(70, 0.003);
+    // tremolio solo se c'entra il giocatore vero (non per i bot che si picchiano lontano)
+    if (hits.length > 0 && (user.isHuman || hits.some((h) => h.isHuman))) scene.cameras.main.shake(70, 0.003);
   },
 };

@@ -8,6 +8,8 @@ export interface Damageable {
   readonly hitRadius: number;
   /** Squadra: chi è della stessa squadra non si colpisce. */
   readonly team: number;
+  /** È il giocatore vero? (serve per effetti come il tremolio dello schermo) */
+  readonly isHuman?: boolean;
   isAlive(): boolean;
   takeDamage(amount: number): void;
 }

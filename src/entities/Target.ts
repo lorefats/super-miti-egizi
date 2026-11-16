@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
+import { turnToSand } from '../art/effects';
 import { PALETTE } from '../art/palette';
 import { TARGET_DATA } from '../data/targets';
 import type { Combat, Damageable } from './Combat';
@@ -63,37 +64,9 @@ export class Target extends Phaser.GameObjects.Container implements Damageable {
 
   /** Sconfitta: la statuetta si sgretola in sabbia e lascia un mucchietto che poi svanisce. */
   private crumbleToSand(): void {
-    const scene = this.scene;
     this.combat.remove(this);
     this.body.enable = false;
     this.bar.destroy();
-
-    this.sprite.setTint(PALETTE.sabbia);
-    scene.tweens.add({
-      targets: this.sprite,
-      scaleY: 0.05,
-      scaleX: 1.25,
-      alpha: 0.3,
-      duration: 450,
-      ease: 'Quad.in',
-      onComplete: () => this.destroy(),
-    });
-
-    const grains = scene.add.particles(this.x, this.y - 50, TEX.granello, {
-      speed: { min: 60, max: 220 },
-      angle: { min: 200, max: 340 },
-      gravityY: 500,
-      lifespan: { min: 500, max: 900 },
-      scale: { start: 1, end: 0.4 },
-      alpha: { start: 1, end: 0 },
-      emitting: false,
-    });
-    grains.setDepth(this.y + 1);
-    grains.explode(36);
-    scene.time.delayedCall(1200, () => grains.destroy());
-
-    const pile = scene.add.image(this.x, this.y + 4, TEX.mucchietto).setOrigin(0.5, 1).setDepth(this.y - 1).setScale(0.3);
-    scene.tweens.add({ targets: pile, scale: 1, duration: 350, delay: 200, ease: 'Back.out' });
-    scene.tweens.add({ targets: pile, alpha: 0, delay: 4000, duration: 1000, onComplete: () => pile.destroy() });
+    turnToSand(this.scene, [this.sprite], this.x, this.y, () => this.destroy());
   }
 }

@@ -17,3 +17,7 @@ export const PALETTE = {
 export function css(color: number): string {
   return '#' + color.toString(16).padStart(6, '0');
 }
+
+/** Varianti di colore di un personaggio: "base" per il giocatore, le altre per distinguere i bot. */
+export const COLOR_VARIANTS = ['base', 'rosso', 'verde', 'viola', 'grigio', 'sabbia'] as const;
+export type ColorVariant = (typeof COLOR_VARIANTS)[number];

@@ -1,4 +1,23 @@
-import { PALETTE, css } from '../palette';
+import { PALETTE, css, type ColorVariant } from '../palette';
+
+/** Colori del pelo di Anubi: il giocatore ha il nero classico, i bot altri colori per riconoscerli. */
+interface Fur {
+  light: string;
+  mid: string;
+  dark: string;
+  /** riflessi */
+  shine: string;
+  /** pieghe e bocca */
+  shade: string;
+}
+const FURS: Record<ColorVariant, Fur> = {
+  base: { light: '#454A66', mid: '#23263A', dark: '#121424', shine: '#5E6488', shade: '#191B2C' },
+  rosso: { light: '#B5574C', mid: '#7A2E27', dark: '#3D1512', shine: '#D07A6E', shade: '#4A1A16' },
+  verde: { light: '#5E8C66', mid: '#33573C', dark: '#16281B', shine: '#82B08A', shade: '#1D3523' },
+  viola: { light: '#8A68B0', mid: '#55397A', dark: '#26193D', shine: '#A88BCB', shade: '#2E1F48' },
+  grigio: { light: '#D3D8E0', mid: '#9299A8', dark: '#565C6B', shine: '#F0F2F6', shade: '#6A7080' },
+  sabbia: { light: '#C29A5E', mid: '#86622F', dark: '#45311A', shine: '#DDBB82', shade: '#54391C' },
+};
 
 /**
  * Anubi in stile "eroico" (vedi docs/ART_STYLE.md): proporzioni vere, contorni sottili, luci e ombre.
@@ -6,7 +25,8 @@ import { PALETTE, css } from '../palette';
  * (anubiScepterSvg) così può ruotare nella mano durante l'attacco.
  * I piedi toccano il fondo dell'immagine: il personaggio va posizionato con origine (0.5, 1).
  */
-export function anubiSvg(): { width: number; height: number; body: string } {
+export function anubiSvg(variant: ColorVariant = 'base'): { width: number; height: number; body: string } {
+  const fur = FURS[variant];
   const line = '#10162B';
   const gold = css(PALETTE.oro);
   const turq = css(PALETTE.turchese);
@@ -16,7 +36,7 @@ export function anubiSvg(): { width: number; height: number; body: string } {
   const body = `
   <defs>
     <linearGradient id="pelo" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#454A66"/><stop offset="0.55" stop-color="#23263A"/><stop offset="1" stop-color="#121424"/>
+      <stop offset="0" stop-color="${fur.light}"/><stop offset="0.55" stop-color="${fur.mid}"/><stop offset="1" stop-color="${fur.dark}"/>
     </linearGradient>
     <linearGradient id="oro" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#FFE08A"/><stop offset="0.5" stop-color="${gold}"/><stop offset="1" stop-color="#A86A0C"/>
@@ -51,7 +71,7 @@ export function anubiSvg(): { width: number; height: number; body: string } {
 
   <!-- busto -->
   <path d="M38 70 Q58 62 80 70 L74 104 L44 104 Z" fill="url(#pelo)" ${s}/>
-  <path d="M50 88 Q58 92 66 88" fill="none" stroke="#3A3E58" stroke-width="2"/>
+  <path d="M50 88 Q58 92 66 88" fill="none" stroke="${fur.light}" stroke-width="2"/>
 
   <!-- cintura -->
   <rect x="41" y="99" width="37" height="7" rx="2" fill="url(#oro)" ${s}/>
@@ -73,11 +93,11 @@ export function anubiSvg(): { width: number; height: number; body: string } {
   <path d="M40 40 Q40 24 56 24 Q70 24 74 36 L74 54 Q64 60 50 58 Q40 54 40 40 Z" fill="url(#pelo)" ${s}/>
   <!-- muso lungo e sottile -->
   <path d="M70 34 Q88 36 104 44 Q106 50 100 52 L74 56 Z" fill="url(#pelo)" ${s}/>
-  <path d="M74 52 L98 52 Q96 56 90 57 L76 58 Z" fill="#191B2C" ${s}/>
+  <path d="M74 52 L98 52 Q96 56 90 57 L76 58 Z" fill="${fur.shade}" ${s}/>
   <ellipse cx="103" cy="47" rx="3.6" ry="3" fill="#07080F" stroke="${line}" stroke-width="1.5"/>
-  <path d="M74 38 Q86 38 98 42" fill="none" stroke="#565C7E" stroke-width="2"/>
+  <path d="M74 38 Q86 38 98 42" fill="none" stroke="${fur.shine}" stroke-width="2"/>
   <!-- riflesso sulla testa -->
-  <path d="M46 34 Q50 27 60 27" fill="none" stroke="#5E6488" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M46 34 Q50 27 60 27" fill="none" stroke="${fur.shine}" stroke-width="2.5" stroke-linecap="round"/>
 
   <!-- orecchio davanti -->
   <path d="M54 28 L62 2 L72 32 Z" fill="url(#pelo)" ${s}/>
@@ -104,7 +124,14 @@ export const ANUBI_HAND = { x: 39, y: -67 };
  * Scettro Uas con il pugno di Anubi che lo stringe.
  * Il punto di presa (GRIP) è il centro del pugno: lì lo scettro ruota.
  */
-export function anubiScepterSvg(): { width: number; height: number; body: string; gripX: number; gripY: number } {
+export function anubiScepterSvg(variant: ColorVariant = 'base'): {
+  width: number;
+  height: number;
+  body: string;
+  gripX: number;
+  gripY: number;
+} {
+  const fur = FURS[variant];
   const line = '#10162B';
   const gold = css(PALETTE.oro);
   const s = `stroke="${line}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"`;
@@ -117,7 +144,7 @@ export function anubiScepterSvg(): { width: number; height: number; body: string
       <stop offset="0" stop-color="#FFE08A"/><stop offset="0.5" stop-color="${gold}"/><stop offset="1" stop-color="#A86A0C"/>
     </linearGradient>
     <linearGradient id="pelo" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#454A66"/><stop offset="1" stop-color="#121424"/>
+      <stop offset="0" stop-color="${fur.light}"/><stop offset="1" stop-color="${fur.dark}"/>
     </linearGradient>
   </defs>
   <path d="M13 14 L13 142" stroke="${line}" stroke-width="6.5" stroke-linecap="round"/>

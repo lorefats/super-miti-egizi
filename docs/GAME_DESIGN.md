@@ -93,6 +93,8 @@ Sabbia (comune) → Bronzo → Turchese → Lapislazzuli → Oro → **Sole** (l
 ## 10. Personaggi
 Ogni personaggio ha: **arma** (attacco base, 3 colpi che si ricaricano), **super** (si carica colpendo i nemici),
 **animazione speciale** (quando vince o viene scelto). Valori base a livello 1; il bilanciamento si fa nei dati.
+**Rigenerazione:** se per 3 secondi non colpisci e non vieni colpito, la vita risale piano piano
+(serve ai bot che scappano sotto il 30% di vita). Numeri in `src/data/combat.ts`.
 
 Legenda ruoli: 🛡️ Tank · ⚔️ Assalto · 🎯 Tiratore · 🗡️ Assassino · 💚 Supporto · 🌀 Controllo · 💣 Lanciatore
 

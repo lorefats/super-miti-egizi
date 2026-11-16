@@ -21,6 +21,7 @@ export class HealthBar extends Phaser.GameObjects.Container {
     scene: Phaser.Scene,
     private readonly color: number,
     private readonly showAmmo: boolean,
+    name = '',
   ) {
     super(scene, 0, 0);
     this.g = scene.add.graphics();
@@ -34,6 +35,18 @@ export class HealthBar extends Phaser.GameObjects.Container {
       })
       .setOrigin(0.5);
     this.add([this.g, this.label]);
+    if (name) {
+      const nameText = scene.add
+        .text(0, -H / 2 - 30, name, {
+          fontFamily: FONT_FAMILY,
+          fontSize: '16px',
+          color: '#FFF3C4',
+          stroke: css(PALETTE.bluNotte),
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5);
+      this.add(nameText);
+    }
     this.setDepth(DEPTH.overhead);
     scene.add.existing(this);
   }
