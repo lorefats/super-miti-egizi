@@ -8,6 +8,11 @@ import {
   pyramidSvg,
   joystickBaseSvg,
   joystickKnobSvg,
+  aimKnobSvg,
+  targetStatueSvg,
+  crescentSvg,
+  grainSvg,
+  sandPileSvg,
 } from './props';
 
 /**
@@ -22,6 +27,11 @@ export const TEX = {
   piramide: 'piramide',
   joyBase: 'joystick-base',
   joyPomello: 'joystick-pomello',
+  miraPomello: 'mira-pomello',
+  bersaglio: 'bersaglio-statuetta',
+  mezzaluna: 'colpo-mezzaluna',
+  granello: 'granello-sabbia',
+  mucchietto: 'mucchietto-sabbia',
 } as const;
 
 /** Chiave della texture di un personaggio (es. "personaggio-anubi"). */
@@ -44,6 +54,11 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.piramide, ...pyramidSvg() },
     { key: TEX.joyBase, ...joystickBaseSvg() },
     { key: TEX.joyPomello, ...joystickKnobSvg() },
+    { key: TEX.miraPomello, ...aimKnobSvg() },
+    { key: TEX.bersaglio, ...targetStatueSvg() },
+    { key: TEX.mezzaluna, ...crescentSvg() },
+    { key: TEX.granello, ...grainSvg() },
+    { key: TEX.mucchietto, ...sandPileSvg() },
     ...Object.entries(CHARACTER_ART).map(([id, draw]) => ({ key: characterTexture(id), ...draw() })),
   ];
   await loadSvgTextures(scene, arts);

@@ -9,7 +9,7 @@ import { MatchScene } from './scenes/MatchScene';
 // Aggiungendo "?debug" all'indirizzo si vedono i rettangoli delle collisioni.
 const debug = new URLSearchParams(location.search).has('debug');
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'gioco',
   backgroundColor: PALETTE.sabbia,
@@ -24,3 +24,6 @@ new Phaser.Game({
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug } },
   scene: [BootScene, PreloadScene, MatchScene],
 });
+
+// Solo in modalità debug: rende il gioco raggiungibile dalla console del browser per le prove.
+if (debug) (window as unknown as { game: Phaser.Game }).game = game;

@@ -18,7 +18,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
   > Aggiungi un joystick virtuale a sinistra per muoverlo su una piccola mappa di sabbia con qualche blocco
   > di pietra (collisioni) e una piramide. La telecamera segue Anubi. Ordinamento per Y e ombre.
 
-- [ ] **Passo 2 — Anubi attacca**
+- [x] **Passo 2 — Anubi attacca**
   > Aggiungi l'arma di Anubi (Scettro Uas): stick di mira a destra (trascina per mirare, rilascia per colpire,
   > tocco veloce = colpo automatico verso il nemico più vicino). 3 colpi con ricarica, mostrati sotto la barra vita.
   > Aggiungi 3 bersagli fermi con vita, numeri di danno e animazione di sconfitta (diventano sabbia).

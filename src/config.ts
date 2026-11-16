@@ -18,3 +18,23 @@ export const JOYSTICK = {
 
 /** Quanto morbidamente la telecamera segue il giocatore (0 = ferma, 1 = rigida). */
 export const CAMERA_LERP = 0.12;
+
+/** Stick di mira/attacco (a destra). */
+export const AIM_STICK = {
+  radius: 80,
+  margin: 40,
+  zoneWidth: 0.45, // parte destra dello schermo (in frazione) dove si può toccare
+  deadZone: 0.25, // sotto questa frazione del raggio è un "tocco veloce" (colpo automatico)
+  idleAlpha: 0.45,
+};
+
+/** Il colpo automatico cerca il nemico più vicino entro (portata dell'arma × questo numero). */
+export const AUTO_AIM_RANGE_FACTOR = 2.2;
+
+/** Profondità di disegno per gli elementi sopra o sotto tutto. */
+export const DEPTH = {
+  ground: -100000,
+  groundMarks: -1000, // indicatore di mira sulla sabbia
+  overhead: 50000, // barre vita, numeri di danno
+  ui: 100000, // joystick e pulsanti
+};

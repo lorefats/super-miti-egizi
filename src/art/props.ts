@@ -50,8 +50,8 @@ export function stoneBlockSvg(width: number) {
   const crack = '#9C845C';
   const body = `
   <ellipse cx="${w / 2}" cy="94" rx="${w / 2 - 2}" ry="7" fill="#14213D" opacity="0.2"/>
-  <rect x="4" y="4" width="${w - 8}" height="56" rx="6" fill="${top}" stroke="${LINE}" stroke-width="4"/>
-  <rect x="4" y="54" width="${w - 8}" height="38" rx="6" fill="${front}" stroke="${LINE}" stroke-width="4"/>
+  <rect x="4" y="4" width="${w - 8}" height="56" rx="6" fill="${top}" stroke="${LINE}" stroke-width="3"/>
+  <rect x="4" y="54" width="${w - 8}" height="38" rx="6" fill="${front}" stroke="${LINE}" stroke-width="3"/>
   <path d="M10 58 L${w - 10} 58" stroke="#D6C29A" stroke-width="3"/>
   <path d="M${w * 0.3} 64 L${w * 0.36} 76 L${w * 0.32} 88" fill="none" stroke="${crack}" stroke-width="3" stroke-linecap="round"/>
   <path d="M${w * 0.7} 16 L${w * 0.62} 28" fill="none" stroke="#CDBB92" stroke-width="3" stroke-linecap="round"/>
@@ -92,8 +92,8 @@ export function pyramidSvg() {
   <polygon points="${pt(A)} ${pt(cR)} ${pt(cB)}" fill="${css(PALETTE.oroOmbra)}"/>
   <polygon points="${pt(A)} ${pt(cL)} ${pt(cR)}" fill="${css(PALETTE.oro)}"/>
   <polyline points="${pt(lerp(A, L, 0.05))} ${pt(lerp(A, L, 0.12))}" stroke="#FFF1C1" stroke-width="4" stroke-linecap="round"/>
-  <polygon points="${pt(A)} ${pt(L)} ${pt(R)} ${pt(B)}" fill="none" stroke="${LINE}" stroke-width="5" stroke-linejoin="round"/>
-  <line x1="${A.x}" y1="${A.y}" x2="${R.x}" y2="${R.y}" stroke="${LINE}" stroke-width="4"/>`;
+  <polygon points="${pt(A)} ${pt(L)} ${pt(R)} ${pt(B)}" fill="none" stroke="${LINE}" stroke-width="3.5" stroke-linejoin="round"/>
+  <line x1="${A.x}" y1="${A.y}" x2="${R.x}" y2="${R.y}" stroke="${LINE}" stroke-width="3"/>`;
   return { width: W, height: H, body };
 }
 
@@ -109,8 +109,90 @@ export function joystickBaseSvg() {
 /** Pomello del joystick: disco d'oro con contorno blu notte. */
 export function joystickKnobSvg() {
   const body = `
-  <circle cx="40" cy="42" r="34" fill="${css(PALETTE.oroOmbra)}" stroke="${LINE}" stroke-width="4"/>
-  <circle cx="40" cy="38" r="34" fill="${css(PALETTE.oro)}" stroke="${LINE}" stroke-width="4"/>
+  <circle cx="40" cy="42" r="34" fill="${css(PALETTE.oroOmbra)}" stroke="${LINE}" stroke-width="3"/>
+  <circle cx="40" cy="38" r="34" fill="${css(PALETTE.oro)}" stroke="${LINE}" stroke-width="3"/>
   <circle cx="30" cy="28" r="9" fill="#FFF1C1" opacity="0.8"/>`;
   return { width: 80, height: 80, body };
+}
+
+/** Pomello dello stick di mira: disco rosso deserto. */
+export function aimKnobSvg() {
+  const body = `
+  <circle cx="40" cy="42" r="34" fill="#9E1F2A" stroke="${LINE}" stroke-width="3"/>
+  <circle cx="40" cy="38" r="34" fill="${css(PALETTE.rossoDeserto)}" stroke="${LINE}" stroke-width="3"/>
+  <circle cx="30" cy="28" r="9" fill="#FFD3D6" opacity="0.7"/>
+  <path d="M40 22 L40 54 M24 38 L56 38" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.9"/>`;
+  return { width: 80, height: 80, body };
+}
+
+/**
+ * Bersaglio d'allenamento: statuetta di terracotta su un piedistallo di pietra.
+ * La base tocca il fondo dell'immagine.
+ */
+export function targetStatueSvg() {
+  const lapis = css(PALETTE.lapislazzuli);
+  const gold = css(PALETTE.oro);
+  const s = `stroke="${LINE}" stroke-width="2.6" stroke-linejoin="round"`;
+  const body = `
+  <defs>
+    <linearGradient id="argilla" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#E39A62"/><stop offset="0.6" stop-color="#C46E3A"/><stop offset="1" stop-color="#8F4A22"/>
+    </linearGradient>
+    <linearGradient id="pietraB" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E8D9B5"/><stop offset="1" stop-color="#B49A70"/>
+    </linearGradient>
+  </defs>
+  <path d="M10 108 L74 108 L70 124 L14 124 Z" fill="url(#pietraB)" ${s}/>
+  <rect x="6" y="100" width="72" height="10" rx="3" fill="#EFE3C6" ${s}/>
+  <path d="M28 100 Q22 70 26 44 L58 44 Q62 70 56 100 Z" fill="url(#argilla)" ${s}/>
+  <path d="M30 60 L54 60 M29 72 L55 72 M29 84 L55 84" stroke="#8F4A22" stroke-width="2"/>
+  <path d="M34 64 L50 64 L50 80 L34 80 Z" fill="#F1D9A0" stroke="#8F4A22" stroke-width="1.5"/>
+  <path d="M38 68 L46 68 M38 72 L46 72 M38 76 L44 76" stroke="${lapis}" stroke-width="1.6"/>
+  <path d="M24 44 Q22 18 42 14 Q62 18 60 44 L54 52 L30 52 Z" fill="${lapis}" ${s}/>
+  <path d="M28 30 L56 30 M26 38 L58 38" stroke="${gold}" stroke-width="3"/>
+  <path d="M32 26 Q32 18 42 18 Q52 18 52 26 L52 40 Q42 48 32 40 Z" fill="url(#argilla)" ${s}/>
+  <path d="M35 29 L40 29 M44 29 L49 29" stroke="${LINE}" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M38 38 Q42 40 46 38" fill="none" stroke="#8F4A22" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M30 22 Q34 12 42 12" fill="none" stroke="#FFFFFF" stroke-width="2" opacity="0.35" stroke-linecap="round"/>`;
+  return { width: 84, height: 126, body };
+}
+
+/**
+ * Colpo a mezzaluna, rivolto verso destra (angolo 0). Il centro dell'immagine è il punto da cui parte il colpo.
+ * Raggio esterno 120px: va scalato in base alla portata dell'arma.
+ */
+export function crescentSvg() {
+  const C = 128;
+  const R = 120;
+  const half = (55 * Math.PI) / 180;
+  const p1 = { x: C + R * Math.cos(-half), y: C + R * Math.sin(-half) };
+  const p2 = { x: C + R * Math.cos(half), y: C + R * Math.sin(half) };
+  const f = (n: number) => n.toFixed(1);
+  const body = `
+  <defs><radialGradient id="mz" cx="${C}" cy="${C}" r="${R}" gradientUnits="userSpaceOnUse">
+    <stop offset="0.6" stop-color="#F2B632" stop-opacity="0.15"/>
+    <stop offset="0.82" stop-color="#F2B632" stop-opacity="0.85"/>
+    <stop offset="0.93" stop-color="#FFF3C4" stop-opacity="1"/>
+    <stop offset="1" stop-color="#FFFFFF" stop-opacity="1"/>
+  </radialGradient></defs>
+  <path d="M${f(p1.x)} ${f(p1.y)} A ${R} ${R} 0 0 1 ${f(p2.x)} ${f(p2.y)} A ${R * 1.35} ${R * 1.35} 0 0 0 ${f(p1.x)} ${f(p1.y)} Z"
+    fill="url(#mz)" stroke="${css(PALETTE.oroOmbra)}" stroke-width="3" stroke-opacity="0.9"/>`;
+  return { width: C * 2, height: C * 2, body };
+}
+
+/** Granello di sabbia per le particelle. */
+export function grainSvg() {
+  const body = `<circle cx="5" cy="5" r="4" fill="${css(PALETTE.sabbia)}" stroke="${css(PALETTE.sabbiaScura)}" stroke-width="1.5"/>`;
+  return { width: 10, height: 10, body };
+}
+
+/** Mucchietto di sabbia che resta dove un personaggio o un bersaglio è stato sconfitto. */
+export function sandPileSvg() {
+  const dark = css(PALETTE.sabbiaScura);
+  const body = `
+  <ellipse cx="40" cy="26" rx="38" ry="8" fill="#14213D" opacity="0.15"/>
+  <path d="M4 26 Q14 8 32 10 Q40 2 50 10 Q68 8 76 26 Z" fill="#E2BC62" stroke="${dark}" stroke-width="2"/>
+  <path d="M24 16 Q32 12 40 14" fill="none" stroke="#F4D88A" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="54" cy="20" r="1.6" fill="${dark}"/><circle cx="20" cy="22" r="1.4" fill="${dark}"/><circle cx="44" cy="22" r="1.2" fill="${dark}"/>`;
+  return { width: 80, height: 32, body };
 }

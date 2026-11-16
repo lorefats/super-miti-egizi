@@ -1,63 +1,108 @@
 import { PALETTE, css } from '../palette';
 
 /**
- * Anubi in stile chibi, girato verso destra (per sinistra si specchia).
+ * Anubi in stile "eroico" (vedi docs/ART_STYLE.md): proporzioni vere, contorni sottili, luci e ombre.
+ * Girato verso destra (per sinistra si specchia), tiene lo Scettro Uas nella mano davanti.
  * I piedi toccano il fondo dell'immagine: il personaggio va posizionato con origine (0.5, 1).
  */
 export function anubiSvg(): { width: number; height: number; body: string } {
-  const line = css(PALETTE.bluNotte);
+  const line = '#10162B';
   const gold = css(PALETTE.oro);
-  const goldDark = css(PALETTE.oroOmbra);
   const turq = css(PALETTE.turchese);
   const lapis = css(PALETTE.lapislazzuli);
-  const fur = '#2B2D42';
-  const furLight = '#3D405B';
-  const s = `stroke="${line}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"`;
+  const s = `stroke="${line}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"`;
 
   const body = `
+  <defs>
+    <linearGradient id="pelo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#454A66"/><stop offset="0.55" stop-color="#23263A"/><stop offset="1" stop-color="#121424"/>
+    </linearGradient>
+    <linearGradient id="oro" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE08A"/><stop offset="0.5" stop-color="${gold}"/><stop offset="1" stop-color="#A86A0C"/>
+    </linearGradient>
+    <linearGradient id="lino" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D8CCB4"/>
+    </linearGradient>
+    <linearGradient id="bastone" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#9C5F0A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- copricapo a strisce dietro la testa -->
+  <path d="M38 40 Q32 62 36 82 L54 80 Q52 60 56 46 Z" fill="${lapis}" ${s}/>
+  <path d="M36 52 L54 50 M35 62 L53 60 M35 72 L53 70" stroke="${gold}" stroke-width="4"/>
+
   <!-- orecchio dietro -->
-  <path d="M34 40 L30 4 L54 30 Z" fill="${fur}" ${s}/>
+  <path d="M42 30 L44 6 L56 26 Z" fill="url(#pelo)" ${s}/>
+
   <!-- braccio dietro -->
-  <rect x="31" y="78" width="12" height="24" rx="6" fill="${fur}" ${s}/>
+  <path d="M40 72 Q32 86 34 102 L42 103 Q42 88 48 76 Z" fill="url(#pelo)" ${s}/>
+
   <!-- gambe e sandali -->
-  <rect x="45" y="112" width="11" height="18" rx="4" fill="${fur}" ${s}/>
-  <rect x="62" y="112" width="11" height="18" rx="4" fill="${fur}" ${s}/>
-  <rect x="42" y="126" width="17" height="8" rx="4" fill="${gold}" ${s}/>
-  <rect x="60" y="126" width="17" height="8" rx="4" fill="${gold}" ${s}/>
-  <!-- gonnellino bianco -->
-  <path d="M40 98 L78 98 L86 120 L32 120 Z" fill="#FDF6E3" ${s}/>
-  <path d="M59 100 L59 118" stroke="#D9CBB0" stroke-width="3"/>
+  <path d="M47 124 L46 150 L54 150 L56 124 Z" fill="url(#pelo)" ${s}/>
+  <path d="M61 124 L63 150 L71 150 L69 124 Z" fill="url(#pelo)" ${s}/>
+  <path d="M43 150 L57 150 L58 156 L42 156 Z" fill="#8A5A2B" ${s}/>
+  <path d="M61 150 L75 150 L77 156 L60 156 Z" fill="#8A5A2B" ${s}/>
+  <path d="M50 146 L52 150 M66 146 L67 150" stroke="${gold}" stroke-width="2"/>
+
+  <!-- gonnellino di lino con pannello d'oro -->
+  <path d="M42 102 L76 102 L84 128 L35 128 Z" fill="url(#lino)" ${s}/>
+  <path d="M46 108 L42 126 M54 108 L52 127 M66 108 L68 127 M73 108 L78 126" stroke="#CBBE9F" stroke-width="1.5"/>
+  <path d="M56 104 L64 104 L67 126 L53 126 Z" fill="url(#oro)" ${s}/>
+  <path d="M60 108 L60 122" stroke="${lapis}" stroke-width="2"/>
+
   <!-- busto -->
-  <rect x="40" y="74" width="38" height="28" rx="12" fill="${fur}" ${s}/>
+  <path d="M38 70 Q58 62 80 70 L74 104 L44 104 Z" fill="url(#pelo)" ${s}/>
+  <path d="M50 88 Q58 92 66 88" fill="none" stroke="#3A3E58" stroke-width="2"/>
+
   <!-- cintura -->
-  <rect x="38" y="94" width="42" height="9" rx="3" fill="${gold}" ${s}/>
-  <rect x="55" y="94" width="8" height="9" fill="${turq}" stroke="${line}" stroke-width="2"/>
+  <rect x="41" y="99" width="37" height="7" rx="2" fill="url(#oro)" ${s}/>
+  <rect x="56" y="99" width="7" height="7" fill="${turq}" stroke="${line}" stroke-width="1.5"/>
+
   <!-- collare usekh -->
-  <path d="M38 76 Q59 102 80 76 Z" fill="${gold}" ${s}/>
-  <path d="M44 80 Q59 96 74 80" fill="none" stroke="${turq}" stroke-width="4"/>
-  <path d="M48 83 Q59 92 70 83" fill="none" stroke="${lapis}" stroke-width="3"/>
-  <!-- braccio davanti con bracciale -->
-  <rect x="74" y="80" width="12" height="24" rx="6" fill="${fur}" ${s}/>
-  <rect x="73" y="92" width="14" height="6" rx="2" fill="${gold}" stroke="${line}" stroke-width="2"/>
+  <path d="M38 70 Q59 96 80 70 Q59 78 38 70 Z" fill="url(#oro)" ${s}/>
+  <path d="M43 75 Q59 90 75 75" fill="none" stroke="${turq}" stroke-width="3"/>
+  <path d="M47 80 Q59 88 71 80" fill="none" stroke="${lapis}" stroke-width="2.5"/>
+
+  <!-- collo -->
+  <path d="M52 56 L50 70 L64 70 L64 56 Z" fill="url(#pelo)" ${s}/>
+
+  <!-- Scettro Uas: bastone d'oro con testa d'animale in cima e forcella in basso -->
+  <path d="M95 22 L95 150" stroke="${line}" stroke-width="6.5" stroke-linecap="round"/>
+  <path d="M95 22 L95 150" stroke="url(#bastone)" stroke-width="3.6" stroke-linecap="round"/>
+  <path d="M92 26 Q92 14 99 12 L109 15 Q104 17 101 20 Q98 22 98 28 Z" fill="url(#oro)" ${s}/>
+  <path d="M91 148 L88 157 M99 148 L102 157" stroke="${line}" stroke-width="4" stroke-linecap="round"/>
+  <path d="M91 148 L88 157 M99 148 L102 157" stroke="${gold}" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- braccio davanti che stringe lo scettro -->
+  <path d="M74 72 Q86 80 92 90 L86 96 Q78 88 70 82 Z" fill="url(#pelo)" ${s}/>
+  <rect x="80" y="84" width="7" height="10" rx="2" transform="rotate(-40 83 89)" fill="url(#oro)" stroke="${line}" stroke-width="1.5"/>
+  <ellipse cx="95" cy="93" rx="6" ry="7" fill="url(#pelo)" ${s}/>
+
   <!-- testa -->
-  <ellipse cx="56" cy="54" rx="28" ry="24" fill="${fur}" ${s}/>
-  <!-- muso lungo -->
-  <path d="M68 44 Q90 46 106 58 Q104 68 92 68 L70 68 Z" fill="${fur}" ${s}/>
-  <ellipse cx="104" cy="59" rx="6" ry="5" fill="#0B0B14" stroke="${line}" stroke-width="3"/>
-  <path d="M80 66 Q90 70 98 66" fill="none" stroke="${furLight}" stroke-width="3"/>
+  <path d="M40 40 Q40 24 56 24 Q70 24 74 36 L74 54 Q64 60 50 58 Q40 54 40 40 Z" fill="url(#pelo)" ${s}/>
+  <!-- muso lungo e sottile -->
+  <path d="M70 34 Q88 36 104 44 Q106 50 100 52 L74 56 Z" fill="url(#pelo)" ${s}/>
+  <path d="M74 52 L98 52 Q96 56 90 57 L76 58 Z" fill="#191B2C" ${s}/>
+  <ellipse cx="103" cy="47" rx="3.6" ry="3" fill="#07080F" stroke="${line}" stroke-width="1.5"/>
+  <path d="M74 38 Q86 38 98 42" fill="none" stroke="#565C7E" stroke-width="2"/>
   <!-- riflesso sulla testa -->
-  <path d="M40 42 Q46 34 56 34" fill="none" stroke="${furLight}" stroke-width="4"/>
+  <path d="M46 34 Q50 27 60 27" fill="none" stroke="#5E6488" stroke-width="2.5" stroke-linecap="round"/>
+
   <!-- orecchio davanti -->
-  <path d="M48 34 L60 0 L72 36 Z" fill="${fur}" ${s}/>
-  <path d="M55 30 L60 12 L66 32 Z" fill="${gold}"/>
-  <!-- fascia d'oro sulla testa -->
-  <path d="M32 50 Q50 40 70 44" fill="none" stroke="${gold}" stroke-width="5"/>
-  <path d="M32 50 Q50 40 70 44" fill="none" stroke="${goldDark}" stroke-width="1.5"/>
-  <!-- occhio -->
-  <path d="M60 54 Q68 46 78 52 Q70 60 60 54 Z" fill="#FFFFFF" stroke="${line}" stroke-width="2.5"/>
-  <circle cx="70" cy="53" r="3.6" fill="${gold}"/>
-  <circle cx="71" cy="53" r="1.8" fill="${line}"/>
-  <path d="M60 54 L50 57" stroke="${gold}" stroke-width="3"/>
+  <path d="M54 28 L62 2 L72 32 Z" fill="url(#pelo)" ${s}/>
+  <path d="M59 26 L62 11 L67 28 Z" fill="url(#oro)"/>
+
+  <!-- diadema d'oro -->
+  <path d="M40 40 Q56 32 72 36" fill="none" stroke="${line}" stroke-width="5.5" stroke-linecap="round"/>
+  <path d="M40 40 Q56 32 72 36" fill="none" stroke="url(#oro)" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- occhio con trucco egizio -->
+  <path d="M64 42 Q70 38 77 41 Q71 46 64 42 Z" fill="#FFF6DA" stroke="${line}" stroke-width="1.6"/>
+  <circle cx="71.5" cy="41.8" r="2.3" fill="${gold}"/>
+  <circle cx="72" cy="41.8" r="1.1" fill="${line}"/>
+  <path d="M64 42 L55 45" stroke="${gold}" stroke-width="2" stroke-linecap="round"/>
+  <path d="M63 38 Q70 34 77 38" fill="none" stroke="${line}" stroke-width="1.6"/>
   `;
-  return { width: 112, height: 136, body };
+  return { width: 112, height: 160, body };
 }

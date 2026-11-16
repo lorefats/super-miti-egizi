@@ -1,9 +1,12 @@
 # Stile grafico
 
 ## Idea generale
-Cartoon colorato e morbido, contorni spessi scuri, proporzioni "chibi" (testa grande, corpo piccolo).
-Ispirato all'allegria di Fortnite e Brawl Stars, ma con un'identità tutta egizia: oro, turchese,
-lapislazzuli, sabbia, geroglifici. **Mai copiare** forme, icone o layout di altri giochi.
+Stile **illustrato "eroico"**, colorato ma **non troppo cartoon** (richiesta del cugino, 16/11/2026):
+- proporzioni più vere: la testa è circa **1/3** dell'altezza (non metà come nei "chibi");
+- contorni **sottili** (circa 3px) blu notte, non spessi;
+- **luci e ombre** con sfumature (luce che arriva da in alto a sinistra), più dettagli su gioielli e vestiti;
+- resta leggibile da piccolo e adatto a un bambino: niente sangue, niente violenza realistica.
+Identità tutta egizia: oro, turchese, lapislazzuli, sabbia, geroglifici. **Mai copiare** forme, icone o layout di altri giochi.
 
 ## Palette
 | Uso | Colore |
@@ -24,7 +27,7 @@ lapislazzuli, sabbia, geroglifici. **Mai copiare** forme, icone o layout di altr
 - Oggetti alti (piramidi, obelischi, palazzi) diventano semitrasparenti quando il giocatore ci passa dietro.
 
 ## Personaggi
-- Testa grande e riconoscibile (sciacallo, falco, gatto, coccodrillo...) da cui si capisce subito chi è.
+- Testa riconoscibile (sciacallo, falco, gatto, coccodrillo...) da cui si capisce subito chi è, con proporzioni da eroe.
 - Ogni personaggio ha un colore principale suo, così si riconosce anche da piccolo.
 - Animazioni minime: attesa (respiro), corsa (rimbalzo), attacco, super, sconfitta (diventa sabbia), vittoria.
 
@@ -35,5 +38,6 @@ lapislazzuli, sabbia, geroglifici. **Mai copiare** forme, icone o layout di altr
 
 ## Interfaccia
 - Pulsanti grandi (minimo 64px) con bordi arrotondati, contorno blu notte, ombra sotto.
+- Interfaccia e scritte possono restare tonde e allegre: il "meno cartoon" riguarda soprattutto personaggi e mappa.
 - Font spesso e arrotondato (ad esempio "Lilita One" o "Baloo 2" da Google Fonts, incluso nel progetto per funzionare offline).
 - Icone a forma di geroglifico semplificato.

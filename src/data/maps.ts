@@ -7,6 +7,8 @@ export interface MapData {
   spawn: { x: number; y: number };
   /** x = centro, y = punto in cui l'oggetto tocca terra (base). */
   obstacles: { kind: ObstacleKind; x: number; y: number }[];
+  /** Bersagli fermi d'allenamento (x, y = base). */
+  targets: { x: number; y: number }[];
 }
 
 /** Piccola mappa di prova del Passo 1. */
@@ -27,5 +29,10 @@ export const MAPPA_PROVA: MapData = {
     { kind: 'bloccoLungo', x: 1000, y: 300 },
     { kind: 'blocco', x: 2150, y: 400 },
     { kind: 'blocco', x: 700, y: 1400 },
+  ],
+  targets: [
+    { x: 1150, y: 760 },
+    { x: 1250, y: 1000 },
+    { x: 620, y: 860 },
   ],
 };
