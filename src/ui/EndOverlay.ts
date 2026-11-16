@@ -5,7 +5,7 @@ import { PALETTE, css } from '../art/palette';
 /** Schermata di fine partita: titolo grande e pulsante per giocare ancora. */
 export function showEndOverlay(scene: Phaser.Scene, title: string, victory: boolean, onPlayAgain: () => void): void {
   const { width, height } = scene.scale;
-  const layer = scene.add.container(0, 0).setScrollFactor(0).setDepth(DEPTH.ui + 100);
+  const layer = scene.add.container(0, 0).setDepth(DEPTH.ui + 100);
 
   const dim = scene.add.rectangle(0, 0, width, height, PALETTE.bluNotte, 0.6).setOrigin(0);
   // blocca i tocchi sotto la schermata
@@ -43,7 +43,10 @@ export function showEndOverlay(scene: Phaser.Scene, title: string, victory: bool
   btn.on('pointerup', () => onPlayAgain());
 
   layer.add([dim, titleText, btn]);
+  // Fisso sullo schermo anche per i tocchi: Phaser controlla ogni oggetto da solo, quindi va detto
+  // a ciascuno (altrimenti, con la telecamera spostata, il tocco "manca" il pulsante).
+  for (const o of [layer, dim, titleText, btn]) o.setScrollFactor(0);
   btn.setAlpha(0);
   scene.tweens.add({ targets: titleText, scale: 1, duration: 450, ease: 'Back.out' });
-  scene.tweens.add({ targets: btn, alpha: 1, delay: 500, duration: 300 });
+  scene.tweens.add({ targets: btn, alpha: 1, delay: 300, duration: 200 });
 }
