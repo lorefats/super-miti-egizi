@@ -196,3 +196,24 @@ export function sandPileSvg() {
   <circle cx="54" cy="20" r="1.6" fill="${dark}"/><circle cx="20" cy="22" r="1.4" fill="${dark}"/><circle cx="44" cy="22" r="1.2" fill="${dark}"/>`;
   return { width: 80, height: 32, body };
 }
+
+/** Scintilla dorata a 4 punte (particelle dei colpi). */
+export function sparkSvg() {
+  const body = `<path d="M8 0 L10 6 L16 8 L10 10 L8 16 L6 10 L0 8 L6 6 Z" fill="#FFF3C4" stroke="${css(PALETTE.oro)}" stroke-width="1.2"/>`;
+  return { width: 16, height: 16, body };
+}
+
+/** Stella di luce che appare dove un colpo va a segno. */
+export function impactSvg() {
+  const pts: string[] = [];
+  for (let i = 0; i < 16; i++) {
+    const r = i % 2 === 0 ? 46 : 16;
+    const a = (i / 16) * Math.PI * 2;
+    pts.push(`${(48 + Math.cos(a) * r).toFixed(1)},${(48 + Math.sin(a) * r).toFixed(1)}`);
+  }
+  const body = `
+  <defs><radialGradient id="im"><stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#FFE08A"/><stop offset="1" stop-color="${css(PALETTE.oro)}"/></radialGradient></defs>
+  <polygon points="${pts.join(' ')}" fill="url(#im)" stroke="${css(PALETTE.oroOmbra)}" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="48" cy="48" r="10" fill="#FFFFFF"/>`;
+  return { width: 96, height: 96, body };
+}

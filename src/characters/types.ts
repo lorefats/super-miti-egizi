@@ -7,6 +7,8 @@ import type { Player } from '../entities/Player';
  */
 export interface CharacterModule {
   id: string;
+  /** Secondi di "carica" prima che parta il colpo (l'arma si alza all'indietro). */
+  swingSeconds: number;
   /** Attacco base nella direzione `angle` (radianti). Munizioni e ricarica le gestisce già Player. */
   attack(user: Player, angle: number, combat: Combat): void;
 }

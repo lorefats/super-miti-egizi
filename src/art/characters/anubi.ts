@@ -2,7 +2,8 @@ import { PALETTE, css } from '../palette';
 
 /**
  * Anubi in stile "eroico" (vedi docs/ART_STYLE.md): proporzioni vere, contorni sottili, luci e ombre.
- * Girato verso destra (per sinistra si specchia), tiene lo Scettro Uas nella mano davanti.
+ * Girato verso destra (per sinistra si specchia). Lo Scettro Uas è un disegno separato
+ * (anubiScepterSvg) così può ruotare nella mano durante l'attacco.
  * I piedi toccano il fondo dell'immagine: il personaggio va posizionato con origine (0.5, 1).
  */
 export function anubiSvg(): { width: number; height: number; body: string } {
@@ -22,9 +23,6 @@ export function anubiSvg(): { width: number; height: number; body: string } {
     </linearGradient>
     <linearGradient id="lino" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#D8CCB4"/>
-    </linearGradient>
-    <linearGradient id="bastone" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#9C5F0A"/>
     </linearGradient>
   </defs>
 
@@ -67,17 +65,9 @@ export function anubiSvg(): { width: number; height: number; body: string } {
   <!-- collo -->
   <path d="M52 56 L50 70 L64 70 L64 56 Z" fill="url(#pelo)" ${s}/>
 
-  <!-- Scettro Uas: bastone d'oro con testa d'animale in cima e forcella in basso -->
-  <path d="M95 22 L95 150" stroke="${line}" stroke-width="6.5" stroke-linecap="round"/>
-  <path d="M95 22 L95 150" stroke="url(#bastone)" stroke-width="3.6" stroke-linecap="round"/>
-  <path d="M92 26 Q92 14 99 12 L109 15 Q104 17 101 20 Q98 22 98 28 Z" fill="url(#oro)" ${s}/>
-  <path d="M91 148 L88 157 M99 148 L102 157" stroke="${line}" stroke-width="4" stroke-linecap="round"/>
-  <path d="M91 148 L88 157 M99 148 L102 157" stroke="${gold}" stroke-width="2" stroke-linecap="round"/>
-
   <!-- braccio davanti che stringe lo scettro -->
   <path d="M74 72 Q86 80 92 90 L86 96 Q78 88 70 82 Z" fill="url(#pelo)" ${s}/>
   <rect x="80" y="84" width="7" height="10" rx="2" transform="rotate(-40 83 89)" fill="url(#oro)" stroke="${line}" stroke-width="1.5"/>
-  <ellipse cx="95" cy="93" rx="6" ry="7" fill="url(#pelo)" ${s}/>
 
   <!-- testa -->
   <path d="M40 40 Q40 24 56 24 Q70 24 74 36 L74 54 Q64 60 50 58 Q40 54 40 40 Z" fill="url(#pelo)" ${s}/>
@@ -105,4 +95,36 @@ export function anubiSvg(): { width: number; height: number; body: string } {
   <path d="M63 38 Q70 34 77 38" fill="none" stroke="${line}" stroke-width="1.6"/>
   `;
   return { width: 112, height: 160, body };
+}
+
+/** Punto della mano davanti di Anubi, misurato dai piedi (centro in basso del disegno). */
+export const ANUBI_HAND = { x: 39, y: -67 };
+
+/**
+ * Scettro Uas con il pugno di Anubi che lo stringe.
+ * Il punto di presa (GRIP) è il centro del pugno: lì lo scettro ruota.
+ */
+export function anubiScepterSvg(): { width: number; height: number; body: string; gripX: number; gripY: number } {
+  const line = '#10162B';
+  const gold = css(PALETTE.oro);
+  const s = `stroke="${line}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"`;
+  const body = `
+  <defs>
+    <linearGradient id="bastone" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFE08A"/><stop offset="1" stop-color="#9C5F0A"/>
+    </linearGradient>
+    <linearGradient id="oro" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE08A"/><stop offset="0.5" stop-color="${gold}"/><stop offset="1" stop-color="#A86A0C"/>
+    </linearGradient>
+    <linearGradient id="pelo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#454A66"/><stop offset="1" stop-color="#121424"/>
+    </linearGradient>
+  </defs>
+  <path d="M13 14 L13 142" stroke="${line}" stroke-width="6.5" stroke-linecap="round"/>
+  <path d="M13 14 L13 142" stroke="url(#bastone)" stroke-width="3.6" stroke-linecap="round"/>
+  <path d="M10 18 Q10 6 17 4 L27 7 Q22 9 19 12 Q16 14 16 20 Z" fill="url(#oro)" ${s}/>
+  <path d="M9 140 L6 149 M17 140 L20 149" stroke="${line}" stroke-width="4" stroke-linecap="round"/>
+  <path d="M9 140 L6 149 M17 140 L20 149" stroke="${gold}" stroke-width="2" stroke-linecap="round"/>
+  <ellipse cx="13" cy="85" rx="6" ry="7" fill="url(#pelo)" ${s}/>`;
+  return { width: 30, height: 152, body, gripX: 13, gripY: 85 };
 }
