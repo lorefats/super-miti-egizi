@@ -13,7 +13,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
   > Per ora mostra solo uno sfondo color sabbia con la scritta "Super Miti Egizi" al centro, in orizzontale
   > e a schermo intero sul telefono. Inizializza git. Dimmi come aprirlo dal telefono.
 
-- [ ] **Passo 1 — Anubi si muove**
+- [x] **Passo 1 — Anubi si muove**
   > Disegna Anubi in stile cartoon 2.5D (vedi docs/ART_STYLE.md e la sua scheda in GAME_DESIGN.md) con il codice.
   > Aggiungi un joystick virtuale a sinistra per muoverlo su una piccola mappa di sabbia con qualche blocco
   > di pietra (collisioni) e una piramide. La telecamera segue Anubi. Ordinamento per Y e ombre.

@@ -3,6 +3,11 @@ import '@fontsource/lilita-one';
 import { GAME_WIDTH, GAME_HEIGHT } from './config';
 import { PALETTE } from './art/palette';
 import { BootScene } from './scenes/BootScene';
+import { PreloadScene } from './scenes/PreloadScene';
+import { MatchScene } from './scenes/MatchScene';
+
+// Aggiungendo "?debug" all'indirizzo si vedono i rettangoli delle collisioni.
+const debug = new URLSearchParams(location.search).has('debug');
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -16,5 +21,6 @@ new Phaser.Game({
     height: GAME_HEIGHT,
   },
   input: { activePointers: 3 }, // più dita insieme (joystick + mira)
-  scene: [BootScene],
+  physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug } },
+  scene: [BootScene, PreloadScene, MatchScene],
 });
