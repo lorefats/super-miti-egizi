@@ -14,6 +14,7 @@ const FOOT_H = 26;
 /** Bersaglio fermo d'allenamento: una statuetta di terracotta. Sconfitta, diventa sabbia. */
 export class Target extends Phaser.GameObjects.Container implements Damageable {
   declare body: Phaser.Physics.Arcade.Body;
+  readonly kind = 'bersaglio' as const;
   readonly team = 99; // nemico di tutti
   readonly hitRadius = 30;
   private health = TARGET_DATA.maxHealth;

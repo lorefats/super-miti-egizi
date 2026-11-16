@@ -18,6 +18,8 @@ export class HealthBar extends Phaser.GameObjects.Container {
   private shownHealth = -1;
   private flashUntil = 0;
   private ankh: Phaser.GameObjects.Image | null = null;
+  private gemIcon: Phaser.GameObjects.Image | null = null;
+  private gemText: Phaser.GameObjects.Text | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -63,6 +65,31 @@ export class HealthBar extends Phaser.GameObjects.Container {
       this.ankh.destroy();
       this.ankh = null;
     }
+  }
+
+  /** Mostra quanti gioielli ha il personaggio (a destra della barra). */
+  setGems(n: number): void {
+    if (n <= 0) {
+      this.gemIcon?.setVisible(false);
+      this.gemText?.setVisible(false);
+      return;
+    }
+    if (!this.gemIcon || !this.gemText) {
+      this.gemIcon = this.scene.add.image(W / 2 + 18, 0, TEX.gioiello).setScale(0.55);
+      this.gemText = this.scene.add
+        .text(W / 2 + 32, 0, '', {
+          fontFamily: FONT_FAMILY,
+          fontSize: '20px',
+          color: '#8FF5EA',
+          stroke: css(PALETTE.bluNotte),
+          strokeThickness: 5,
+        })
+        .setOrigin(0, 0.5);
+      this.add([this.gemIcon, this.gemText]);
+    }
+    this.gemIcon.setVisible(true);
+    this.gemText.setVisible(true).setText(String(n));
+    this.scene.tweens.add({ targets: this.gemIcon, scale: { from: 0.9, to: 0.55 }, duration: 250, ease: 'Back.out' });
   }
 
   /** Fa lampeggiare di rosso i colpi (quando provi ad attaccare senza munizioni). */

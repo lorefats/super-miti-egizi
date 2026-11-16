@@ -12,6 +12,10 @@ export interface MapData {
   obstacles: { kind: ObstacleKind; x: number; y: number }[];
   /** Piramidi grandi in cui si entra (x = centro, y = base davanti, dove c'è la porta). */
   bigPyramids?: { x: number; y: number }[];
+  /** Bauli del tesoro (x, y = base). */
+  chests?: { x: number; y: number }[];
+  /** Centro del cerchio sicuro della tempesta (di solito il centro della mappa). */
+  stormCenter?: { x: number; y: number };
   /** Bersagli fermi d'allenamento (x, y = base). */
   targets: { x: number; y: number }[];
 }
@@ -88,5 +92,23 @@ export const MAPPA_MEDIA: MapData = {
     { kind: 'bloccoLungo', x: 2950, y: 1800 },
   ],
   bigPyramids: [{ x: 1600, y: 1350 }],
+  chests: [
+    // due dentro la piramide grande: un premio per chi entra
+    { x: 1350, y: 1260 },
+    { x: 1850, y: 1260 },
+    { x: 700, y: 620 },
+    { x: 1300, y: 460 },
+    { x: 2300, y: 460 },
+    { x: 2950, y: 560 },
+    { x: 380, y: 1350 },
+    { x: 1000, y: 1460 },
+    { x: 2250, y: 1380 },
+    { x: 600, y: 2000 },
+    { x: 1600, y: 2250 },
+    { x: 1900, y: 1900 },
+    { x: 2500, y: 1900 },
+    { x: 3000, y: 2250 },
+  ],
+  stormCenter: { x: 1600, y: 1550 },
   targets: [],
 };

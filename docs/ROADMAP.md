@@ -32,7 +32,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
   > Aggiungi la barra della super (si carica colpendo) e il pulsante super. Implementa "Bende del Sarcofago"
   > esattamente come in GAME_DESIGN.md, con la vita extra e la resurrezione dal sarcofago, e una bella animazione.
 
-- [ ] **Passo 5 — Bauli, gioielli e tempesta**
+- [x] **Passo 5 — Bauli, gioielli e tempesta**
   > Aggiungi i bauli del tesoro rompibili con dentro i Gioielli (Cubi Energia) come descritto nella sezione 4,
   > il contatore gioielli sopra ogni personaggio, e la tempesta di sabbia che si restringe con un timer.
 

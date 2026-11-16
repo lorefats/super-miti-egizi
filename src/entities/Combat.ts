@@ -1,8 +1,12 @@
 import Phaser from 'phaser';
 import { HIDEOUT_REVEAL_DISTANCE } from '../data/combat';
 
-/** Qualunque cosa possa essere colpita: personaggi, bersagli, (in futuro) bauli e muri. */
+/** Che cos'è: un personaggio, un baule del tesoro, un bersaglio d'allenamento. */
+export type DamageableKind = 'personaggio' | 'baule' | 'bersaglio';
+
+/** Qualunque cosa possa essere colpita: personaggi, bersagli, bauli. */
 export interface Damageable {
+  readonly kind: DamageableKind;
   readonly x: number;
   readonly y: number;
   /** Raggio "di corpo" in pixel, a livello dei piedi. */
@@ -52,11 +56,19 @@ export class Combat {
    * Nemico vivo più vicino entro maxDist, oppure null.
    * Chi è in un nascondiglio diverso dal nostro si vede solo da molto vicino.
    */
-  nearestEnemy(x: number, y: number, team: number, maxDist: number, viewerHideout: object | null = null): Damageable | null {
+  nearestEnemy(
+    x: number,
+    y: number,
+    team: number,
+    maxDist: number,
+    viewerHideout: object | null = null,
+    kinds?: DamageableKind[],
+  ): Damageable | null {
     let best: Damageable | null = null;
     let bestDist = maxDist;
     for (const d of this.list) {
       if (d.team === team || !targetable(d)) continue;
+      if (kinds && !kinds.includes(d.kind)) continue;
       const dist = Phaser.Math.Distance.Between(x, y, d.x, d.y) - d.hitRadius;
       if (d.hideout && d.hideout !== viewerHideout && dist > HIDEOUT_REVEAL_DISTANCE) continue;
       if (dist < bestDist) {

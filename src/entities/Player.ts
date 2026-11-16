@@ -3,6 +3,7 @@ import { TEX, characterTexture, weaponTexture, legTexture, getHeldWeapon, getLeg
 import { dustPuff, footstepDust, turnToSand } from '../art/effects';
 import { PALETTE, type ColorVariant } from '../art/palette';
 import { REGEN, REVIVE_SECONDS } from '../data/combat';
+import { GEM } from '../data/match';
 import { playImprison, playRevive } from '../art/sarcophagusFx';
 import { getCharacter, SPEED_VALUES, type CharacterData } from '../data/characters';
 import { getCharacterModule } from '../characters';
@@ -66,7 +67,10 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   declare body: Phaser.Physics.Arcade.Body;
   readonly stats: CharacterData;
   readonly team: number;
+  readonly kind = 'personaggio' as const;
   readonly hitRadius = 26;
+  /** Gioielli raccolti in questa partita (ognuno: +10% vita e +10% danno). */
+  gems = 0;
   readonly isHuman: boolean;
   readonly displayName: string;
   /** Nascondiglio in cui si trova adesso (lo aggiorna la partita). */
@@ -130,7 +134,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.stats = getCharacter(characterId);
     this.module = getCharacterModule(characterId);
     this.team = team;
-    this.health = this.stats.maxHealth;
+    this.health = this.maxHealth;
     this.ammo = this.stats.weapon.maxAmmo;
 
     this.shadow = scene.add.image(0, 0, TEX.ombra);
@@ -184,6 +188,24 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   /** La super è carica e si può usare adesso? */
   canUseSuper(): boolean {
     return this.canAct() && this.superCharge >= 1 && this.attackTime < 0;
+  }
+
+  /** Vita massima, compresi i gioielli. */
+  get maxHealth(): number {
+    return this.stats.maxHealth * (1 + GEM.healthBonus * this.gems);
+  }
+
+  /** Danno dell'attacco base, compresi i gioielli. */
+  attackDamage(): number {
+    return this.stats.weapon.damage * (1 + GEM.damageBonus * this.gems);
+  }
+
+  /** Raccoglie un gioiello: più vita massima (e la stessa vita in più subito) e più danno. */
+  addGem(): void {
+    if (!this.isAlive()) return;
+    this.gems += 1;
+    this.health += this.stats.maxHealth * GEM.healthBonus;
+    this.bar.setGems(this.gems);
   }
 
   isTargetable(): boolean {
@@ -271,7 +293,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   /** Cura una frazione della vita massima (con numero verde). */
   heal(fraction: number): void {
     if (!this.isAlive() || this.reviving) return;
-    const amount = Math.min(this.stats.maxHealth - this.health, this.stats.maxHealth * fraction);
+    const amount = Math.min(this.maxHealth - this.health, this.maxHealth * fraction);
     this.health += amount;
     if (amount > 0 && this.revealed) showDamageNumber(this.scene, this.x, this.y - BAR_OFFSET_Y + 20, amount, '#7CF29A', '+');
   }
@@ -337,7 +359,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.sprite.clearTint();
     playRevive(this.scene, this, this.bodyParts(), REVIVE_SECONDS, () => {
       this.reviving = false;
-      this.health = this.stats.maxHealth * this.reviveHealth;
+      this.health = this.maxHealth * this.reviveHealth;
       this.sinceCombat = 0;
     });
   }
@@ -397,7 +419,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     }
     if (!this.canAct()) {
       this.bar.setPosition(this.x, this.y - BAR_OFFSET_Y);
-      this.bar.draw(this.health, this.stats.maxHealth, this.ammo, w.maxAmmo);
+      this.bar.draw(this.health, this.maxHealth, this.ammo, w.maxAmmo);
       return;
     }
 
@@ -411,8 +433,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
     // rigenerazione lenta se lontano dai combattimenti
     this.sinceCombat += dt;
-    if (this.sinceCombat > REGEN.delaySeconds && this.health < this.stats.maxHealth) {
-      this.health = Math.min(this.stats.maxHealth, this.health + this.stats.maxHealth * REGEN.fractionPerSecond * dt);
+    if (this.sinceCombat > REGEN.delaySeconds && this.health < this.maxHealth) {
+      this.health = Math.min(this.maxHealth, this.health + this.maxHealth * REGEN.fractionPerSecond * dt);
     }
 
     const f = this.facing;
@@ -533,7 +555,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     }
 
     this.bar.setPosition(this.x, this.y - BAR_OFFSET_Y);
-    this.bar.draw(this.health, this.stats.maxHealth, this.ammo, w.maxAmmo);
+    this.bar.draw(this.health, this.maxHealth, this.ammo, w.maxAmmo);
   }
 
   /**

@@ -21,6 +21,10 @@ import {
   bandageRollSvg,
   ankhSvg,
   superButtonSvg,
+  chestSvg,
+  plankSvg,
+  gemSvg,
+  stormTileSvg,
 } from './props';
 import {
   bigPyramidRoofSvg,
@@ -59,6 +63,10 @@ export const TEX = {
   rotoloBende: 'rotolo-bende',
   ankh: 'ankh',
   pulsanteSuper: 'pulsante-super',
+  baule: 'baule',
+  asse: 'asse-legno',
+  gioiello: 'gioiello',
+  tempesta: 'tempesta',
 } as const;
 
 const suffix = (v: ColorVariant) => (v === 'base' ? '' : `-${v}`);
@@ -159,6 +167,10 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.rotoloBende, ...bandageRollSvg() },
     { key: TEX.ankh, ...ankhSvg() },
     { key: TEX.pulsanteSuper, ...superButtonSvg() },
+    { key: TEX.baule, ...chestSvg() },
+    { key: TEX.asse, ...plankSvg() },
+    { key: TEX.gioiello, ...gemSvg() },
+    { key: TEX.tempesta, ...stormTileSvg() },
   ];
   await loadSvgTextures(scene, arts);
 }

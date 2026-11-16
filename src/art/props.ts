@@ -296,3 +296,61 @@ export function superButtonSvg() {
   <circle cx="58" cy="58" r="6" fill="#FFF1C1" opacity="0.85"/>`;
   return { width: 128, height: 128, body };
 }
+
+/** Baule del tesoro in 2.5D: coperchio lapislazzuli con angoli d'oro, fianco di legno. Base in fondo al disegno. */
+export function chestSvg() {
+  const gold = css(PALETTE.oro);
+  const lapis = css(PALETTE.lapislazzuli);
+  const s = `stroke="${LINE}" stroke-width="2.6" stroke-linejoin="round"`;
+  const body = `
+  <defs>
+    <linearGradient id="legno" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A86B3C"/><stop offset="1" stop-color="#6E4122"/></linearGradient>
+    <linearGradient id="coperchio" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3456B8"/><stop offset="1" stop-color="${lapis}"/></linearGradient>
+  </defs>
+  <ellipse cx="46" cy="80" rx="44" ry="7" fill="#14213D" opacity="0.22"/>
+  <rect x="6" y="38" width="80" height="42" rx="4" fill="url(#legno)" ${s}/>
+  <path d="M10 52 H82 M10 66 H82" stroke="#5A331A" stroke-width="2"/>
+  <path d="M6 30 Q6 12 46 10 Q86 12 86 30 L86 40 L6 40 Z" fill="url(#coperchio)" ${s}/>
+  <path d="M14 24 Q46 14 78 24" fill="none" stroke="#5B7BD6" stroke-width="3" stroke-linecap="round"/>
+  <rect x="38" y="10" width="16" height="70" fill="${gold}" ${s}/>
+  <path d="M6 30 L16 30 L16 40 M86 30 L76 30 L76 40 M6 70 L16 70 L16 80 M86 70 L76 70 L76 80" fill="none" stroke="${gold}" stroke-width="4"/>
+  <rect x="40" y="40" width="12" height="14" rx="2" fill="#FFE08A" ${s}/>
+  <circle cx="46" cy="46" r="2" fill="${LINE}"/>
+  <path d="M40 18 L44 14" stroke="#FFF1C1" stroke-width="2" stroke-linecap="round"/>`;
+  return { width: 92, height: 88, body };
+}
+
+/** Asse di legno (pezzi del baule rotto). */
+export function plankSvg() {
+  const body = `<rect x="1" y="1" width="22" height="8" rx="2" fill="#8E5A2E" stroke="${LINE}" stroke-width="1.5"/>`;
+  return { width: 24, height: 10, body };
+}
+
+/** Gioiello = Cubo Energia: un cubo di turchese sfaccettato che brilla. */
+export function gemSvg() {
+  const body = `
+  <polygon points="20,3 37,12 20,21 3,12" fill="#8FF5EA" stroke="${LINE}" stroke-width="2.2" stroke-linejoin="round"/>
+  <polygon points="3,12 20,21 20,40 3,30" fill="${css(PALETTE.turchese)}" stroke="${LINE}" stroke-width="2.2" stroke-linejoin="round"/>
+  <polygon points="37,12 20,21 20,40 37,30" fill="#1C8F84" stroke="${LINE}" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M9 13 L20 8" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M7 18 L7 26" stroke="#C9FFF8" stroke-width="2" stroke-linecap="round"/>`;
+  return { width: 40, height: 43, body };
+}
+
+/** Pezzo di tempesta di sabbia che si ripete: vortici e strisce di vento. */
+export function stormTileSvg() {
+  const S = 256;
+  let streaks = '';
+  let seed = 11;
+  const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
+  for (let i = 0; i < 14; i++) {
+    const x = rnd() * S;
+    const y = rnd() * S;
+    const w = 40 + rnd() * 80;
+    streaks += `<path d="M${x.toFixed(0)} ${y.toFixed(0)} q${(w / 2).toFixed(0)} -10 ${w.toFixed(0)} 0" fill="none" stroke="${rnd() < 0.5 ? '#E8B878' : '#8C5A2B'}" stroke-width="${(3 + rnd() * 4).toFixed(1)}" stroke-linecap="round" opacity="0.6"/>`;
+    // copia spostata per far combaciare i bordi
+    streaks += `<path d="M${(x - S).toFixed(0)} ${y.toFixed(0)} q${(w / 2).toFixed(0)} -10 ${w.toFixed(0)} 0" fill="none" stroke="#E8B878" stroke-width="3" stroke-linecap="round" opacity="0.4"/>`;
+  }
+  const body = `<rect width="${S}" height="${S}" fill="#B9773C"/>${streaks}`;
+  return { width: S, height: S, body };
+}

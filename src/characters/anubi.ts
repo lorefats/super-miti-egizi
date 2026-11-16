@@ -60,7 +60,7 @@ export const anubi: CharacterModule = {
     scene.time.delayedCall(500, () => sparks.destroy());
 
     // danno e impatto
-    const hits = combat.hitArc(user, angle, w.range, w.arcDegrees, w.damage);
+    const hits = combat.hitArc(user, angle, w.range, w.arcDegrees, user.attackDamage());
     for (const h of hits) hitSpark(scene, h.x, h.y - 60, h.y + 2);
     // tremolio solo se c'entra il giocatore vero (non per i bot che si picchiano lontano)
     if (hits.length > 0 && (user.isHuman || hits.some((h) => h.isHuman))) scene.cameras.main.shake(70, 0.003);
@@ -87,6 +87,7 @@ export const anubi: CharacterModule = {
       drawTrail: drawBandageRibbon,
       onHit: (target, x, y) => {
         hitSpark(scene, x, y - 70, y + 2);
+        if (target.kind === 'baule') return; // un baule non è un nemico: le bende si fermano e basta
         if (target.team !== user.team) {
           target.stun?.(p.stunSeconds);
           user.grantExtraLife(p.maxExtraLives, p.reviveHealth);
