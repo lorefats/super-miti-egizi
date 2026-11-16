@@ -47,9 +47,25 @@ export class Chest extends Phaser.GameObjects.Container implements Damageable {
     combat.add(this);
   }
 
+  private revealed = true;
+  private inView = true;
+
   /** Nasconde la barra quando il baule è dentro una piramide e il giocatore è fuori. */
   setRevealed(on: boolean): void {
-    if (this.isAlive()) this.bar.setVisible(on);
+    this.revealed = on;
+    this.refreshVisibility();
+  }
+
+  /** Lontano dallo schermo il baule non si disegna (meno fatica per il telefono). */
+  setInView(on: boolean): void {
+    this.inView = on;
+    this.refreshVisibility();
+  }
+
+  private refreshVisibility(): void {
+    if (!this.isAlive()) return;
+    this.setVisible(this.inView);
+    this.bar.setVisible(this.inView && this.revealed);
   }
 
   isAlive(): boolean {

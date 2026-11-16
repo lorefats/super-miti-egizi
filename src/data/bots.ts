@@ -26,8 +26,8 @@ export const BOT_RECOVER_HEALTH = 0.6;
 /** Nomi dei bot (mostrati sopra la testa). */
 export const BOT_NAMES = ['Kha', 'Neb', 'Seti', 'Tiye', 'Meri', 'Huy', 'Ahmose', 'Nofret', 'Ipi'];
 
-/** Partita Solo del Passo 3: quanti bot e di che livello. */
+/** Partita Solo: quanti bot (tu + 9 = 10 giocatori) e di che livello. */
 export const SOLO_SETUP = {
-  botCount: 5,
+  botCount: 9,
   botLevel: 0,
 };

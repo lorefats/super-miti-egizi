@@ -38,7 +38,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
 
 ## Fase 2 — La mappa vera
 
-- [ ] **Passo 6 — Valle dei Due Egitti**
+- [x] **Passo 6 — Valle dei Due Egitti**
   > Costruisci la mappa grande con tutte le zone della sezione 3: Piana di Giza, Karnak, Valle dei Re, Nilo,
   > Bazar, Cairo moderno, Oasi. Canne di papiro e tende come cespugli dove nascondersi. Oggetti alti
   > semitrasparenti quando ci passi dietro. Partita Solo con 9 bot. Mostra una minimappa.

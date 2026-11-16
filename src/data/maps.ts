@@ -1,6 +1,28 @@
 // Mappe del gioco: dimensioni e posizione degli ostacoli.
 import type { ObstacleKind } from '../entities/Obstacle';
 
+/** Tipi di terreno delle zone. */
+export type GroundKind = 'sabbia' | 'roccia' | 'lastre' | 'asfalto' | 'bazar' | 'erba' | 'oasi';
+
+/** Una zona della mappa (rettangolo con nome, terreno e colore per la minimappa). */
+export interface ZoneData {
+  name: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  ground: GroundKind;
+  /** colore nella minimappa */
+  color: number;
+}
+
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface MapData {
   width: number;
   height: number;
@@ -18,6 +40,16 @@ export interface MapData {
   stormCenter?: { x: number; y: number };
   /** Bersagli fermi d'allenamento (x, y = base). */
   targets: { x: number; y: number }[];
+  /** Zone con nome e terreno proprio. */
+  zones?: ZoneData[];
+  /** Acqua (rallenta chi ci cammina). */
+  water?: Rect[];
+  /** Cespugli dove nascondersi: ogni gruppo è fatto di più ciuffi vicini. */
+  bushes?: { kind: 'papiro' | 'tenda'; spots: { x: number; y: number }[] }[];
+  /** Cammelli che camminano piano avanti e indietro tra due punti. */
+  camels?: { x1: number; y1: number; x2: number; y2: number }[];
+  /** Tempesta di questa mappa (se manca si usano i valori di STORM). */
+  storm?: { startRadius: number; endRadius: number; shrinkSeconds: number };
 }
 
 /** Piccola mappa di prova del Passo 1. */

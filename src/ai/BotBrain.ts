@@ -3,7 +3,7 @@ import { BOT_FLEE_HEALTH, BOT_RECOVER_HEALTH, type BotLevel } from '../data/bots
 import type { Combat, Damageable } from '../entities/Combat';
 import type { Player } from '../entities/Player';
 
-type Mode = 'tempesta' | 'scappa' | 'combatti' | 'baule' | 'gioiello' | 'esplora';
+type Mode = 'tempesta' | 'scappa' | 'nascondi' | 'combatti' | 'baule' | 'gioiello' | 'esplora';
 
 /** Cosa sa un bot della mappa. */
 export interface BotWorld {
@@ -16,6 +16,8 @@ export interface BotWorld {
   routeVia?(fx: number, fy: number, tx: number, ty: number): { x: number; y: number } | null;
   /** Cerchio sicuro della tempesta (fuori si perde vita). */
   safeZone?(): { x: number; y: number; r: number };
+  /** Centro del cespuglio più vicino entro maxDist, oppure null. */
+  nearestBush?(x: number, y: number, maxDist: number): { x: number; y: number } | null;
   /** Gioiello a terra più vicino entro maxDist, oppure null. */
   nearestGem?(x: number, y: number, maxDist: number): { x: number; y: number } | null;
 }
@@ -26,7 +28,7 @@ const STORM_MARGIN = 80;
 /**
  * Il "cervello" di un bot (sezione 11 di GAME_DESIGN.md), in ordine di priorità:
  * 1. nella tempesta → verso il centro
- * 2. vita sotto il 30% → scappa              (i cespugli arriveranno nel Passo 6)
+ * 2. vita sotto il 30% → scappa e nasconditi nei cespugli
  * 3. nemico a tiro → attacca con un piccolo errore di mira
  * 4. super carica e buon bersaglio → usala
  * 5. altrimenti → gioielli e bauli più vicini, poi esplora
@@ -75,6 +77,10 @@ export class BotBrain {
       case 'tempesta':
       case 'gioiello':
         this.headTo(this.goal.x, this.goal.y);
+        break;
+      case 'nascondi':
+        // arrivato nel cespuglio: resta fermo e recupera vita
+        if (Phaser.Math.Distance.Between(bot.x, bot.y, this.goal.x, this.goal.y) > 24) this.headTo(this.goal.x, this.goal.y);
         break;
       case 'scappa':
         if (this.target) this.wanted.set(bot.x - this.target.x, bot.y - this.target.y).normalize();
@@ -145,11 +151,23 @@ export class BotBrain {
 
     const enemy = this.combat.nearestEnemy(bot.x, bot.y, bot.team, sight, bot.hideout, ['personaggio', 'bersaglio']);
 
-    // 2) poca vita: scappa (e continua finché non si è ripreso)
-    if (enemy && (lifeFrac < BOT_FLEE_HEALTH || (this.mode === 'scappa' && lifeFrac < BOT_RECOVER_HEALTH))) {
-      this.mode = 'scappa';
-      this.target = enemy;
-      return;
+    // 2) poca vita: scappa e nasconditi in un cespuglio (e continua finché non si è ripreso)
+    const hiding = this.mode === 'scappa' || this.mode === 'nascondi';
+    if (lifeFrac < BOT_FLEE_HEALTH || (hiding && lifeFrac < BOT_RECOVER_HEALTH)) {
+      const bush = this.world.nearestBush?.(bot.x, bot.y, 800);
+      const enemyClose = enemy && Phaser.Math.Distance.Between(bot.x, bot.y, enemy.x, enemy.y) < 180;
+      // va al cespuglio solo se non deve passare vicino al nemico
+      if (bush && !enemyClose && (!enemy || Phaser.Math.Distance.Between(enemy.x, enemy.y, bush.x, bush.y) > Phaser.Math.Distance.Between(bot.x, bot.y, bush.x, bush.y))) {
+        this.mode = 'nascondi';
+        this.goal.set(bush.x, bush.y);
+        this.target = enemy;
+        return;
+      }
+      if (enemy) {
+        this.mode = 'scappa';
+        this.target = enemy;
+        return;
+      }
     }
 
     // 3) nemico in vista: combatti

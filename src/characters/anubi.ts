@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
-import { hitSpark } from '../art/effects';
+import { hitSpark, isOnScreen } from '../art/effects';
 import { Projectile } from '../entities/Projectile';
 import type { CharacterModule } from './types';
 
@@ -17,6 +17,11 @@ export const anubi: CharacterModule = {
   attack(user, angle, combat) {
     const w = user.stats.weapon;
     const scene = user.scene;
+    if (!isOnScreen(scene, user.x, user.y)) {
+      // lontano dallo schermo: solo il danno, senza effetti
+      combat.hitArc(user, angle, w.range, w.arcDegrees, user.attackDamage());
+      return;
+    }
     const side = Math.cos(angle) >= 0 ? 1 : -1; // il fendente va dall'alto verso il basso nel verso in cui guarda
 
     // Il fendente vive in un contenitore schiacciato: così sembra disegnato sulla sabbia in prospettiva.

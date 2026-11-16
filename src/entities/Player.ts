@@ -3,7 +3,7 @@ import { TEX, characterTexture, weaponTexture, legTexture, getHeldWeapon, getLeg
 import { dustPuff, footstepDust, turnToSand } from '../art/effects';
 import { PALETTE, type ColorVariant } from '../art/palette';
 import { REGEN, REVIVE_SECONDS } from '../data/combat';
-import { GEM } from '../data/match';
+import { BUSH, GEM } from '../data/match';
 import { playImprison, playRevive } from '../art/sarcophagusFx';
 import { getCharacter, SPEED_VALUES, type CharacterData } from '../data/characters';
 import { getCharacterModule } from '../characters';
@@ -75,6 +75,10 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   readonly displayName: string;
   /** Nascondiglio in cui si trova adesso (lo aggiorna la partita). */
   hideout: object | null = null;
+  /** Velocità in più o in meno per il terreno (acqua = più lento). La aggiorna la partita. */
+  terrainSpeed = 1;
+  /** Fino a quando (tempo di gioco, ms) resta visibile anche dentro un cespuglio, perché ha attaccato. */
+  revealedUntil = 0;
   /** Visibile al giocatore? (false = nascosto dentro una piramide) */
   private revealed = true;
   health: number;
@@ -227,7 +231,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
       this.moving = false;
       return;
     }
-    const speed = SPEED_VALUES[this.stats.speed];
+    const speed = SPEED_VALUES[this.stats.speed] * this.terrainSpeed;
     this.targetVel.set(dir.x * speed, dir.y * speed);
     const wasMoving = this.moving;
     this.moving = dir.lengthSq() > 0;
@@ -272,6 +276,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   private startSwing(angle: number, isSuper: boolean): void {
     this.sinceCombat = 0;
+    this.revealedUntil = this.scene.time.now + BUSH.revealAfterAttack * 1000;
     this.attackTime = 0;
     this.attackAngle = angle;
     this.attackFired = false;
@@ -391,6 +396,11 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.revealed = on;
     this.setVisible(on);
     this.bar.setVisible(on);
+  }
+
+  /** Aspetto "nascosto": il giocatore si vede semitrasparente quando è in un nascondiglio. */
+  setHiddenLook(on: boolean): void {
+    this.setAlpha(on ? 0.55 : 1);
   }
 
   /** Il personaggio sta guardando a destra (1) o a sinistra (-1). */

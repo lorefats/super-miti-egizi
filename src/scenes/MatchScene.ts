@@ -2,18 +2,24 @@ import Phaser from 'phaser';
 import { TEX } from '../art';
 import { COLOR_VARIANTS } from '../art/palette';
 import { AIM_STICK, AUTO_AIM_RANGE_FACTOR, CAMERA_LERP, DEPTH, JOYSTICK } from '../config';
-import { MAPPA_MEDIA, type MapData } from '../data/maps';
+import type { GroundKind, MapData, ZoneData } from '../data/maps';
+import { MAPPA_VALLE } from '../data/valle';
 import { BOT_LEVELS, BOT_NAMES, SOLO_SETUP } from '../data/bots';
 import { HIDEOUT_REVEAL_DISTANCE } from '../data/combat';
 import { Combat } from '../entities/Combat';
-import { createObstacle } from '../entities/Obstacle';
+import { createObstacle, type PlacedObstacle } from '../entities/Obstacle';
 import { Player, DEFEATED_EVENT } from '../entities/Player';
 import { Bot } from '../entities/Bot';
 import { BigPyramid } from '../entities/BigPyramid';
 import { Chest, CHEST_BROKEN_EVENT } from '../entities/Chest';
 import { Gem } from '../entities/Gem';
 import { Storm } from '../entities/Storm';
-import { GEM, STORM } from '../data/match';
+import { GEM, STORM, WATER } from '../data/match';
+import { BushPatch } from '../entities/BushPatch';
+import { Culler } from '../entities/Culler';
+import { Camel } from '../entities/Camel';
+import { Minimap } from '../ui/Minimap';
+import { addFpsMeter } from '../ui/FpsMeter';
 import { Target } from '../entities/Target';
 import { VirtualStick } from '../ui/VirtualStick';
 import { AimIndicator } from '../ui/AimIndicator';
@@ -22,6 +28,17 @@ import { MatchHud } from '../ui/MatchHud';
 import { showEndOverlay } from '../ui/EndOverlay';
 import { fullscreenOnFirstTap } from '../ui/fullscreen';
 
+/** Terreno di ogni zona → disegno da ripetere. */
+const GROUND_TEXTURE: Record<GroundKind, string> = {
+  sabbia: TEX.sabbia,
+  roccia: TEX.terrenoRoccia,
+  lastre: TEX.terrenoLastre,
+  asfalto: TEX.terrenoAsfalto,
+  bazar: TEX.terrenoBazar,
+  erba: TEX.terrenoErba,
+  oasi: TEX.terrenoOasi,
+};
+
 type KeyName = 'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space' | 'e';
 
 /** La partita Solo: tu contro i bot, vince l'ultimo rimasto. */
@@ -29,6 +46,14 @@ export class MatchScene extends Phaser.Scene {
   private player!: Player;
   private fighters: Player[] = [];
   private pyramids: BigPyramid[] = [];
+  private bushes: BushPatch[] = [];
+  private tallThings: (PlacedObstacle & { bounds: Phaser.Geom.Rectangle })[] = [];
+  private waterTiles: Phaser.GameObjects.TileSprite[] = [];
+  private map!: MapData;
+  private minimap!: Minimap;
+  private currentZone: ZoneData | null = null;
+  private zoneCheck = 0;
+  private culler!: Culler;
   private chests: Chest[] = [];
   private gems: Gem[] = [];
   private storm!: Storm;
@@ -48,17 +73,43 @@ export class MatchScene extends Phaser.Scene {
   }
 
   create(): void {
-    const map: MapData = MAPPA_MEDIA;
+    const map: MapData = MAPPA_VALLE;
+    this.map = map;
     this.combat = new Combat();
+    this.currentZone = null;
     this.fighters = [];
     this.over = false;
 
     this.physics.world.setBounds(0, 0, map.width, map.height);
-    this.add.tileSprite(0, 0, map.width, map.height, TEX.sabbia).setOrigin(0).setDepth(DEPTH.ground);
+    // terreno: ogni zona ha il suo; senza zone, sabbia dappertutto (un solo strato: meno fatica per il telefono)
+    const zones = map.zones ?? [];
+    if (zones.length === 0) this.add.tileSprite(0, 0, map.width, map.height, TEX.sabbia).setOrigin(0).setDepth(DEPTH.ground);
+    for (const z of zones) {
+      this.add
+        .tileSprite(Math.floor(z.x), Math.floor(z.y), Math.ceil(z.w) + 1, Math.ceil(z.h) + 1, GROUND_TEXTURE[z.ground])
+        .setOrigin(0)
+        .setDepth(DEPTH.ground);
+    }
+    this.waterTiles = (map.water ?? []).map((w) => {
+      const edge = this.add.graphics().setDepth(DEPTH.ground + 3);
+      edge.lineStyle(10, 0xe9d3a0, 0.9).strokeRoundedRect(w.x, w.y, w.w, w.h, 30);
+      edge.lineStyle(3, 0x14213d, 0.5).strokeRoundedRect(w.x, w.y, w.w, w.h, 30);
+      return this.add.tileSprite(w.x, w.y, w.w, w.h, TEX.acqua).setOrigin(0).setDepth(DEPTH.ground + 2);
+    });
 
     const walls = this.physics.add.staticGroup();
     this.combat.walls = walls;
-    for (const o of map.obstacles) createObstacle(this, walls, o.kind, o.x, o.y);
+    this.tallThings = [];
+    this.culler = new Culler();
+    for (const o of map.obstacles) {
+      const placed = createObstacle(this, walls, o.kind, o.x, o.y);
+      if (placed.tall) this.tallThings.push({ ...placed, bounds: placed.image.getBounds() });
+      this.culler.add(placed.image);
+      for (const e of placed.extras) this.culler.add(e);
+    }
+    this.bushes = (map.bushes ?? []).map((b) => new BushPatch(this, b.kind, b.spots));
+    for (const b of this.bushes) for (const img of b.images) this.culler.add(img);
+    const camels = (map.camels ?? []).map((c) => new Camel(this, { x: c.x1, y: c.y1 }, { x: c.x2, y: c.y2 }));
     this.pyramids = (map.bigPyramids ?? []).map((p) => new BigPyramid(this, walls, p.x, p.y));
     const targets = map.targets.map((t) => new Target(this, t.x, t.y, this.combat));
     this.gems = [];
@@ -66,13 +117,22 @@ export class MatchScene extends Phaser.Scene {
       const chest = new Chest(this, c.x, c.y, this.combat);
       chest.hideout = this.pyramids.find((p) => p.contains(c.x, c.y)) ?? null;
       chest.on(CHEST_BROKEN_EVENT, (x: number, y: number, n: number) => this.spawnGems(x, y, n));
+      this.culler.addCustom(new Phaser.Geom.Rectangle(c.x - 60, c.y - 130, 120, 140), (on) => chest.setInView(on));
       return chest;
     });
-    this.storm = new Storm(this, map.width, map.height, map.stormCenter ?? { x: map.width / 2, y: map.height / 2 });
+    this.storm = new Storm(
+      this,
+      map.width,
+      map.height,
+      map.stormCenter ?? { x: map.width / 2, y: map.height / 2 },
+      map.storm ?? STORM,
+    );
     this.stormTick = 0;
 
-    // il giocatore (squadra 0) e i bot (ognuno nella sua squadra: tutti contro tutti)
-    this.player = new Player(this, map.spawn.x, map.spawn.y, {
+    // il giocatore (squadra 0) e i bot (ognuno nella sua squadra: tutti contro tutti); partenze a caso
+    const spawns = Phaser.Utils.Array.Shuffle([map.spawn, ...(map.botSpawns ?? [])]);
+    const mySpawn = spawns.shift()!;
+    this.player = new Player(this, mySpawn.x, mySpawn.y, {
       characterId: 'anubi',
       team: 0,
       combat: this.combat,
@@ -80,7 +140,6 @@ export class MatchScene extends Phaser.Scene {
     });
     this.fighters.push(this.player);
 
-    const spawns = Phaser.Utils.Array.Shuffle([...(map.botSpawns ?? [])]);
     const names = Phaser.Utils.Array.Shuffle([...BOT_NAMES]);
     const level = BOT_LEVELS[SOLO_SETUP.botLevel];
     const botCount = Math.min(SOLO_SETUP.botCount, spawns.length);
@@ -113,6 +172,19 @@ export class MatchScene extends Phaser.Scene {
             }
             return best;
           },
+          nearestBush: (x, y, maxDist) => {
+            let best: { x: number; y: number } | null = null;
+            let bestD = maxDist;
+            for (const b of this.bushes) {
+              const sp = b.nearestSpot(x, y);
+              const d = Phaser.Math.Distance.Between(x, y, sp.x, sp.y);
+              if (d < bestD) {
+                bestD = d;
+                best = sp;
+              }
+            }
+            return best;
+          },
           routeVia: (fx, fy, tx, ty) => {
             for (const p of this.pyramids) {
               const via = p.routeVia(fx, fy, tx, ty);
@@ -129,6 +201,7 @@ export class MatchScene extends Phaser.Scene {
       this.physics.add.collider(f, walls);
       if (targets.length) this.physics.add.collider(f, targets);
       if (this.chests.length) this.physics.add.collider(f, this.chests);
+      if (camels.length) this.physics.add.collider(f, camels);
       f.on(DEFEATED_EVENT, (who: Player) => this.onDefeated(who));
     }
 
@@ -164,6 +237,8 @@ export class MatchScene extends Phaser.Scene {
     this.aimIndicator = new AimIndicator(this);
     this.hud = new MatchHud(this);
     this.hud.setRemaining(this.aliveCount());
+    this.minimap = new Minimap(this, map);
+    addFpsMeter(this);
 
     this.input.mouse?.disableContextMenu();
     fullscreenOnFirstTap(this);
@@ -243,7 +318,7 @@ export class MatchScene extends Phaser.Scene {
 
   /** La tempesta si stringe; ogni secondo toglie vita a chi è fuori dal cerchio. */
   private updateStorm(dt: number): void {
-    this.storm.update(dt);
+    this.storm.update(dt, this.cameras.main.worldView);
     this.stormTick += dt;
     if (this.stormTick >= 1) {
       this.stormTick -= 1;
@@ -265,10 +340,21 @@ export class MatchScene extends Phaser.Scene {
 
   /** Chi è dentro una piramide? Il tetto diventa trasparente per il giocatore e chi è nascosto sparisce. */
   private updateHideouts(dt: number): void {
+    const now = this.time.now;
     for (const f of this.fighters) {
-      f.hideout = this.pyramids.find((p) => p.contains(f.x, f.y)) ?? null;
+      const place = this.pyramids.find((p) => p.contains(f.x, f.y)) ?? this.bushes.find((b) => b.contains(f.x, f.y)) ?? null;
+      // chi ha appena attaccato da un cespuglio si vede per un attimo
+      f.hideout = place instanceof BushPatch && f.revealedUntil > now ? null : place;
+      // terreno: nell'acqua si va più piano
+      f.terrainSpeed = (this.map.water ?? []).some((w) => f.x > w.x && f.x < w.x + w.w && f.y > w.y && f.y < w.y + w.h)
+        ? WATER.speedFactor
+        : 1;
     }
     const me = this.player;
+    const myPlace = this.bushes.find((b) => b.contains(me.x, me.y)) ?? null;
+    for (const b of this.bushes) b.setSeeThrough(b === myPlace);
+    me.setHiddenLook(!!me.hideout);
+    this.updateTallThings(me, dt);
     for (const p of this.pyramids) p.updateView(me.x, me.y, dt);
     for (const c of this.chests) if (c.hideout) c.setRevealed(c.hideout === me.hideout);
     for (const f of this.fighters) {
@@ -278,7 +364,38 @@ export class MatchScene extends Phaser.Scene {
     }
   }
 
+  /** Gli oggetti alti diventano semitrasparenti quando il giocatore ci passa dietro. */
+  private updateTallThings(me: Player, dt: number): void {
+    const k = Math.min(1, dt * 10);
+    for (const t of this.tallThings) {
+      const behind = me.y < t.baseY - 4 && t.bounds.contains(me.x, me.y - 50);
+      const target = behind ? 0.45 : 1;
+      if (t.image.alpha !== target) {
+        t.image.alpha = Math.abs(t.image.alpha - target) < 0.02 ? target : Phaser.Math.Linear(t.image.alpha, target, k);
+      }
+    }
+  }
+
+  /** Nome della zona quando il giocatore ci entra. */
+  private updateZone(dt: number): void {
+    this.zoneCheck -= dt;
+    if (this.zoneCheck > 0) return;
+    this.zoneCheck = 0.3;
+    const me = this.player;
+    const zone = (this.map.zones ?? []).find((z) => me.x >= z.x && me.x < z.x + z.w && me.y >= z.y && me.y < z.y + z.h) ?? null;
+    if (zone && zone !== this.currentZone) this.hud.showZone(zone.name);
+    this.currentZone = zone;
+  }
+
   update(_time: number, delta: number): void {
+    const dt = delta / 1000;
+    for (const w of this.waterTiles) {
+      w.tilePositionX += dt * 22;
+      w.tilePositionY += dt * 6;
+    }
+    this.updateZone(dt);
+    this.culler.update(this.cameras.main);
+    this.minimap.update({ x: this.player.x, y: this.player.y, alive: this.player.isAlive() }, this.storm);
     this.updateHideouts(delta / 1000);
     this.updateStorm(delta / 1000);
     this.pickUpGems();

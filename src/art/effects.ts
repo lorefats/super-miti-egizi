@@ -1,8 +1,18 @@
 import Phaser from 'phaser';
 import { TEX } from './index';
 
+/**
+ * Il punto (x, y) della mappa è sullo schermo (con un margine)?
+ * Gli effetti lontani non si creano: nessuno li vedrebbe e il telefono fa meno fatica.
+ */
+export function isOnScreen(scene: Phaser.Scene, x: number, y: number, margin = 250): boolean {
+  const v = scene.cameras.main.worldView;
+  return x > v.x - margin && x < v.right + margin && y > v.y - margin && y < v.bottom + margin;
+}
+
 /** Stella di luce + scintille dove un colpo va a segno. */
 export function hitSpark(scene: Phaser.Scene, x: number, y: number, depth: number): void {
+  if (!isOnScreen(scene, x, y)) return;
   const star = scene.add
     .image(x, y, TEX.impatto)
     .setDepth(depth)
@@ -32,6 +42,7 @@ export function hitSpark(scene: Phaser.Scene, x: number, y: number, depth: numbe
 
 /** Sbuffo di sabbia ai piedi (quando un personaggio scatta o colpisce). */
 export function dustPuff(scene: Phaser.Scene, x: number, y: number, direction: number, depth: number): void {
+  if (!isOnScreen(scene, x, y)) return;
   const deg = Phaser.Math.RadToDeg(direction + Math.PI);
   const dust = scene.add.particles(x, y, TEX.granello, {
     speed: { min: 40, max: 120 },
@@ -91,6 +102,7 @@ const footDust = new WeakMap<Phaser.Scene, Phaser.GameObjects.Particles.Particle
 
 /** Piccola nuvoletta di sabbia sotto un piede che tocca terra. */
 export function footstepDust(scene: Phaser.Scene, x: number, y: number): void {
+  if (!isOnScreen(scene, x, y, 100)) return;
   let e = footDust.get(scene);
   if (!e || !e.scene) {
     e = scene.add.particles(0, 0, TEX.granello, {

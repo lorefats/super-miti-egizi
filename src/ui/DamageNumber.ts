@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { DEPTH, FONT_FAMILY } from '../config';
 import { PALETTE, css } from '../art/palette';
+import { isOnScreen } from '../art/effects';
 
 /** Numero di danno che salta fuori, con bordo scuro, e svanisce. */
 export function showDamageNumber(
@@ -12,6 +13,7 @@ export function showDamageNumber(
   prefix = '',
   suffix = '',
 ): void {
+  if (!isOnScreen(scene, x, y, 100)) return; // fuori schermo: nessuno lo vedrebbe
   const t = scene.add
     .text(x + Phaser.Math.Between(-14, 14), y, prefix + String(Math.round(amount)) + suffix, {
       fontFamily: FONT_FAMILY,

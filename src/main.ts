@@ -6,8 +6,11 @@ import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { MatchScene } from './scenes/MatchScene';
 
-// Aggiungendo "?debug" all'indirizzo si vedono i rettangoli delle collisioni.
-const debug = new URLSearchParams(location.search).has('debug');
+// "?fisica" nell'indirizzo mostra i rettangoli delle collisioni (rallenta: solo per provare).
+// "?debug" rende il gioco raggiungibile dalla console del browser per le prove automatiche.
+const params = new URLSearchParams(location.search);
+const debug = params.has('debug');
+const showPhysics = params.has('fisica');
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -21,7 +24,7 @@ const game = new Phaser.Game({
     height: GAME_HEIGHT,
   },
   input: { activePointers: 3 }, // più dita insieme (joystick + mira)
-  physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug } },
+  physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: showPhysics } },
   scene: [BootScene, PreloadScene, MatchScene],
 });
 

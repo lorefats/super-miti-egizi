@@ -12,15 +12,28 @@ const STORM_DEPTH = 40000;
 export class Storm {
   readonly cx: number;
   readonly cy: number;
-  radius = STORM.startRadius;
+  radius: number;
+  private readonly startRadius: number;
+  private readonly endRadius: number;
+  private readonly shrinkSeconds: number;
   private elapsed = 0;
   private readonly sand: Phaser.GameObjects.TileSprite;
   private readonly maskShape: Phaser.GameObjects.Graphics;
   private readonly edge: Phaser.GameObjects.Graphics;
 
-  constructor(scene: Phaser.Scene, mapW: number, mapH: number, center: { x: number; y: number }) {
+  constructor(
+    scene: Phaser.Scene,
+    mapW: number,
+    mapH: number,
+    center: { x: number; y: number },
+    sizes: { startRadius: number; endRadius: number; shrinkSeconds: number } = STORM,
+  ) {
     this.cx = center.x;
     this.cy = center.y;
+    this.startRadius = sizes.startRadius;
+    this.endRadius = sizes.endRadius;
+    this.shrinkSeconds = sizes.shrinkSeconds;
+    this.radius = this.startRadius;
     // un po' più grande della mappa, così copre anche i bordi
     this.sand = scene.add
       .tileSprite(-400, -400, mapW + 800, mapH + 800, TEX.tempesta)
@@ -42,7 +55,7 @@ export class Storm {
 
   /** La tempesta ha finito di stringersi? */
   get finished(): boolean {
-    return this.elapsed >= STORM.startDelaySeconds + STORM.shrinkSeconds;
+    return this.elapsed >= STORM.startDelaySeconds + this.shrinkSeconds;
   }
 
   /** Il punto è dentro la tempesta (cioè fuori dal cerchio sicuro)? */
@@ -50,10 +63,22 @@ export class Storm {
     return Phaser.Math.Distance.Between(x, y, this.cx, this.cy) > this.radius;
   }
 
-  update(dt: number): void {
+  /** `view` = la parte di mappa che si vede sullo schermo. */
+  update(dt: number, view: Phaser.Geom.Rectangle): void {
     this.elapsed += dt;
-    const t = Phaser.Math.Clamp((this.elapsed - STORM.startDelaySeconds) / STORM.shrinkSeconds, 0, 1);
-    this.radius = Phaser.Math.Linear(STORM.startRadius, STORM.endRadius, t);
+    const t = Phaser.Math.Clamp((this.elapsed - STORM.startDelaySeconds) / this.shrinkSeconds, 0, 1);
+    this.radius = Phaser.Math.Linear(this.startRadius, this.endRadius, t);
+    // se lo schermo è tutto dentro il cerchio sicuro, la tempesta non si vede: niente da disegnare
+    const far = Math.max(
+      Phaser.Math.Distance.Between(this.cx, this.cy, view.x, view.y),
+      Phaser.Math.Distance.Between(this.cx, this.cy, view.right, view.y),
+      Phaser.Math.Distance.Between(this.cx, this.cy, view.x, view.bottom),
+      Phaser.Math.Distance.Between(this.cx, this.cy, view.right, view.bottom),
+    );
+    const visible = far > this.radius - 20;
+    this.sand.setVisible(visible);
+    this.edge.setVisible(visible);
+    if (!visible) return;
     // il vento muove la sabbia
     this.sand.tilePositionX += dt * 90;
     this.sand.tilePositionY += dt * 25;

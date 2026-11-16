@@ -97,7 +97,14 @@ export class HealthBar extends Phaser.GameObjects.Container {
     this.flashUntil = this.scene.time.now + 300;
   }
 
+  private lastKey = '';
+
   draw(health: number, maxHealth: number, ammo = 0, maxAmmo = 0): void {
+    // ridisegna solo se qualcosa è cambiato (le barre sono tante: così il telefono fa meno fatica)
+    const flashing = this.scene.time.now < this.flashUntil;
+    const key = `${Math.ceil(health)}|${Math.round(maxHealth)}|${ammo.toFixed(2)}|${flashing}`;
+    if (key === this.lastKey) return;
+    this.lastKey = key;
     const g = this.g;
     g.clear();
     const x0 = -W / 2;
@@ -117,7 +124,6 @@ export class HealthBar extends Phaser.GameObjects.Container {
     if (this.showAmmo && maxAmmo > 0) {
       const y = H / 2 + 6;
       const segW = (W - AMMO_GAP * (maxAmmo - 1)) / maxAmmo;
-      const flashing = this.scene.time.now < this.flashUntil;
       g.fillStyle(PALETTE.bluNotte, 1).fillRoundedRect(x0 - 3, y - 3, W + 6, AMMO_H + 6, 4);
       for (let i = 0; i < maxAmmo; i++) {
         const sx = x0 + i * (segW + AMMO_GAP);

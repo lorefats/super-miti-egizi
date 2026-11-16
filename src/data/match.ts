@@ -30,3 +30,22 @@ export const STORM = {
   /** danno ogni secondo a chi è fuori dal cerchio */
   damagePerSecond: 500,
 };
+
+/** Acqua (Nilo, laghetto dell'oasi): chi ci cammina va più piano. */
+export const WATER = {
+  /** velocità nell'acqua (frazione della velocità normale) */
+  speedFactor: 0.6,
+};
+
+/** Cespugli (papiro, tende del bazar): chi è dentro non si vede da lontano. */
+export const BUSH = {
+  /** raggio di un ciuffo (pixel) */
+  radius: 66,
+  /** secondi in cui chi attacca da un cespuglio resta visibile */
+  revealAfterAttack: 1.2,
+};
+
+/** Cammelli dell'oasi: camminano piano avanti e indietro. */
+export const CAMEL = {
+  speed: 55,
+};
