@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#E9C46A" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Super Miti Egizi</title>
+    <style>
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+        background: #E9C46A; touch-action: none; -webkit-user-select: none; user-select: none;
+        -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+      #gioco { position: fixed; inset: 0; }
+      #ruota { display: none; position: fixed; inset: 0; z-index: 10; background: #1F3A93; color: #F2B632;
+        font-family: 'Lilita One', sans-serif; font-size: 28px; text-align: center;
+        align-items: center; justify-content: center; flex-direction: column; gap: 16px; padding: 24px; box-sizing: border-box; }
+      #ruota .icona { font-size: 64px; }
+      @media (orientation: portrait) and (pointer: coarse) { #ruota { display: flex; } }
+    </style>
+  </head>
+  <body>
+    <div id="gioco"></div>
+    <div id="ruota"><div class="icona">⟳</div><div>Gira il telefono<br />in orizzontale!</div></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

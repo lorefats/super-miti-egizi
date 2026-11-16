@@ -1,0 +1,87 @@
+# Tabella di marcia
+
+Ogni passo ha un **prompt da incollare in Claude Code**. Fate un passo alla volta, provatelo sul telefono,
+e passate al successivo solo quando funziona. Claude Code spunta le caselle da solo.
+Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non ancora fatto.
+
+---
+
+## Fase 1 — Il cuore del gioco
+
+- [x] **Passo 0 — Progetto vuoto che si apre sul telefono**
+  > Leggi CLAUDE.md. Crea il progetto con Phaser 3, TypeScript e Vite seguendo la struttura delle cartelle.
+  > Per ora mostra solo uno sfondo color sabbia con la scritta "Super Miti Egizi" al centro, in orizzontale
+  > e a schermo intero sul telefono. Inizializza git. Dimmi come aprirlo dal telefono.
+
+- [ ] **Passo 1 — Anubi si muove**
+  > Disegna Anubi in stile cartoon 2.5D (vedi docs/ART_STYLE.md e la sua scheda in GAME_DESIGN.md) con il codice.
+  > Aggiungi un joystick virtuale a sinistra per muoverlo su una piccola mappa di sabbia con qualche blocco
+  > di pietra (collisioni) e una piramide. La telecamera segue Anubi. Ordinamento per Y e ombre.
+
+- [ ] **Passo 2 — Anubi attacca**
+  > Aggiungi l'arma di Anubi (Scettro Uas): stick di mira a destra (trascina per mirare, rilascia per colpire,
+  > tocco veloce = colpo automatico verso il nemico più vicino). 3 colpi con ricarica, mostrati sotto la barra vita.
+  > Aggiungi 3 bersagli fermi con vita, numeri di danno e animazione di sconfitta (diventano sabbia).
+
+- [ ] **Passo 3 — I bot**
+  > Crea i bot seguendo la sezione 11 di GAME_DESIGN.md. Per ora i bot sono altri Anubi di colore diverso.
+  > Partita Solo: tu + 5 bot su una mappa media. Quando resti solo tu appare "VITTORIA!", se vieni
+  > sconfitto "Sconfitto — 4° posto" con il posto giusto.
+
+- [ ] **Passo 4 — La super di Anubi**
+  > Aggiungi la barra della super (si carica colpendo) e il pulsante super. Implementa "Bende del Sarcofago"
+  > esattamente come in GAME_DESIGN.md, con la vita extra e la resurrezione dal sarcofago, e una bella animazione.
+
+- [ ] **Passo 5 — Bauli, gioielli e tempesta**
+  > Aggiungi i bauli del tesoro rompibili con dentro i Gioielli (Cubi Energia) come descritto nella sezione 4,
+  > il contatore gioielli sopra ogni personaggio, e la tempesta di sabbia che si restringe con un timer.
+
+## Fase 2 — La mappa vera
+
+- [ ] **Passo 6 — Valle dei Due Egitti**
+  > Costruisci la mappa grande con tutte le zone della sezione 3: Piana di Giza, Karnak, Valle dei Re, Nilo,
+  > Bazar, Cairo moderno, Oasi. Canne di papiro e tende come cespugli dove nascondersi. Oggetti alti
+  > semitrasparenti quando ci passi dietro. Partita Solo con 9 bot. Mostra una minimappa.
+
+## Fase 3 — Lobby e progressi
+
+- [ ] **Passo 7 — Salvataggio e coppe**
+  > Crea il SaveManager. Dopo ogni partita assegna le coppe secondo la tabella della sezione 4 e salvale per
+  > personaggio. Schermata Risultati con posizione, coppe guadagnate (animate) e pulsante per tornare.
+
+- [ ] **Passo 8 — Logo e Lobby**
+  > Disegna il logo (sezione 1) e una schermata iniziale animata. Poi la Lobby come descritta nella sezione 8,
+  > con sfondo che cambia con l'ora e il personaggio scelto sul piedistallo.
+
+- [ ] **Passo 9 — Sarcofagi**
+  > Quando vinci, al ritorno in lobby ricevi un sarcofago (sezione 5). Schermata di apertura con animazione
+  > (trema, coperchio scivola, luce, premi che volano fuori). Gestisci scarabei d'oro e polvere di stelle.
+
+- [ ] **Passo 10 — Cammino delle Coppe e Prestigi**
+  > Schermata Cammino delle Coppe (sezione 6) con i premi e Rà a 6000 coppe. Prestigio 1 a 1000 coppe per
+  > personaggio (sezione 7). Schermata Personaggi con tutti e 24 (quelli bloccati in ombra) e potenziamento livelli.
+
+## Fase 4 — Tutti gli dèi (3-4 alla volta)
+
+Per ogni gruppo usate: `/nuovo-personaggio Nome`
+
+- [ ] Horus, Sobek, Bastet, Tefnut, Shu (Bronzo)
+- [ ] Osiride, Hathor, Geb, Khepri, Khnum (Turchese)
+- [ ] Iside, Seth, Sekhmet, Khonsu, Nut, Ptah (Lapislazzuli)
+- [ ] Ammit, Amon, Maat, Kek, Thoth, Nefti (Oro)
+- [ ] Rà (Sole)
+- [ ] Modalità Duo con compagno bot (necessaria per provare le super sui compagni)
+- [ ] I bot usano personaggi diversi a caso
+
+## Fase 5 — Rifinitura e pubblicazione
+
+- [ ] Suoni ed effetti (generati o file gratuiti), musica in lobby, vibrazione del telefono
+- [ ] Modalità Allenamento
+- [ ] Bilanciamento: far giocare il cugino e annotare chi è troppo forte o troppo debole
+- [ ] PWA: icona, schermata di avvio, funziona offline, "Aggiungi a Home"
+- [ ] Pubblicazione gratuita (GitHub Pages o Netlify)
+
+## Fase 6 — Un giorno, forse
+- [ ] Multiplayer con gli amici
+- [ ] Nuove mappe e modalità
+- [ ] Prestigi oltre il primo

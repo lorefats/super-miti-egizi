@@ -1,0 +1,19 @@
+{
+  "name": "super-miti-egizi",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource/lilita-one": "^5.3.0",
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9",
+    "vite": "^8.3.8"
+  }
+}
