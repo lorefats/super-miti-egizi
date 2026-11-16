@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { HIDEOUT_REVEAL_DISTANCE } from '../data/combat';
 
 /** Qualunque cosa possa essere colpita: personaggi, bersagli, (in futuro) bauli e muri. */
 export interface Damageable {
@@ -10,6 +11,8 @@ export interface Damageable {
   readonly team: number;
   /** È il giocatore vero? (serve per effetti come il tremolio dello schermo) */
   readonly isHuman?: boolean;
+  /** Nascondiglio in cui si trova (es. una piramide grande), oppure null. */
+  readonly hideout?: object | null;
   isAlive(): boolean;
   takeDamage(amount: number): void;
 }
@@ -27,13 +30,17 @@ export class Combat {
     if (i >= 0) this.list.splice(i, 1);
   }
 
-  /** Nemico vivo più vicino entro maxDist, oppure null. */
-  nearestEnemy(x: number, y: number, team: number, maxDist: number): Damageable | null {
+  /**
+   * Nemico vivo più vicino entro maxDist, oppure null.
+   * Chi è in un nascondiglio diverso dal nostro si vede solo da molto vicino.
+   */
+  nearestEnemy(x: number, y: number, team: number, maxDist: number, viewerHideout: object | null = null): Damageable | null {
     let best: Damageable | null = null;
     let bestDist = maxDist;
     for (const d of this.list) {
       if (d.team === team || !d.isAlive()) continue;
       const dist = Phaser.Math.Distance.Between(x, y, d.x, d.y) - d.hitRadius;
+      if (d.hideout && d.hideout !== viewerHideout && dist > HIDEOUT_REVEAL_DISTANCE) continue;
       if (dist < bestDist) {
         bestDist = dist;
         best = d;

@@ -35,6 +35,10 @@ Oggetti nella mappa:
 - **Canne di papiro / tende del bazar:** cespugli dove ci si nasconde.
 - **Bauli del tesoro:** casse rompibili. Dentro ci sono **Gioielli = Cubi Energia** (vedi sotto).
 - **Muri** di pietra, mattoni o cemento; alcuni si distruggono con le super.
+- **Piramidi grandi in cui si entra** (idea del cugino): alcune piramidi sono cave e hanno una porta davanti.
+  Da fuori sembrano normali e **non si vede chi c'è dentro** (né le barre della vita). Quando entri, la piramide
+  diventa trasparente e si vede la sala: pavimento decorato, torce, un sarcofago. È un nascondiglio:
+  i nemici fuori ti vedono solo se sono molto vicini. Chi passa **dietro** una piramide grande la vede semitrasparente.
 
 ## 4. Valute e ricompense
 | Nome | Dove si trova | A cosa serve |

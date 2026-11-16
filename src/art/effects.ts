@@ -85,3 +85,24 @@ export function turnToSand(
   scene.tweens.add({ targets: pile, scale: 1, duration: 350, delay: 200, ease: 'Back.out' });
   scene.tweens.add({ targets: pile, alpha: 0, delay: 4000, duration: 1000, onComplete: () => pile.destroy() });
 }
+
+/** Un solo emettitore di polvere per scena (crearne uno per ogni passo sarebbe lento sul telefono). */
+const footDust = new WeakMap<Phaser.Scene, Phaser.GameObjects.Particles.ParticleEmitter>();
+
+/** Piccola nuvoletta di sabbia sotto un piede che tocca terra. */
+export function footstepDust(scene: Phaser.Scene, x: number, y: number): void {
+  let e = footDust.get(scene);
+  if (!e || !e.scene) {
+    e = scene.add.particles(0, 0, TEX.granello, {
+      speed: { min: 15, max: 45 },
+      angle: { min: 180, max: 360 },
+      lifespan: { min: 250, max: 400 },
+      scale: { start: 0.7, end: 0.15 },
+      alpha: { start: 0.6, end: 0 },
+      emitting: false,
+    });
+    e.setDepth(-900); // sulla sabbia, sotto i personaggi
+    footDust.set(scene, e);
+  }
+  e.emitParticleAt(x, y, 2);
+}

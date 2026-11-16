@@ -56,12 +56,7 @@ export function anubiSvg(variant: ColorVariant = 'base'): { width: number; heigh
   <!-- braccio dietro -->
   <path d="M40 72 Q32 86 34 102 L42 103 Q42 88 48 76 Z" fill="url(#pelo)" ${s}/>
 
-  <!-- gambe e sandali -->
-  <path d="M47 124 L46 150 L54 150 L56 124 Z" fill="url(#pelo)" ${s}/>
-  <path d="M61 124 L63 150 L71 150 L69 124 Z" fill="url(#pelo)" ${s}/>
-  <path d="M43 150 L57 150 L58 156 L42 156 Z" fill="#8A5A2B" ${s}/>
-  <path d="M61 150 L75 150 L77 156 L60 156 Z" fill="#8A5A2B" ${s}/>
-  <path d="M50 146 L52 150 M66 146 L67 150" stroke="${gold}" stroke-width="2"/>
+  <!-- le gambe sono disegni separati (anubiLegSvg) per animare la camminata -->
 
   <!-- gonnellino di lino con pannello d'oro -->
   <path d="M42 102 L76 102 L84 128 L35 128 Z" fill="url(#lino)" ${s}/>
@@ -154,4 +149,28 @@ export function anubiScepterSvg(variant: ColorVariant = 'base'): {
   <path d="M9 140 L6 149 M17 140 L20 149" stroke="${gold}" stroke-width="2" stroke-linecap="round"/>
   <ellipse cx="13" cy="85" rx="6" ry="7" fill="url(#pelo)" ${s}/>`;
   return { width: 30, height: 152, body, gripX: 13, gripY: 85 };
+}
+
+/** Anche (punto in cui ruota la gamba), misurate dai piedi del personaggio girato a destra. */
+export const ANUBI_HIPS = { back: { x: -5, y: -35 }, front: { x: 9, y: -35 } };
+
+/** Una gamba con il sandalo. Il punto dell'anca (HIP) è in alto: lì la gamba ruota quando cammina. */
+export function anubiLegSvg(variant: ColorVariant = 'base'): {
+  width: number;
+  height: number;
+  body: string;
+  hipX: number;
+  hipY: number;
+} {
+  const fur = FURS[variant];
+  const line = '#10162B';
+  const s = `stroke="${line}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"`;
+  const body = `
+  <defs><linearGradient id="pelo" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="${fur.light}"/><stop offset="0.55" stop-color="${fur.mid}"/><stop offset="1" stop-color="${fur.dark}"/>
+  </linearGradient></defs>
+  <path d="M6 2 L6 28 L14 28 L16 2 Z" fill="url(#pelo)" ${s}/>
+  <path d="M3 28 L17 28 L20 34 L2 34 Z" fill="#8A5A2B" ${s}/>
+  <path d="M10 24 L12 28" stroke="${css(PALETTE.oro)}" stroke-width="2"/>`;
+  return { width: 22, height: 36, body, hipX: 11, hipY: 3 };
 }

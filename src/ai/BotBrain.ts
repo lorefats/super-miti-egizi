@@ -5,10 +5,15 @@ import type { Player } from '../entities/Player';
 
 type Mode = 'esplora' | 'combatti' | 'scappa';
 
-/** Per sapere dove può andare un bot: dimensioni della mappa. */
+/** Cosa sa un bot della mappa. */
 export interface BotWorld {
   width: number;
   height: number;
+  /**
+   * Se per andare da (fx, fy) a (tx, ty) bisogna passare da una porta (es. piramide grande),
+   * restituisce il punto verso cui andare prima; altrimenti null.
+   */
+  routeVia?(fx: number, fy: number, tx: number, ty: number): { x: number; y: number } | null;
 }
 
 /**
@@ -72,7 +77,7 @@ export class BotBrain {
         this.strafeTimer = Phaser.Math.FloatBetween(0.6, 1.4);
         this.strafeSign = Math.random() < 0.5 ? -1 : 1;
       }
-      if (dist > range * 0.7) this.wanted.copy(toTarget);
+      if (dist > range * 0.7) this.headTo(t.x, t.y);
       else this.wanted.set(-toTarget.y * this.strafeSign, toTarget.x * this.strafeSign).add(toTarget.clone().scale(0.2)).normalize();
 
       // attacca quando è a tiro, dopo un piccolo "tempo di reazione"
@@ -85,16 +90,23 @@ export class BotBrain {
     } else {
       // esplora: cammina verso un punto a caso della mappa
       if (Phaser.Math.Distance.Between(bot.x, bot.y, this.wander.x, this.wander.y) < 60) this.pickWanderPoint();
-      this.wanted.set(this.wander.x - bot.x, this.wander.y - bot.y).normalize();
+      this.headTo(this.wander.x, this.wander.y);
     }
 
     return this.avoidGettingStuck(dt);
   }
 
+  /** Cammina verso (x, y), passando dalla porta se serve. */
+  private headTo(x: number, y: number): void {
+    const via = this.world.routeVia?.(this.bot.x, this.bot.y, x, y);
+    const p = via ?? { x, y };
+    this.wanted.set(p.x - this.bot.x, p.y - this.bot.y).normalize();
+  }
+
   private think(): void {
     const bot = this.bot;
     const lifeFrac = bot.health / bot.stats.maxHealth;
-    const enemy = this.combat.nearestEnemy(bot.x, bot.y, bot.team, this.level.sightRange);
+    const enemy = this.combat.nearestEnemy(bot.x, bot.y, bot.team, this.level.sightRange, bot.hideout);
 
     if (this.mode === 'scappa' && lifeFrac < BOT_RECOVER_HEALTH && enemy) {
       this.target = enemy; // continua a scappare finché non si è ripreso

@@ -7,3 +7,6 @@ export const REGEN = {
   /** Frazione della vita massima recuperata ogni secondo. */
   fractionPerSecond: 0.12,
 };
+
+/** Nascondigli (piramidi grandi): chi è dentro si vede da fuori solo entro questa distanza (pixel). */
+export const HIDEOUT_REVEAL_DISTANCE = 180;

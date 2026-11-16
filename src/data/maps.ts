@@ -10,6 +10,8 @@ export interface MapData {
   botSpawns?: { x: number; y: number }[];
   /** x = centro, y = punto in cui l'oggetto tocca terra (base). */
   obstacles: { kind: ObstacleKind; x: number; y: number }[];
+  /** Piramidi grandi in cui si entra (x = centro, y = base davanti, dove c'è la porta). */
+  bigPyramids?: { x: number; y: number }[];
   /** Bersagli fermi d'allenamento (x, y = base). */
   targets: { x: number; y: number }[];
 }
@@ -53,8 +55,7 @@ export const MAPPA_MEDIA: MapData = {
     { x: 400, y: 1500 },
   ],
   obstacles: [
-    // piramidi
-    { kind: 'piramide', x: 1600, y: 1300 },
+    // piramide piccola (quella grande in cui si entra è in bigPyramids)
     { kind: 'piramide', x: 2650, y: 720 },
     // nord-ovest
     { kind: 'blocco', x: 800, y: 400 },
@@ -86,5 +87,6 @@ export const MAPPA_MEDIA: MapData = {
     { kind: 'blocco', x: 400, y: 2150 },
     { kind: 'bloccoLungo', x: 2950, y: 1800 },
   ],
+  bigPyramids: [{ x: 1600, y: 1350 }],
   targets: [],
 };

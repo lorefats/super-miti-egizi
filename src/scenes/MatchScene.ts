@@ -4,10 +4,12 @@ import { COLOR_VARIANTS } from '../art/palette';
 import { AIM_STICK, AUTO_AIM_RANGE_FACTOR, CAMERA_LERP, DEPTH, JOYSTICK } from '../config';
 import { MAPPA_MEDIA, type MapData } from '../data/maps';
 import { BOT_LEVELS, BOT_NAMES, SOLO_SETUP } from '../data/bots';
+import { HIDEOUT_REVEAL_DISTANCE } from '../data/combat';
 import { Combat } from '../entities/Combat';
 import { createObstacle } from '../entities/Obstacle';
 import { Player, DEFEATED_EVENT } from '../entities/Player';
 import { Bot } from '../entities/Bot';
+import { BigPyramid } from '../entities/BigPyramid';
 import { Target } from '../entities/Target';
 import { VirtualStick } from '../ui/VirtualStick';
 import { AimIndicator } from '../ui/AimIndicator';
@@ -21,6 +23,7 @@ type KeyName = 'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space
 export class MatchScene extends Phaser.Scene {
   private player!: Player;
   private fighters: Player[] = [];
+  private pyramids: BigPyramid[] = [];
   private moveStick!: VirtualStick;
   private aimStick!: VirtualStick;
   private aimIndicator!: AimIndicator;
@@ -45,6 +48,7 @@ export class MatchScene extends Phaser.Scene {
 
     const walls = this.physics.add.staticGroup();
     for (const o of map.obstacles) createObstacle(this, walls, o.kind, o.x, o.y);
+    this.pyramids = (map.bigPyramids ?? []).map((p) => new BigPyramid(this, walls, p.x, p.y));
     const targets = map.targets.map((t) => new Target(this, t.x, t.y, this.combat));
 
     // il giocatore (squadra 0) e i bot (ognuno nella sua squadra: tutti contro tutti)
@@ -73,7 +77,17 @@ export class MatchScene extends Phaser.Scene {
           name: names[i % names.length],
         },
         level,
-        map,
+        {
+          width: map.width,
+          height: map.height,
+          routeVia: (fx, fy, tx, ty) => {
+            for (const p of this.pyramids) {
+              const via = p.routeVia(fx, fy, tx, ty);
+              if (via) return via;
+            }
+            return null;
+          },
+        },
       );
       this.fighters.push(bot);
     }
@@ -154,7 +168,22 @@ export class MatchScene extends Phaser.Scene {
     this.time.delayedCall(1100, () => showEndOverlay(this, title, victory, () => this.scene.restart()));
   }
 
-  update(): void {
+  /** Chi è dentro una piramide? Il tetto diventa trasparente per il giocatore e chi è nascosto sparisce. */
+  private updateHideouts(dt: number): void {
+    for (const f of this.fighters) {
+      f.hideout = this.pyramids.find((p) => p.contains(f.x, f.y)) ?? null;
+    }
+    const me = this.player;
+    for (const p of this.pyramids) p.updateView(me.x, me.y, dt);
+    for (const f of this.fighters) {
+      if (f === me) continue;
+      const near = Phaser.Math.Distance.Between(f.x, f.y, me.x, me.y) < HIDEOUT_REVEAL_DISTANCE;
+      f.setRevealed(!f.hideout || f.hideout === me.hideout || near);
+    }
+  }
+
+  update(_time: number, delta: number): void {
+    this.updateHideouts(delta / 1000);
     if (this.over) return;
     if (this.moveStick.active) {
       this.dir.copy(this.moveStick.direction);

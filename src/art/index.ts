@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { loadSvgTextures, type SvgArt } from './svg';
 import { COLOR_VARIANTS, type ColorVariant } from './palette';
-import { anubiSvg, anubiScepterSvg, ANUBI_HAND } from './characters/anubi';
+import { anubiSvg, anubiScepterSvg, anubiLegSvg, ANUBI_HAND, ANUBI_HIPS } from './characters/anubi';
 import {
   shadowSvg,
   sandTileSvg,
@@ -17,6 +17,13 @@ import {
   sparkSvg,
   impactSvg,
 } from './props';
+import {
+  bigPyramidRoofSvg,
+  bigPyramidFloorSvg,
+  bigPyramidFrontWallSvg,
+  sarcophagusSvg,
+  torchGlowSvg,
+} from './bigPyramid';
 
 /**
  * UNICO punto da cui passano tutte le immagini del gioco.
@@ -37,6 +44,11 @@ export const TEX = {
   mucchietto: 'mucchietto-sabbia',
   scintilla: 'scintilla',
   impatto: 'stella-impatto',
+  piramideGrandeTetto: 'piramide-grande-tetto',
+  piramideGrandeSala: 'piramide-grande-sala',
+  piramideGrandeMuro: 'piramide-grande-muro',
+  sarcofago: 'sarcofago-decorativo',
+  bagliore: 'bagliore-torcia',
 } as const;
 
 const suffix = (v: ColorVariant) => (v === 'base' ? '' : `-${v}`);
@@ -44,6 +56,11 @@ const suffix = (v: ColorVariant) => (v === 'base' ? '' : `-${v}`);
 /** Chiave della texture di un personaggio (es. "personaggio-anubi" o "personaggio-anubi-rosso"). */
 export function characterTexture(characterId: string, variant: ColorVariant = 'base'): string {
   return `personaggio-${characterId}${suffix(variant)}`;
+}
+
+/** Chiave della texture della gamba di un personaggio (se le gambe sono disegnate a parte). */
+export function legTexture(characterId: string, variant: ColorVariant = 'base'): string {
+  return `gamba-${characterId}${suffix(variant)}`;
 }
 
 /** Chiave della texture dell'arma che il personaggio tiene in mano (se ne ha una separata). */
@@ -60,10 +77,34 @@ export interface HeldWeaponArt {
   hand: { x: number; y: number };
 }
 
-/** Disegni dei personaggi: id del personaggio → corpo e (facoltativa) arma in mano. */
-const CHARACTER_ART: Record<string, { body: (variant?: ColorVariant) => Drawing; weapon?: HeldWeaponArt }> = {
-  anubi: { body: anubiSvg, weapon: { draw: anubiScepterSvg, hand: ANUBI_HAND } },
+/** Gambe disegnate a parte, per animare i passi. */
+export interface LegsArt {
+  draw: (variant?: ColorVariant) => Drawing & { hipX: number; hipY: number };
+  /** Anche rispetto ai piedi del personaggio (girato a destra). */
+  hips: { back: { x: number; y: number }; front: { x: number; y: number } };
+}
+
+/** Disegni dei personaggi: id del personaggio → corpo, (facoltativa) arma in mano e (facoltative) gambe. */
+const CHARACTER_ART: Record<
+  string,
+  { body: (variant?: ColorVariant) => Drawing; weapon?: HeldWeaponArt; legs?: LegsArt }
+> = {
+  anubi: {
+    body: anubiSvg,
+    weapon: { draw: anubiScepterSvg, hand: ANUBI_HAND },
+    legs: { draw: anubiLegSvg, hips: ANUBI_HIPS },
+  },
 };
+
+/** Dati delle gambe per l'animazione: posizione delle anche e punto di rotazione (0..1). */
+export function getLegs(
+  characterId: string,
+): { hips: LegsArt['hips']; originX: number; originY: number } | null {
+  const l = CHARACTER_ART[characterId]?.legs;
+  if (!l) return null;
+  const d = l.draw();
+  return { hips: l.hips, originX: d.hipX / d.width, originY: d.hipY / d.height };
+}
 
 /** Dati dell'arma in mano per l'animazione: dove sta la mano e il punto di presa (0..1). */
 export function getHeldWeapon(characterId: string): { hand: { x: number; y: number }; originX: number; originY: number } | null {
@@ -92,11 +133,17 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
       COLOR_VARIANTS.flatMap((v) => {
         const list: SvgArt[] = [{ key: characterTexture(id, v), ...art.body(v) }];
         if (art.weapon) list.push({ key: weaponTexture(id, v), ...art.weapon.draw(v) });
+        if (art.legs) list.push({ key: legTexture(id, v), ...art.legs.draw(v) });
         return list;
       }),
     ),
     { key: TEX.scintilla, ...sparkSvg() },
     { key: TEX.impatto, ...impactSvg() },
+    { key: TEX.piramideGrandeTetto, ...bigPyramidRoofSvg() },
+    { key: TEX.piramideGrandeSala, ...bigPyramidFloorSvg() },
+    { key: TEX.piramideGrandeMuro, ...bigPyramidFrontWallSvg() },
+    { key: TEX.sarcofago, ...sarcophagusSvg() },
+    { key: TEX.bagliore, ...torchGlowSvg() },
   ];
   await loadSvgTextures(scene, arts);
 }
