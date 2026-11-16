@@ -33,6 +33,14 @@ const STEP_RATE = 2.1;
 const WALK_LEAN = 0.07;
 /** Durata del "giro" quando cambia lato (secondi). */
 const TURN_TIME = 0.14;
+/** Quanto si accorcia la gamba che viene sollevata (ginocchio piegato). */
+const KNEE_LIFT = 0.22;
+/** Ondeggiamento dei fianchi di lato (pixel). */
+const HIP_SWAY = 1.5;
+/** Rapidità con cui si raggiunge la velocità piena (più alto = più scattante). */
+const ACCEL = 18;
+/** Durata del piccolo "rimbalzo" quando si ferma (secondi). */
+const SETTLE_TIME = 0.22;
 
 export interface FighterOptions {
   characterId: string;
@@ -93,6 +101,11 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   /** Fase della camminata (radianti) e quanto si sta camminando (0 = fermo, 1 = cammina). */
   private walkPhase = 0;
   private walkBlend = 0;
+  /** Velocità desiderata (la velocità vera la raggiunge in fretta ma senza scatti). */
+  private readonly targetVel = new Phaser.Math.Vector2();
+  /** Quanto si sta camminando in verticale (0 = di lato, 1 = su/giù). */
+  private vertical = 0;
+  private settleTimer = SETTLE_TIME;
   private turnTimer = TURN_TIME;
   private lastFacing = 1;
   private animTime = 0;
@@ -188,12 +201,16 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     if (!this.isAlive()) return;
     if (!this.canAct()) {
       this.body.setVelocity(0, 0);
+      this.targetVel.set(0, 0);
       this.moving = false;
       return;
     }
     const speed = SPEED_VALUES[this.stats.speed];
-    this.body.setVelocity(dir.x * speed, dir.y * speed);
+    this.targetVel.set(dir.x * speed, dir.y * speed);
+    const wasMoving = this.moving;
     this.moving = dir.lengthSq() > 0;
+    if (this.moving) this.vertical = Phaser.Math.Linear(this.vertical, Math.abs(dir.y), 0.2);
+    else if (wasMoving) this.settleTimer = 0; // si è appena fermato
     if (this.attackTime < 0) {
       if (dir.x < -0.1) this.facing = -1;
       else if (dir.x > 0.1) this.facing = 1;
@@ -384,6 +401,14 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
       return;
     }
 
+    // velocità: si avvicina a quella desiderata in un attimo (partenza e frenata morbide)
+    const k = Math.min(1, dt * ACCEL);
+    let vx = Phaser.Math.Linear(this.body.velocity.x, this.targetVel.x, k);
+    let vy = Phaser.Math.Linear(this.body.velocity.y, this.targetVel.y, k);
+    if (Math.abs(vx - this.targetVel.x) < 8) vx = this.targetVel.x; // niente scivolate lente alla fine
+    if (Math.abs(vy - this.targetVel.y) < 8) vy = this.targetVel.y;
+    this.body.setVelocity(vx, vy);
+
     // rigenerazione lenta se lontano dai combattimenti
     this.sinceCombat += dt;
     if (this.sinceCombat > REGEN.delaySeconds && this.health < this.stats.maxHealth) {
@@ -405,6 +430,10 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     let weaponRot = WEAPON_REST;
     let legBack = 0;
     let legFront = 0;
+    let legBackScale = 1;
+    let legFrontScale = 1;
+    let legBackLift = 0;
+    let legFrontLift = 0;
 
     if (this.attackTime >= 0) {
       this.attackTime += dt;
@@ -462,19 +491,36 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
         }
       }
       const step = Math.sin(this.walkPhase);
+      const swingDir = Math.cos(this.walkPhase); // > 0: la gamba davanti va avanti (è sollevata)
+      // di lato il passo è lungo; su/giù è più corto e le gambe si alternano in altezza
+      const stride = STRIDE * (1 - 0.45 * this.vertical) * b;
       // il corpo è più in alto quando le gambe si incrociano, più in basso a gambe aperte
       const lift = (1 - Math.abs(step)) * STEP_BOB * b;
-      legFront = step * STRIDE * b;
-      legBack = -step * STRIDE * b;
-      weaponRot = WEAPON_REST - step * 0.14 * b; // il braccio oscilla al contrario della gamba davanti
+      legFront = step * stride;
+      legBack = -step * stride;
+      // ginocchio: la gamba che avanza si solleva (si accorcia), quella appoggiata resta lunga
+      legFrontScale = 1 - Math.max(0, swingDir) * KNEE_LIFT * b;
+      legBackScale = 1 - Math.max(0, -swingDir) * KNEE_LIFT * b;
+      legFrontLift = Math.max(0, swingDir) * 3 * this.vertical * b;
+      legBackLift = Math.max(0, -swingDir) * 3 * this.vertical * b;
+      weaponRot = WEAPON_REST - step * 0.16 * b; // il braccio oscilla al contrario della gamba davanti
+
+      // rimbalzo quando si ferma: si abbassa un attimo e torna su
+      this.settleTimer = Math.min(SETTLE_TIME, this.settleTimer + dt);
+      const settle = Math.sin((this.settleTimer / SETTLE_TIME) * Math.PI) * (1 - this.settleTimer / SETTLE_TIME);
 
       // respiro quando è fermo
       const breath = Math.sin(this.animTime * 3) * (1 - b);
-      this.sprite.x = 0;
-      this.sprite.y = 2 - lift;
-      this.sprite.rotation = f * WALK_LEAN * b + Math.sin(this.walkPhase * 2) * 0.012 * b;
-      this.sprite.setScale((1 - breath * 0.01) * turnSquash, 1 + breath * 0.018 + Math.abs(step) * 0.015 * b);
-      this.shadow.setScale(1 - lift * 0.02);
+      // peso: schiacciato quando il piede tocca terra, allungato a metà passo
+      const weight = (Math.abs(step) - 0.5) * 2 * b; // -1 a metà passo, +1 a piede appoggiato
+      this.sprite.x = Math.sin(this.walkPhase) * HIP_SWAY * b * (1 - this.vertical * 0.5);
+      this.sprite.y = 2 - lift + settle * 3;
+      this.sprite.rotation = f * WALK_LEAN * b * (1 - this.vertical * 0.6) + Math.sin(this.walkPhase * 2) * 0.012 * b;
+      this.sprite.setScale(
+        (1 - breath * 0.01 + weight * 0.012 + settle * 0.04) * turnSquash,
+        1 + breath * 0.018 - weight * 0.018 - settle * 0.05,
+      );
+      this.shadow.setScale(1 - lift * 0.02 + settle * 0.05, 1);
     }
 
     // arma e gambe seguono il corpo (che può piegarsi, salire e scendere); lo specchio vale anche per loro
@@ -482,8 +528,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
       this.attach(this.weapon, this.hand.x, this.hand.y - 2, this.weaponOriginX, weaponRot);
     }
     if (this.legs) {
-      this.attach(this.legs.back, this.hips.back.x, this.hips.back.y, this.legOriginX, legBack, true);
-      this.attach(this.legs.front, this.hips.front.x, this.hips.front.y, this.legOriginX, legFront, true);
+      this.attach(this.legs.back, this.hips.back.x, this.hips.back.y - legBackLift, this.legOriginX, legBack, true, legBackScale);
+      this.attach(this.legs.front, this.hips.front.x, this.hips.front.y - legFrontLift, this.legOriginX, legFront, true, legFrontScale);
     }
 
     this.bar.setPosition(this.x, this.y - BAR_OFFSET_Y);
@@ -501,6 +547,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     originX: number,
     localRot: number,
     upright = false,
+    scaleY = 1,
   ): void {
     const f = this.facing;
     const rot = this.sprite.rotation;
@@ -512,7 +559,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     );
     img.setFlipX(f < 0);
     img.setOrigin(f < 0 ? 1 - originX : originX, img.originY);
-    img.setScale(Math.abs(this.sprite.scaleX), 1);
+    img.setScale(Math.abs(this.sprite.scaleX), scaleY);
     img.rotation = (upright ? rot * 0.3 : rot) + f * localRot;
   }
 
