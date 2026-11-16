@@ -24,6 +24,26 @@ export class AimIndicator {
     g.strokePath();
   }
 
+  /** Linea dritta (per le super che volano dritte): lunghezza e larghezza in pixel, dorata. */
+  showLine(x: number, y: number, angle: number, length: number, width: number): void {
+    const g = this.g;
+    g.clear().setVisible(true);
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const nx = -sin * (width / 2);
+    const ny = cos * (width / 2);
+    const ex = x + cos * length;
+    const ey = y + sin * length;
+    const pts = [
+      new Phaser.Math.Vector2(x + nx, y + ny),
+      new Phaser.Math.Vector2(ex + nx, ey + ny),
+      new Phaser.Math.Vector2(ex - nx, ey - ny),
+      new Phaser.Math.Vector2(x - nx, y - ny),
+    ];
+    g.fillStyle(PALETTE.oro, 0.3).fillPoints(pts, true);
+    g.lineStyle(3, PALETTE.oro, 0.9).strokePoints(pts, true);
+  }
+
   hide(): void {
     this.g.setVisible(false);
   }

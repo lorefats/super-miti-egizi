@@ -12,6 +12,8 @@ export interface StickOptions {
   /** Sotto questa frazione del raggio la direzione è zero. */
   deadZone: number;
   idleAlpha: number;
+  /** Zona dello schermo da ignorare (es. il pulsante della super). */
+  ignore?: (x: number, y: number) => boolean;
 }
 
 export interface StickRelease {
@@ -113,6 +115,7 @@ export class VirtualStick {
 
   private onDown(pointer: Phaser.Input.Pointer): void {
     if (!this.enabled || this.active || !this.inZone(pointer.x)) return;
+    if (this.opt.ignore?.(pointer.x, pointer.y)) return;
     this.pointerId = pointer.id;
     const r = this.opt.radius;
     const x = Phaser.Math.Clamp(pointer.x, r, this.scene.scale.width - r);

@@ -38,3 +38,14 @@ export const DEPTH = {
   overhead: 50000, // barre vita, numeri di danno
   ui: 100000, // joystick e pulsanti
 };
+
+/** Pulsante della super (a sinistra dello stick di mira). */
+export const SUPER_BUTTON = {
+  radius: 58,
+  /** distanza dal bordo destro e dal basso del centro del pulsante */
+  right: 300,
+  bottom: 96,
+  /** quanto si può trascinare per mirare la super */
+  dragRadius: 80,
+  deadZone: 0.25,
+};

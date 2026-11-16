@@ -16,6 +16,11 @@ import {
   sandPileSvg,
   sparkSvg,
   impactSvg,
+  standingSarcophagusSvg,
+  bandageStripSvg,
+  bandageRollSvg,
+  ankhSvg,
+  superButtonSvg,
 } from './props';
 import {
   bigPyramidRoofSvg,
@@ -49,6 +54,11 @@ export const TEX = {
   piramideGrandeMuro: 'piramide-grande-muro',
   sarcofago: 'sarcofago-decorativo',
   bagliore: 'bagliore-torcia',
+  sarcofagoInPiedi: 'sarcofago-in-piedi',
+  benda: 'benda',
+  rotoloBende: 'rotolo-bende',
+  ankh: 'ankh',
+  pulsanteSuper: 'pulsante-super',
 } as const;
 
 const suffix = (v: ColorVariant) => (v === 'base' ? '' : `-${v}`);
@@ -144,6 +154,11 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.piramideGrandeMuro, ...bigPyramidFrontWallSvg() },
     { key: TEX.sarcofago, ...sarcophagusSvg() },
     { key: TEX.bagliore, ...torchGlowSvg() },
+    { key: TEX.sarcofagoInPiedi, ...standingSarcophagusSvg() },
+    { key: TEX.benda, ...bandageStripSvg() },
+    { key: TEX.rotoloBende, ...bandageRollSvg() },
+    { key: TEX.ankh, ...ankhSvg() },
+    { key: TEX.pulsanteSuper, ...superButtonSvg() },
   ];
   await loadSvgTextures(scene, arts);
 }

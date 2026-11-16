@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
 import { hitSpark } from '../art/effects';
+import { Projectile } from '../entities/Projectile';
 import type { CharacterModule } from './types';
 
 /** Schiacciamento verticale degli effetti a terra (prospettiva 2.5D). */
@@ -64,4 +65,58 @@ export const anubi: CharacterModule = {
     // tremolio solo se c'entra il giocatore vero (non per i bot che si picchiano lontano)
     if (hits.length > 0 && (user.isHuman || hits.some((h) => h.isHuman))) scene.cameras.main.shake(70, 0.003);
   },
+
+  /**
+   * Super — Bende del Sarcofago: lancia un fascio di bende.
+   * Nemico colpito → chiuso in un sarcofago (non si muove né attacca) e Anubi riceve +1 vita.
+   * Compagno colpito → il compagno si cura e anche Anubi si cura.
+   */
+  useSuper(user, angle, combat) {
+    const sup = user.stats.super;
+    const p = sup.params;
+    const scene = user.scene;
+    new Projectile(scene, user.x + Math.cos(angle) * 30, user.y + Math.sin(angle) * 30, {
+      owner: user,
+      combat,
+      angle,
+      speed: p.projectileSpeed,
+      range: sup.range,
+      radius: p.projectileRadius,
+      height: 70,
+      texture: TEX.rotoloBende,
+      drawTrail: drawBandageRibbon,
+      onHit: (target, x, y) => {
+        hitSpark(scene, x, y - 70, y + 2);
+        if (target.team !== user.team) {
+          target.stun?.(p.stunSeconds);
+          user.grantExtraLife(p.maxExtraLives, p.reviveHealth);
+        } else {
+          target.heal?.(p.allyHeal);
+          user.heal(p.selfHeal);
+        }
+      },
+    });
+  },
 };
+
+/** Il fascio di bende: un nastro bianco ondulato con il bordo scuro, dalla mano di Anubi fino al rotolo. */
+function drawBandageRibbon(g: Phaser.GameObjects.Graphics, sx: number, sy: number, x: number, y: number, t: number): void {
+  const len = Phaser.Math.Distance.Between(sx, sy, x, y);
+  if (len < 4) return;
+  const nx = -(y - sy) / len;
+  const ny = (x - sx) / len;
+  const pts: Phaser.Math.Vector2[] = [];
+  const n = Math.max(2, Math.floor(len / 16));
+  for (let i = 0; i <= n; i++) {
+    const k = i / n;
+    // l'onda è più ampia in mezzo e ferma alle due estremità
+    const wave = Math.sin(k * 10 - t * 30) * 7 * Math.sin(k * Math.PI);
+    pts.push(new Phaser.Math.Vector2(sx + (x - sx) * k + nx * wave, sy + (y - sy) * k + ny * wave));
+  }
+  g.lineStyle(14, 0x14213d, 1).strokePoints(pts);
+  g.lineStyle(9, 0xfbf6ea, 1).strokePoints(pts);
+  g.lineStyle(2, 0xd9cbb0, 1);
+  for (let i = 1; i < pts.length; i += 2) {
+    g.lineBetween(pts[i].x - nx * 3, pts[i].y - ny * 3, pts[i].x + nx * 3, pts[i].y + ny * 3);
+  }
+}

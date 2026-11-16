@@ -217,3 +217,82 @@ export function impactSvg() {
   <circle cx="48" cy="48" r="10" fill="#FFFFFF"/>`;
   return { width: 96, height: 96, body };
 }
+
+/**
+ * Sarcofago in piedi (visto di fronte): serve per imprigionare e per resuscitare.
+ * Il fondo del disegno tocca terra.
+ */
+export function standingSarcophagusSvg() {
+  const gold = css(PALETTE.oro);
+  const lapis = css(PALETTE.lapislazzuli);
+  const turq = css(PALETTE.turchese);
+  const s = `stroke="${LINE}" stroke-width="2.6" stroke-linejoin="round"`;
+  const body = `
+  <defs>
+    <linearGradient id="sg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFE08A"/><stop offset="0.45" stop-color="${gold}"/><stop offset="1" stop-color="#A86A0C"/>
+    </linearGradient>
+  </defs>
+  <path d="M30 168 L24 96 Q18 70 26 46 Q34 8 60 6 Q86 8 94 46 Q102 70 96 96 L90 168 Z" fill="url(#sg)" ${s}/>
+  <path d="M32 50 Q34 14 60 12 Q86 14 88 50 L84 82 L36 82 Z" fill="${lapis}" ${s}/>
+  <path d="M36 30 H84 M34 44 H86 M35 58 H85 M37 72 H83" stroke="${gold}" stroke-width="3"/>
+  <path d="M44 34 Q44 20 60 20 Q76 20 76 34 L76 56 Q60 70 44 56 Z" fill="#F3D27A" ${s}/>
+  <path d="M49 38 L56 38 M64 38 L71 38" stroke="${LINE}" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M48 36 Q52 33 57 36 M63 36 Q68 33 72 36" stroke="${LINE}" stroke-width="1.6" fill="none"/>
+  <path d="M54 50 Q60 53 66 50" stroke="#8C5A0C" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M57 58 L60 70 L63 58" fill="${lapis}" stroke="${LINE}" stroke-width="1.6"/>
+  <path d="M34 92 Q60 108 86 92 L84 104 Q60 120 36 104 Z" fill="${turq}" ${s}/>
+  <path d="M38 98 Q60 112 82 98" stroke="${lapis}" stroke-width="2.5" fill="none"/>
+  <path d="M40 118 L80 118 M38 132 L82 132 M36 146 L84 146" stroke="#8C5A0C" stroke-width="2"/>
+  <rect x="52" y="122" width="16" height="36" rx="3" fill="${lapis}" stroke="${LINE}" stroke-width="2"/>
+  <path d="M55 128 H65 M55 136 H65 M55 144 H65 M55 152 H65" stroke="${gold}" stroke-width="2"/>
+  <path d="M30 160 L90 160" stroke="${LINE}" stroke-width="2.6"/>`;
+  return { width: 120, height: 172, body };
+}
+
+/** Striscia di benda bianca (per l'avvolgimento). */
+export function bandageStripSvg() {
+  const body = `
+  <rect x="2" y="2" width="76" height="12" rx="5" fill="#FBF6EA" stroke="${LINE}" stroke-width="2"/>
+  <path d="M14 4 L10 12 M30 4 L26 12 M46 4 L42 12 M62 4 L58 12" stroke="#D9CBB0" stroke-width="2"/>`;
+  return { width: 80, height: 16, body };
+}
+
+/** Rotolo di bende: la "testa" del fascio lanciato da Anubi. */
+export function bandageRollSvg() {
+  const body = `
+  <circle cx="18" cy="18" r="15" fill="#FBF6EA" stroke="${LINE}" stroke-width="2.5"/>
+  <path d="M18 18 m-3 0 a3 3 0 1 1 6 0 a6 6 0 1 1 -12 0 a9 9 0 1 1 18 0" fill="none" stroke="#C9B994" stroke-width="2"/>
+  <circle cx="12" cy="11" r="3" fill="#FFFFFF"/>`;
+  return { width: 36, height: 36, body };
+}
+
+/** Ankh d'oro: indica la vita extra. */
+export function ankhSvg() {
+  const gold = css(PALETTE.oro);
+  const body = `
+  <path d="M15 4 Q4 4 5 14 Q6 21 13 23 L3 23 L3 29 L12 29 L12 44 L18 44 L18 29 L27 29 L27 23 L17 23 Q24 21 25 14 Q26 4 15 4 Z M15 9 Q20 9 20 14 Q20 19 15 20 Q10 19 10 14 Q10 9 15 9 Z"
+    fill="${gold}" stroke="${LINE}" stroke-width="2.4" fill-rule="evenodd" stroke-linejoin="round"/>
+  <path d="M8 13 Q9 7 14 7" stroke="#FFF1C1" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+  return { width: 30, height: 48, body };
+}
+
+/** Pulsante della super: disco lapislazzuli con un sole d'oro al centro (l'anello di carica si disegna a parte). */
+export function superButtonSvg() {
+  const gold = css(PALETTE.oro);
+  let rays = '';
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const r1 = 22;
+    const r2 = i % 2 === 0 ? 38 : 32;
+    rays += `<path d="M${(64 + Math.cos(a - 0.12) * r1).toFixed(1)} ${(64 + Math.sin(a - 0.12) * r1).toFixed(1)} L${(64 + Math.cos(a) * r2).toFixed(1)} ${(64 + Math.sin(a) * r2).toFixed(1)} L${(64 + Math.cos(a + 0.12) * r1).toFixed(1)} ${(64 + Math.sin(a + 0.12) * r1).toFixed(1)} Z" fill="${gold}" stroke="${LINE}" stroke-width="1.5"/>`;
+  }
+  const body = `
+  <circle cx="64" cy="68" r="56" fill="#10224F" stroke="${LINE}" stroke-width="3"/>
+  <circle cx="64" cy="64" r="56" fill="${css(PALETTE.lapislazzuli)}" stroke="${LINE}" stroke-width="3"/>
+  <circle cx="64" cy="64" r="48" fill="none" stroke="#3456B8" stroke-width="3"/>
+  ${rays}
+  <circle cx="64" cy="64" r="20" fill="${gold}" stroke="${LINE}" stroke-width="2.5"/>
+  <circle cx="58" cy="58" r="6" fill="#FFF1C1" opacity="0.85"/>`;
+  return { width: 128, height: 128, body };
+}

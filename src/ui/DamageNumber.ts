@@ -3,9 +3,17 @@ import { DEPTH, FONT_FAMILY } from '../config';
 import { PALETTE, css } from '../art/palette';
 
 /** Numero di danno che salta fuori, con bordo scuro, e svanisce. */
-export function showDamageNumber(scene: Phaser.Scene, x: number, y: number, amount: number, color = '#FFFFFF'): void {
+export function showDamageNumber(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  amount: number,
+  color = '#FFFFFF',
+  prefix = '',
+  suffix = '',
+): void {
   const t = scene.add
-    .text(x + Phaser.Math.Between(-14, 14), y, String(Math.round(amount)), {
+    .text(x + Phaser.Math.Between(-14, 14), y, prefix + String(Math.round(amount)) + suffix, {
       fontFamily: FONT_FAMILY,
       fontSize: '34px',
       color,

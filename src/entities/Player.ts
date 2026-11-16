@@ -2,11 +2,12 @@ import Phaser from 'phaser';
 import { TEX, characterTexture, weaponTexture, legTexture, getHeldWeapon, getLegs } from '../art';
 import { dustPuff, footstepDust, turnToSand } from '../art/effects';
 import { PALETTE, type ColorVariant } from '../art/palette';
-import { REGEN } from '../data/combat';
+import { REGEN, REVIVE_SECONDS } from '../data/combat';
+import { playImprison, playRevive } from '../art/sarcophagusFx';
 import { getCharacter, SPEED_VALUES, type CharacterData } from '../data/characters';
 import { getCharacterModule } from '../characters';
 import type { CharacterModule } from '../characters/types';
-import type { Combat, Damageable } from './Combat';
+import type { Attacker, Combat, Damageable } from './Combat';
 import { HealthBar } from '../ui/HealthBar';
 import { showDamageNumber } from '../ui/DamageNumber';
 
@@ -53,7 +54,7 @@ export const DEFEATED_EVENT = 'sconfitto';
  * serve per l'ordinamento per Y (chi è più in basso viene disegnato sopra).
  * Munizioni, ricarica e vita sono qui; cosa fa l'attacco lo decide il modulo del personaggio.
  */
-export class Player extends Phaser.GameObjects.Container implements Damageable {
+export class Player extends Phaser.GameObjects.Container implements Damageable, Attacker {
   declare body: Phaser.Physics.Arcade.Body;
   readonly stats: CharacterData;
   readonly team: number;
@@ -66,6 +67,18 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
   private revealed = true;
   health: number;
   ammo: number;
+  /** Carica della super: da 0 a 1 (1 = pronta). */
+  superCharge = 0;
+  /** Vite extra (si resuscita dal sarcofago) e con quanta vita. */
+  extraLives = 0;
+  private reviveHealth = 0.5;
+  /** Secondi rimasti chiuso nel sarcofago (non si muove né attacca). */
+  private stunTime = 0;
+  private releaseFromPrison: (() => void) | null = null;
+  /** Sta resuscitando: non si può colpire. */
+  private reviving = false;
+  /** Il colpo in corso è una super? */
+  private attackIsSuper = false;
 
   private readonly module: CharacterModule;
   private readonly shadow: Phaser.GameObjects.Image;
@@ -145,14 +158,39 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
     return this.health > 0;
   }
 
+  /** Può agire (non è chiuso nel sarcofago e non sta resuscitando)? */
+  canAct(): boolean {
+    return this.isAlive() && this.stunTime <= 0 && !this.reviving;
+  }
+
   /** Il personaggio può sparare adesso? */
   canAttack(): boolean {
-    return this.isAlive() && this.ammo >= 1 && this.attackCooldown <= 0;
+    return this.canAct() && this.ammo >= 1 && this.attackCooldown <= 0 && this.attackTime < 0;
+  }
+
+  /** La super è carica e si può usare adesso? */
+  canUseSuper(): boolean {
+    return this.canAct() && this.superCharge >= 1 && this.attackTime < 0;
+  }
+
+  isTargetable(): boolean {
+    return this.isAlive() && !this.reviving;
+  }
+
+  /** Chiamato da Combat quando i colpi di questo personaggio vanno a segno: carica la super. */
+  onDealtDamage(amount: number): void {
+    if (this.attackIsSuper) return;
+    this.superCharge = Math.min(1, this.superCharge + amount / this.stats.super.chargeDamage);
   }
 
   /** Muove il personaggio. dir ha lunghezza 0 (fermo) oppure 1. */
   move(dir: Phaser.Math.Vector2): void {
     if (!this.isAlive()) return;
+    if (!this.canAct()) {
+      this.body.setVelocity(0, 0);
+      this.moving = false;
+      return;
+    }
     const speed = SPEED_VALUES[this.stats.speed];
     this.body.setVelocity(dir.x * speed, dir.y * speed);
     this.moving = dir.lengthSq() > 0;
@@ -169,13 +207,77 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
       return false;
     }
     this.ammo -= 1;
-    this.sinceCombat = 0;
     this.attackCooldown = this.stats.weapon.attackDelay;
+    this.startSwing(angle, false);
+    return true;
+  }
+
+  /** Usa la super nella direzione `angle`. Restituisce false se non è carica. */
+  tryUseSuper(angle: number): boolean {
+    if (!this.canUseSuper()) return false;
+    this.superCharge = 0;
+    this.startSwing(angle, true);
+    // luce dorata sulla testa mentre lancia la super
+    const glow = this.scene.add.image(this.facing * 20, -120, TEX.bagliore).setTint(0xffd27a).setBlendMode(Phaser.BlendModes.ADD).setScale(0.4);
+    this.add(glow);
+    this.scene.tweens.add({ targets: glow, scale: 1.1, alpha: { from: 1, to: 0 }, duration: 450, onComplete: () => glow.destroy() });
+    return true;
+  }
+
+  /** Super automatica verso il nemico più vicino. */
+  autoSuper(maxDistance: number): boolean {
+    const target = this.combat.nearestEnemy(this.x, this.y, this.team, maxDistance, this.hideout);
+    const angle = target ? Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y) : this.facing > 0 ? 0 : Math.PI;
+    return this.tryUseSuper(angle);
+  }
+
+  private startSwing(angle: number, isSuper: boolean): void {
+    this.sinceCombat = 0;
     this.attackTime = 0;
     this.attackAngle = angle;
     this.attackFired = false;
+    this.attackIsSuper = isSuper;
     if (Math.abs(Math.cos(angle)) > 0.05) this.facing = Math.cos(angle) < 0 ? -1 : 1;
-    return true;
+  }
+
+  /** Chiuso nel sarcofago per qualche secondo: non si muove né attacca. */
+  stun(seconds: number): void {
+    if (!this.isAlive() || this.reviving) return;
+    this.stunTime = Math.max(this.stunTime, seconds);
+    this.attackTime = -1;
+    this.body.setVelocity(0, 0);
+    if (!this.releaseFromPrison) {
+      this.releaseFromPrison = playImprison(this.scene, this, this.bodyParts(), this.isHuman);
+    }
+  }
+
+  /** Cura una frazione della vita massima (con numero verde). */
+  heal(fraction: number): void {
+    if (!this.isAlive() || this.reviving) return;
+    const amount = Math.min(this.stats.maxHealth - this.health, this.stats.maxHealth * fraction);
+    this.health += amount;
+    if (amount > 0 && this.revealed) showDamageNumber(this.scene, this.x, this.y - BAR_OFFSET_Y + 20, amount, '#7CF29A', '+');
+  }
+
+  /** Riceve una vita extra (fino a `max`): la prossima sconfitta resusciterà dal sarcofago. */
+  grantExtraLife(max: number, reviveHealth: number): void {
+    this.reviveHealth = reviveHealth;
+    if (this.extraLives >= max) return;
+    this.extraLives += 1;
+    this.bar.setExtraLife(true);
+    // l'ankh salta fuori sopra la testa
+    const ankh = this.scene.add.image(this.x, this.y - 150, TEX.ankh).setDepth(this.y + 5000).setScale(0.3);
+    this.scene.tweens.add({ targets: ankh, scale: 1.3, y: this.y - 210, duration: 350, ease: 'Back.out' });
+    this.scene.tweens.add({ targets: ankh, alpha: 0, delay: 650, duration: 300, onComplete: () => ankh.destroy() });
+    if (this.revealed) showDamageNumber(this.scene, this.x, this.y - 230, 1, '#FFE08A', '+', ' vita');
+  }
+
+  /** I pezzi visibili del corpo (da nascondere quando è chiuso nel sarcofago). */
+  private bodyParts(): Phaser.GameObjects.GameObject[] {
+    const parts: Phaser.GameObjects.GameObject[] = [this.sprite];
+    if (this.weapon) parts.push(this.weapon);
+    if (this.legs) parts.push(this.legs.back, this.legs.front);
+    return parts;
   }
 
   /** Attacco automatico verso il nemico più vicino (tocco veloce). */
@@ -186,7 +288,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
   }
 
   takeDamage(amount: number): void {
-    if (!this.isAlive()) return;
+    if (!this.isTargetable()) return;
     this.health = Math.max(0, this.health - amount);
     this.sinceCombat = 0;
     if (this.revealed) {
@@ -196,11 +298,39 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
     this.scene.time.delayedCall(70, () => {
       if (this.isAlive()) this.sprite.clearTint();
     });
-    if (this.health <= 0) this.defeat();
+    if (this.health <= 0) {
+      if (this.extraLives > 0) this.revive();
+      else this.defeat();
+    }
+  }
+
+  /** Invece di essere sconfitto, resuscita dal suo sarcofago con parte della vita. */
+  private revive(): void {
+    this.extraLives -= 1;
+    this.bar.setExtraLife(this.extraLives > 0);
+    this.health = 1; // resta "vivo" ma non si può colpire mentre resuscita
+    this.reviving = true;
+    this.attackTime = -1;
+    this.body.setVelocity(0, 0);
+    if (this.releaseFromPrison) {
+      this.releaseFromPrison();
+      this.releaseFromPrison = null;
+      this.stunTime = 0;
+    }
+    this.sprite.clearTint();
+    playRevive(this.scene, this, this.bodyParts(), REVIVE_SECONDS, () => {
+      this.reviving = false;
+      this.health = this.stats.maxHealth * this.reviveHealth;
+      this.sinceCombat = 0;
+    });
   }
 
   /** Sconfitto: diventa sabbia e sparisce. Avvisa la partita con l'evento DEFEATED_EVENT. */
   private defeat(): void {
+    if (this.releaseFromPrison) {
+      this.releaseFromPrison();
+      this.releaseFromPrison = null;
+    }
     this.combat.remove(this);
     this.body.stop();
     this.body.enable = false;
@@ -240,6 +370,20 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
     if (this.ammo < w.maxAmmo) this.ammo = Math.min(w.maxAmmo, this.ammo + dt / w.reloadSeconds);
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
 
+    // chiuso nel sarcofago o mentre resuscita: niente animazioni del corpo
+    if (this.stunTime > 0) {
+      this.stunTime -= dt;
+      if (this.stunTime <= 0 && this.releaseFromPrison) {
+        this.releaseFromPrison();
+        this.releaseFromPrison = null;
+      }
+    }
+    if (!this.canAct()) {
+      this.bar.setPosition(this.x, this.y - BAR_OFFSET_Y);
+      this.bar.draw(this.health, this.stats.maxHealth, this.ammo, w.maxAmmo);
+      return;
+    }
+
     // rigenerazione lenta se lontano dai combattimenti
     this.sinceCombat += dt;
     if (this.sinceCombat > REGEN.delaySeconds && this.health < this.stats.maxHealth) {
@@ -264,7 +408,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
 
     if (this.attackTime >= 0) {
       this.attackTime += dt;
-      const windup = this.module.swingSeconds;
+      const windup = this.module.swingSeconds * (this.attackIsSuper ? 2.2 : 1);
       const t = this.attackTime;
       let lean: number; // -1 indietro … +1 in avanti
       if (t < windup) {
@@ -276,8 +420,9 @@ export class Player extends Phaser.GameObjects.Container implements Damageable {
         if (!this.attackFired) {
           // 2) il colpo parte adesso
           this.attackFired = true;
-          if (this.isAlive()) {
-            this.module.attack(this, this.attackAngle, this.combat);
+          if (this.canAct()) {
+            if (this.attackIsSuper) this.module.useSuper(this, this.attackAngle, this.combat);
+            else this.module.attack(this, this.attackAngle, this.combat);
             dustPuff(this.scene, this.x, this.y, this.attackAngle, this.y - 1);
           }
         }

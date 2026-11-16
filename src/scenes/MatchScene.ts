@@ -13,11 +13,12 @@ import { BigPyramid } from '../entities/BigPyramid';
 import { Target } from '../entities/Target';
 import { VirtualStick } from '../ui/VirtualStick';
 import { AimIndicator } from '../ui/AimIndicator';
+import { SuperButton } from '../ui/SuperButton';
 import { MatchHud } from '../ui/MatchHud';
 import { showEndOverlay } from '../ui/EndOverlay';
 import { fullscreenOnFirstTap } from '../ui/fullscreen';
 
-type KeyName = 'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space';
+type KeyName = 'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space' | 'e';
 
 /** La partita Solo: tu contro i bot, vince l'ultimo rimasto. */
 export class MatchScene extends Phaser.Scene {
@@ -26,6 +27,7 @@ export class MatchScene extends Phaser.Scene {
   private pyramids: BigPyramid[] = [];
   private moveStick!: VirtualStick;
   private aimStick!: VirtualStick;
+  private superButton!: SuperButton;
   private aimIndicator!: AimIndicator;
   private hud!: MatchHud;
   private combat!: Combat;
@@ -47,6 +49,7 @@ export class MatchScene extends Phaser.Scene {
     this.add.tileSprite(0, 0, map.width, map.height, TEX.sabbia).setOrigin(0).setDepth(DEPTH.ground);
 
     const walls = this.physics.add.staticGroup();
+    this.combat.walls = walls;
     for (const o of map.obstacles) createObstacle(this, walls, o.kind, o.x, o.y);
     this.pyramids = (map.bigPyramids ?? []).map((p) => new BigPyramid(this, walls, p.x, p.y));
     const targets = map.targets.map((t) => new Target(this, t.x, t.y, this.combat));
@@ -110,11 +113,17 @@ export class MatchScene extends Phaser.Scene {
       knobTexture: TEX.joyPomello,
       ...JOYSTICK,
     });
+    this.superButton = new SuperButton(this);
+    this.superButton.onRelease = (r) => {
+      if (r.tap) this.player.autoSuper(this.player.stats.super.range);
+      else if (r.aimed) this.player.tryUseSuper(r.angle);
+    };
     this.aimStick = new VirtualStick(this, {
       side: 'right',
       baseTexture: TEX.joyBase,
       knobTexture: TEX.miraPomello,
       ...AIM_STICK,
+      ignore: (x, y) => this.superButton.covers(x, y),
     });
     this.aimStick.onRelease = (r) => {
       if (r.tap) this.player.autoAttack(this.player.stats.weapon.range * AUTO_AIM_RANGE_FACTOR);
@@ -128,15 +137,18 @@ export class MatchScene extends Phaser.Scene {
     this.input.mouse?.disableContextMenu();
     fullscreenOnFirstTap(this);
 
-    // Tastiera: solo un extra per provare al computer (frecce/WASD per muoversi, spazio = colpo automatico)
+    // Tastiera: solo un extra per provare al computer (frecce/WASD per muoversi, spazio = colpo automatico, E = super)
     const kb = this.input.keyboard;
     if (kb) {
       const K = Phaser.Input.Keyboard.KeyCodes;
       this.keys = kb.addKeys({
-        up: K.UP, down: K.DOWN, left: K.LEFT, right: K.RIGHT, w: K.W, a: K.A, s: K.S, d: K.D, space: K.SPACE,
+        up: K.UP, down: K.DOWN, left: K.LEFT, right: K.RIGHT, w: K.W, a: K.A, s: K.S, d: K.D, space: K.SPACE, e: K.E,
       }) as Record<KeyName, Phaser.Input.Keyboard.Key>;
       this.keys.space.on('down', () => {
         if (!this.over) this.player.autoAttack(this.player.stats.weapon.range * AUTO_AIM_RANGE_FACTOR);
+      });
+      this.keys.e.on('down', () => {
+        if (!this.over) this.player.autoSuper(this.player.stats.super.range);
       });
     }
   }
@@ -163,6 +175,7 @@ export class MatchScene extends Phaser.Scene {
     this.over = true;
     this.moveStick.setEnabled(false);
     this.aimStick.setEnabled(false);
+    this.superButton.setEnabled(false);
     this.aimIndicator.hide();
     this.player.move(this.dir.set(0, 0));
     this.time.delayedCall(1100, () => showEndOverlay(this, title, victory, () => this.scene.restart()));
@@ -199,7 +212,11 @@ export class MatchScene extends Phaser.Scene {
     }
     this.player.move(this.dir);
 
-    if (this.aimStick.engaged) {
+    this.superButton.update(this.player.superCharge, delta / 1000);
+    const sup = this.player.stats.super;
+    if (this.superButton.engaged) {
+      this.aimIndicator.showLine(this.player.x, this.player.y, this.superButton.angle, sup.range, sup.aimWidth);
+    } else if (this.aimStick.engaged) {
       this.aimIndicator.show(this.player.x, this.player.y, this.aimStick.angle, this.player.stats.weapon, this.player.ammo >= 1);
     } else {
       this.aimIndicator.hide();

@@ -21,7 +21,7 @@ export interface BotWorld {
  * 1. tempesta → verso il centro          (arriverà con la tempesta, Passo 5)
  * 2. vita sotto il 30% → scappa           (i cespugli arriveranno nel Passo 6)
  * 3. nemico a tiro → attacca con un piccolo errore di mira
- * 4. super carica → usala                 (arriverà con la super, Passo 4)
+ * 4. super carica e buon bersaglio → usala
  * 5. altrimenti → bauli/gioielli, poi esplora (i bauli arriveranno nel Passo 5)
  */
 export class BotBrain {
@@ -80,8 +80,14 @@ export class BotBrain {
       if (dist > range * 0.7) this.headTo(t.x, t.y);
       else this.wanted.set(-toTarget.y * this.strafeSign, toTarget.x * this.strafeSign).add(toTarget.clone().scale(0.2)).normalize();
 
-      // attacca quando è a tiro, dopo un piccolo "tempo di reazione"
+      // 4) super carica e bersaglio a portata → usala
       this.attackWait -= dt;
+      if (this.attackWait <= 0 && bot.canUseSuper() && dist < bot.stats.super.range * 0.85) {
+        const error = Phaser.Math.DegToRad(Phaser.Math.FloatBetween(-this.level.aimErrorDeg, this.level.aimErrorDeg) * 0.5);
+        bot.tryUseSuper(Phaser.Math.Angle.Between(bot.x, bot.y, t.x, t.y) + error);
+        this.attackWait = this.randomPause();
+      }
+      // 3) attacca quando è a tiro, dopo un piccolo "tempo di reazione"
       if (dist - t.hitRadius < range * 0.95 && this.attackWait <= 0 && bot.canAttack()) {
         const error = Phaser.Math.DegToRad(Phaser.Math.FloatBetween(-this.level.aimErrorDeg, this.level.aimErrorDeg));
         bot.tryAttack(Phaser.Math.Angle.Between(bot.x, bot.y, t.x, t.y) + error);

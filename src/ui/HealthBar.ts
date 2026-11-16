@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { DEPTH, FONT_FAMILY } from '../config';
 import { PALETTE, css } from '../art/palette';
+import { TEX } from '../art';
 
 const W = 92;
 const H = 14;
@@ -16,6 +17,7 @@ export class HealthBar extends Phaser.GameObjects.Container {
   private readonly label: Phaser.GameObjects.Text;
   private shownHealth = -1;
   private flashUntil = 0;
+  private ankh: Phaser.GameObjects.Image | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -49,6 +51,18 @@ export class HealthBar extends Phaser.GameObjects.Container {
     }
     this.setDepth(DEPTH.overhead);
     scene.add.existing(this);
+  }
+
+  /** Mostra l'ankh d'oro accanto alla barra quando c'è una vita extra. */
+  setExtraLife(on: boolean): void {
+    if (on && !this.ankh) {
+      this.ankh = this.scene.add.image(-W / 2 - 16, 0, TEX.ankh).setScale(0.6);
+      this.add(this.ankh);
+      this.scene.tweens.add({ targets: this.ankh, scale: { from: 1.2, to: 0.6 }, duration: 300, ease: 'Back.out' });
+    } else if (!on && this.ankh) {
+      this.ankh.destroy();
+      this.ankh = null;
+    }
   }
 
   /** Fa lampeggiare di rosso i colpi (quando provi ad attaccare senza munizioni). */

@@ -28,7 +28,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
   > Partita Solo: tu + 5 bot su una mappa media. Quando resti solo tu appare "VITTORIA!", se vieni
   > sconfitto "Sconfitto — 4° posto" con il posto giusto.
 
-- [ ] **Passo 4 — La super di Anubi**
+- [x] **Passo 4 — La super di Anubi**
   > Aggiungi la barra della super (si carica colpendo) e il pulsante super. Implementa "Bende del Sarcofago"
   > esattamente come in GAME_DESIGN.md, con la vita extra e la resurrezione dal sarcofago, e una bella animazione.
 

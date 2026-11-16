@@ -28,6 +28,23 @@ export interface WeaponData {
   attackDelay: number;
 }
 
+/**
+ * Super (si carica colpendo i nemici). `params` contiene i numeri propri della super di ogni personaggio
+ * (ognuno ha una super diversa), così restano tutti qui nei dati.
+ */
+export interface SuperData {
+  name: string;
+  /** Danno da fare con l'attacco base per caricare la super al 100%. */
+  chargeDamage: number;
+  /** Portata in pixel (per la mira e per i bot). */
+  range: number;
+  /** Forma dell'indicatore di mira. */
+  aim: 'linea';
+  /** Larghezza della linea di mira (pixel). */
+  aimWidth: number;
+  params: Record<string, number>;
+}
+
 export interface CharacterData {
   id: string;
   name: string;
@@ -35,6 +52,7 @@ export interface CharacterData {
   maxHealth: number;
   speed: SpeedClass;
   weapon: WeaponData;
+  super: SuperData;
 }
 
 export const CHARACTERS: Record<string, CharacterData> = {
@@ -52,6 +70,28 @@ export const CHARACTERS: Record<string, CharacterData> = {
       maxAmmo: 3,
       reloadSeconds: 1.3,
       attackDelay: 0.4,
+    },
+    super: {
+      name: 'Bende del Sarcofago',
+      chargeDamage: 4000, // 4 colpi a segno
+      range: 620,
+      aim: 'linea',
+      aimWidth: 56,
+      params: {
+        /** velocità del fascio di bende (pixel al secondo) */
+        projectileSpeed: 950,
+        /** raggio del fascio per colpire (pixel) */
+        projectileRadius: 28,
+        /** secondi chiuso nel sarcofago (non si muove né attacca) */
+        stunSeconds: 2,
+        /** vite extra al massimo (si resuscita dal sarcofago) */
+        maxExtraLives: 1,
+        /** vita alla resurrezione (frazione della vita massima) */
+        reviveHealth: 0.5,
+        /** cura al compagno colpito e ad Anubi (frazione della vita massima) */
+        allyHeal: 0.4,
+        selfHeal: 0.25,
+      },
     },
   },
 };

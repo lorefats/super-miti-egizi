@@ -10,3 +10,6 @@ export const REGEN = {
 
 /** Nascondigli (piramidi grandi): chi è dentro si vede da fuori solo entro questa distanza (pixel). */
 export const HIDEOUT_REVEAL_DISTANCE = 180;
+
+/** Resurrezione dal sarcofago: quanto dura l'animazione (secondi, in cui non si può essere colpiti). */
+export const REVIVE_SECONDS = 1.4;
