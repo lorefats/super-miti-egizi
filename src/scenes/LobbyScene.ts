@@ -5,6 +5,7 @@ import { PALETTE, css } from '../art/palette';
 import { FONT_FAMILY } from '../config';
 import { getCharacter } from '../data/characters';
 import { LOBBY_POSE_EVERY, timeOfDayAt } from '../data/lobby';
+import { SARCOPHAGI, type SarcophagusTier } from '../data/progression';
 import { SaveManager } from '../save/SaveManager';
 import { createCharacterPose, type CharacterPose } from '../ui/CharacterPose';
 import { fullscreenOnFirstTap } from '../ui/fullscreen';
@@ -26,9 +27,15 @@ export class LobbyScene extends Phaser.Scene {
   private hero!: CharacterPose;
   private heroScale = 1.7;
   private leaving = false;
+  private pile!: Phaser.GameObjects.Container;
+  private newSarcophagi = 0;
 
   constructor() {
     super('Lobby');
+  }
+
+  init(data: { newSarcophagi?: number }): void {
+    this.newSarcophagi = data?.newSarcophagi ?? 0;
   }
 
   create(): void {
@@ -45,6 +52,7 @@ export class LobbyScene extends Phaser.Scene {
     this.drawLeftSide(H);
     this.drawRightSide(W, H);
     this.drawBottomBar(W, H);
+    if (this.newSarcophagi > 0) this.time.delayedCall(450, () => this.sarcophagusArrives(W, H));
   }
 
   private pickTime(): TimeOfDay {
@@ -251,7 +259,13 @@ export class LobbyScene extends Phaser.Scene {
     const x = 96;
     // pila di sarcofagi (con numerino)
     const pending = SaveManager.getPendingSarcophagi();
-    const pile = this.add.container(x, 230);
+    const pile = (this.pile = this.add.container(x, 230));
+    if (pending > 0) {
+      // bagliore dietro la pila: c'è qualcosa da aprire!
+      const glow = this.add.image(0, 0, TEX.bagliore).setScale(2.2).setTint(PALETTE.oro).setAlpha(0.7);
+      pile.add(glow);
+      this.tweens.add({ targets: glow, alpha: 0.25, scale: 1.8, duration: 700, yoyo: true, repeat: -1 });
+    }
     pile.add(this.add.image(-16, 6, TEX.sarcofagoIcona).setScale(0.8).setAngle(-10).setTint(0xb0b0b0));
     pile.add(this.add.image(12, 2, TEX.sarcofagoIcona).setScale(0.85).setAngle(8).setTint(0xd0d0d0));
     pile.add(this.add.image(0, 0, TEX.sarcofagoIcona).setScale(0.95));
@@ -260,8 +274,16 @@ export class LobbyScene extends Phaser.Scene {
     badge.lineStyle(3, PALETTE.bluNotte, 1).strokeCircle(40, -42, 20);
     pile.add(badge);
     pile.add(this.add.text(40, -43, String(pending), { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#FFFFFF' }).setOrigin(0.5));
-    pile.add(this.label(0, 70, 'Sarcofagi'));
-    this.makeButton(pile, 140, 170, () => showToast(this, 'Vinci una partita per\nguadagnare un sarcofago!'));
+    pile.add(this.label(0, 70, pending > 0 ? 'Apri!' : 'Sarcofagi'));
+    if (pending > 0) {
+      // ogni tanto la pila trema, come se dentro ci fosse qualcosa
+      this.time.addEvent({
+        delay: 2200,
+        loop: true,
+        callback: () => this.tweens.add({ targets: pile, angle: 5, duration: 70, yoyo: true, repeat: 3 }),
+      });
+    }
+    this.makeButton(pile, 140, 170, () => this.openSarcophagus());
 
     // Cammino delle Coppe (arriva al Passo 10)
     const road = this.add.container(x, Math.min(H - BAR_H - 110, 420));
@@ -321,7 +343,7 @@ export class LobbyScene extends Phaser.Scene {
     g.fillStyle(PALETTE.oro, 1).fillRect(0, H - BAR_H, W, 4);
     const items: [string, string, string][] = [
       [TEX.iconaPersonaggi, 'Personaggi', 'La schermata Personaggi\narriva presto!'],
-      [TEX.iconaSarcofagi, 'Sarcofagi', 'Vinci una partita per\nguadagnare un sarcofago!'],
+      [TEX.iconaSarcofagi, 'Sarcofagi', ''],
       [TEX.iconaCoppe, 'Coppe', 'Il Cammino delle Coppe\narriva presto!'],
       [TEX.iconaImpostazioni, 'Impostazioni', 'Le impostazioni\narrivano presto!'],
     ];
@@ -330,7 +352,7 @@ export class LobbyScene extends Phaser.Scene {
       const b = this.add.container(W / 2 + (i - 1.5) * step, H - BAR_H / 2 + 2);
       b.add(this.add.image(0, -12, tex).setScale(0.72));
       b.add(this.add.text(0, 30, name, { fontFamily: FONT_FAMILY, fontSize: '18px', color: '#FFFFFF' }).setOrigin(0.5));
-      this.makeButton(b, step - 10, BAR_H - 6, () => showToast(this, msg));
+      this.makeButton(b, step - 10, BAR_H - 6, () => (msg ? showToast(this, msg) : this.openSarcophagus()));
     });
   }
 
@@ -368,6 +390,56 @@ export class LobbyScene extends Phaser.Scene {
       c.setScale(base());
       onPress();
     });
+  }
+
+  // ------------------------------------------------------------ sarcofagi
+
+  /** Un sarcofago appena vinto vola dal centro e atterra sulla pila. */
+  private sarcophagusArrives(W: number, H: number): void {
+    const icon = this.add.image(W / 2, H * 0.4, TEX.sarcofagoIcona).setScale(0).setAngle(-20);
+    const glow = this.add.image(W / 2, H * 0.4, TEX.bagliore).setScale(0).setTint(PALETTE.oro).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: glow, scale: 4, duration: 400, ease: 'Back.out' });
+    this.tweens.add({
+      targets: icon,
+      scale: 2,
+      angle: 0,
+      duration: 450,
+      ease: 'Back.out',
+      onComplete: () => {
+        this.tweens.add({ targets: glow, alpha: 0, duration: 500, delay: 300, onComplete: () => glow.destroy() });
+        this.tweens.add({
+          targets: icon,
+          x: this.pile.x,
+          y: this.pile.y,
+          scale: 0.95,
+          angle: 360,
+          delay: 400,
+          duration: 550,
+          ease: 'Quad.in',
+          onComplete: () => {
+            icon.destroy();
+            this.tweens.add({ targets: this.pile, scale: 1.25, duration: 110, yoyo: true });
+            showToast(this, 'Hai vinto un sarcofago!\nToccalo per aprirlo');
+          },
+        });
+      },
+    });
+  }
+
+  /** Apre la schermata del sarcofago (se ce n'è almeno uno). Per provarla: "?sarcofago=oro". */
+  private openSarcophagus(): void {
+    if (this.leaving) return;
+    const test = new URLSearchParams(location.search).get('sarcofago');
+    const testTier = SARCOPHAGI.find((s) => s.tier === test)?.tier as SarcophagusTier | undefined;
+    if (SaveManager.getPendingSarcophagi() <= 0 && !testTier) {
+      showToast(this, 'Vinci una partita per\nguadagnare un sarcofago!');
+      return;
+    }
+    this.leaving = true;
+    this.cameras.main.fadeOut(250, 20, 33, 61);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () =>
+      this.scene.start('Sarcophagus', { forcedTier: testTier }),
+    );
   }
 
   private startMatch(): void {

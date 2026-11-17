@@ -6,6 +6,7 @@ import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { MatchScene } from './scenes/MatchScene';
 import { ResultsScene } from './scenes/ResultsScene';
+import { SarcophagusScene } from './scenes/SarcophagusScene';
 import { TitleScene } from './scenes/TitleScene';
 import { LobbyScene } from './scenes/LobbyScene';
 
@@ -28,7 +29,7 @@ const game = new Phaser.Game({
   },
   input: { activePointers: 3 }, // più dita insieme (joystick + mira)
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: showPhysics } },
-  scene: [BootScene, PreloadScene, TitleScene, LobbyScene, MatchScene, ResultsScene],
+  scene: [BootScene, PreloadScene, TitleScene, LobbyScene, MatchScene, ResultsScene, SarcophagusScene],
 });
 
 // Solo in modalità debug: rende il gioco raggiungibile dalla console del browser per le prove.

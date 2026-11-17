@@ -4,6 +4,8 @@
  * i salvataggi vecchi alla forma nuova senza perdere niente.
  */
 
+import { SARCOPHAGI_PER_VICTORY, type SarcophagusLoot } from '../data/progression';
+
 const STORAGE_KEY = 'super-miti-egizi:salvataggio';
 const CURRENT_VERSION = 1;
 
@@ -18,7 +20,7 @@ export interface SaveData {
   version: number;
   characters: Record<string, CharacterProgress>;
   stats: { matches: number; victories: number };
-  /** valute (si guadagnano dai sarcofagi, dal Passo 9) */
+  /** valute (si trovano nei sarcofagi) */
   scarabs: number;
   stardust: number;
   /** sarcofagi vinti e non ancora aperti */
@@ -36,6 +38,8 @@ export interface MatchReward {
   trophiesBefore: number;
   trophiesAfter: number;
   totalTrophies: number;
+  /** sarcofagi vinti in questa partita */
+  sarcophagiWon: number;
 }
 
 function emptySave(): SaveData {
@@ -137,7 +141,9 @@ class SaveManagerImpl {
     c.trophies = Math.max(0, before + trophies);
     c.bestTrophies = Math.max(c.bestTrophies, c.trophies);
     this.data.stats.matches++;
+    const sarcophagiWon = place === 1 ? SARCOPHAGI_PER_VICTORY : 0;
     if (place === 1) this.data.stats.victories++;
+    this.data.pendingSarcophagi += sarcophagiWon;
     this.save();
     return {
       characterId,
@@ -146,7 +152,22 @@ class SaveManagerImpl {
       trophiesBefore: before,
       trophiesAfter: c.trophies,
       totalTrophies: this.getTotalTrophies(),
+      sarcophagiWon,
     };
+  }
+
+  /**
+   * Apre un sarcofago: ne toglie uno dalla pila e aggiunge subito i premi (e salva),
+   * così se il gioco si chiude durante l'animazione i premi non vanno persi.
+   * Restituisce false se non c'erano sarcofagi da aprire.
+   */
+  openSarcophagus(loot: SarcophagusLoot): boolean {
+    if (this.data.pendingSarcophagi <= 0) return false;
+    this.data.pendingSarcophagi--;
+    this.data.scarabs += loot.scarabs;
+    this.data.stardust += loot.stardust;
+    this.save();
+    return true;
   }
 }
 

@@ -73,6 +73,7 @@ export class ResultsScene extends Phaser.Scene {
         strokeThickness: 8,
       })
       .setOrigin(0.5);
+    if (d.sarcophagiWon > 0) this.showSarcophagusWon(cx, Math.min(H - 34, feetY + 108), d.sarcophagiWon);
     if (victory) {
       // saltelli di gioia
       this.tweens.add({ targets: hero, y: feetY - 26, duration: 260, yoyo: true, repeat: -1, repeatDelay: 380, ease: 'Quad.out' });
@@ -134,7 +135,7 @@ export class ResultsScene extends Phaser.Scene {
     // ---- pulsante per tornare alla Lobby ----
     const btn = createGoldButton(this, px, Math.min(H - 70, panelTop + panelH + 70), 'Continua', () => {
       this.cameras.main.fadeOut(250, 20, 33, 61);
-      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start('Lobby'));
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start('Lobby', { newSarcophagi: d.sarcophagiWon }));
     });
     btn.setAlpha(0).disableInteractive();
     const showButton = () => {
@@ -153,6 +154,21 @@ export class ResultsScene extends Phaser.Scene {
     );
     // per sicurezza il pulsante compare comunque
     this.time.delayedCall(4500, showButton);
+  }
+
+  /** Vittoria: "+1 sarcofago", che poi si apre nella Lobby. */
+  private showSarcophagusWon(x: number, y: number, count: number): void {
+    const box = this.add.container(x, y);
+    const g = this.add.graphics();
+    g.fillStyle(PALETTE.bluNotte, 0.85).fillRoundedRect(-150, -28, 300, 56, 28);
+    g.lineStyle(3, PALETTE.oro, 1).strokeRoundedRect(-150, -28, 300, 56, 28);
+    const icon = this.add.image(-112, -6, TEX.sarcofagoIcona).setScale(0.55).setAngle(-8);
+    const text = this.add
+      .text(12, 0, `+${count} sarcofago!`, { fontFamily: FONT_FAMILY, fontSize: '28px', color: css(PALETTE.oro) })
+      .setOrigin(0.5);
+    box.add([g, icon, text]).setScale(0);
+    this.tweens.add({ targets: box, scale: 1, delay: 900, duration: 380, ease: 'Back.out' });
+    this.tweens.add({ targets: icon, angle: 8, duration: 260, yoyo: true, repeat: -1, delay: 1300, repeatDelay: 900 });
   }
 
   /** Le coppe volano una alla volta nel contatore (o, se si perdono, il numero scende). */

@@ -37,6 +37,7 @@ import {
 import * as V from './valley';
 import * as L from './lobby';
 import { logoCaseSvg, logoLidSvg, logoWinkSvg, logoRaysSvg } from './logo';
+import { prizeCaseSvg, prizeLidSvg, lightBeamSvg } from './sarcophagi';
 
 /**
  * UNICO punto da cui passano tutte le immagini del gioco.
@@ -77,6 +78,14 @@ export const TEX = {
   logoCoperchio: 'logo-coperchio',
   logoOcchiolino: 'logo-occhiolino',
   logoRaggi: 'logo-raggi',
+  // sarcofagi premio
+  sarcLegnoCassa: 'sarcofago-legno-cassa',
+  sarcLegnoCoperchio: 'sarcofago-legno-coperchio',
+  sarcBronzoCassa: 'sarcofago-bronzo-cassa',
+  sarcBronzoCoperchio: 'sarcofago-bronzo-coperchio',
+  sarcOroCassa: 'sarcofago-oro-cassa',
+  sarcOroCoperchio: 'sarcofago-oro-coperchio',
+  raggioLuce: 'raggio-luce',
   // lobby
   lobbyPiramidi: 'lobby-piramidi',
   lobbyMuro: 'lobby-muro',
@@ -242,6 +251,13 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.tempesta, ...stormTileSvg() },
     { key: TEX.coppa, ...trophySvg() },
     { key: TEX.logoCassa, ...logoCaseSvg() },
+    { key: TEX.sarcLegnoCassa, ...prizeCaseSvg('legno') },
+    { key: TEX.sarcLegnoCoperchio, ...prizeLidSvg('legno') },
+    { key: TEX.sarcBronzoCassa, ...prizeCaseSvg('bronzo') },
+    { key: TEX.sarcBronzoCoperchio, ...prizeLidSvg('bronzo') },
+    { key: TEX.sarcOroCassa, ...prizeCaseSvg('oro') },
+    { key: TEX.sarcOroCoperchio, ...prizeLidSvg('oro') },
+    { key: TEX.raggioLuce, ...lightBeamSvg() },
     { key: TEX.logoCoperchio, ...logoLidSvg() },
     { key: TEX.logoOcchiolino, ...logoWinkSvg() },
     { key: TEX.logoRaggi, ...logoRaysSvg() },

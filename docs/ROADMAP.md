@@ -53,7 +53,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
   > Disegna il logo (sezione 1) e una schermata iniziale animata. Poi la Lobby come descritta nella sezione 8,
   > con sfondo che cambia con l'ora e il personaggio scelto sul piedistallo.
 
-- [ ] **Passo 9 — Sarcofagi**
+- [x] **Passo 9 — Sarcofagi**
   > Quando vinci, al ritorno in lobby ricevi un sarcofago (sezione 5). Schermata di apertura con animazione
   > (trema, coperchio scivola, luce, premi che volano fuori). Gestisci scarabei d'oro e polvere di stelle.
 
