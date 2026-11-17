@@ -57,6 +57,8 @@ Oggetti nella mappa:
 
 In Duo: 1ª squadra +10, 2ª +6, 3ª +2, 4ª −2, 5ª −4.
 Le coppe si guadagnano **per personaggio**; il totale del giocatore è la somma.
+Le coppe di un personaggio non scendono mai sotto zero. I bot diventano più bravi con le coppe totali:
+principiante fino a 149, esperto da 150, campione da 500 (numeri in `src/data/progression.ts`).
 
 ## 5. Sarcofagi (premio vittoria)
 Quando **vinci una partita e torni nella lobby** ricevi un sarcofago. Nella lobby si apre con

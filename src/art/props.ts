@@ -354,3 +354,24 @@ export function stormTileSvg() {
   const body = `<rect width="${S}" height="${S}" fill="#B9773C"/>${streaks}`;
   return { width: S, height: S, body };
 }
+
+/** Coppa: calice d'oro egizio con fascia di lapislazzuli e un piccolo sole. */
+export function trophySvg() {
+  const gold = css(PALETTE.oro);
+  const s = `stroke="${LINE}" stroke-width="2.6" stroke-linejoin="round"`;
+  const body = `
+  <defs><linearGradient id="coppa" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#FFE08A"/><stop offset="0.55" stop-color="${gold}"/><stop offset="1" stop-color="#A86A0C"/>
+  </linearGradient></defs>
+  <path d="M9 10 Q1 10 2 18 Q4 27 14 28" fill="none" stroke="${LINE}" stroke-width="6" stroke-linecap="round"/>
+  <path d="M9 10 Q1 10 2 18 Q4 27 14 28" fill="none" stroke="${gold}" stroke-width="3" stroke-linecap="round"/>
+  <path d="M43 10 Q51 10 50 18 Q48 27 38 28" fill="none" stroke="${LINE}" stroke-width="6" stroke-linecap="round"/>
+  <path d="M43 10 Q51 10 50 18 Q48 27 38 28" fill="none" stroke="${gold}" stroke-width="3" stroke-linecap="round"/>
+  <path d="M8 5 L44 5 Q44 30 26 36 Q8 30 8 5 Z" fill="url(#coppa)" ${s}/>
+  <rect x="8" y="9" width="36" height="6" fill="${css(PALETTE.lapislazzuli)}" stroke="${LINE}" stroke-width="1.6"/>
+  <circle cx="26" cy="23" r="5" fill="${css(PALETTE.rossoDeserto)}" stroke="${LINE}" stroke-width="1.6"/>
+  <rect x="22" y="35" width="8" height="8" fill="url(#coppa)" ${s}/>
+  <path d="M14 50 L38 50 L35 42 L17 42 Z" fill="url(#coppa)" ${s}/>
+  <path d="M13 9 Q13 22 19 28" fill="none" stroke="#FFF1C1" stroke-width="2.4" stroke-linecap="round"/>`;
+  return { width: 52, height: 54, body };
+}

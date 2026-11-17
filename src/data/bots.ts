@@ -12,7 +12,7 @@ export interface BotLevel {
   sightRange: number;
 }
 
-/** Tre livelli di bravura. In futuro cresceranno con le coppe del giocatore. */
+/** Tre livelli di bravura: crescono con le coppe del giocatore (vedi BOT_LEVEL_BY_TROPHIES in progression.ts). */
 export const BOT_LEVELS: BotLevel[] = [
   { name: 'principiante', aimErrorDeg: 30, thinkSeconds: 0.4, attackPause: [0.9, 1.6], sightRange: 520 },
   { name: 'esperto', aimErrorDeg: 16, thinkSeconds: 0.25, attackPause: [0.5, 1.0], sightRange: 700 },
@@ -29,5 +29,6 @@ export const BOT_NAMES = ['Kha', 'Neb', 'Seti', 'Tiye', 'Meri', 'Huy', 'Ahmose',
 /** Partita Solo: quanti bot (tu + 9 = 10 giocatori) e di che livello. */
 export const SOLO_SETUP = {
   botCount: 9,
+  /** livello minimo (con poche coppe) */
   botLevel: 0,
 };

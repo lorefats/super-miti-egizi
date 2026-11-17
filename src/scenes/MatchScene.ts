@@ -5,6 +5,8 @@ import { AIM_STICK, AUTO_AIM_RANGE_FACTOR, CAMERA_LERP, DEPTH, JOYSTICK } from '
 import type { GroundKind, MapData, ZoneData } from '../data/maps';
 import { MAPPA_VALLE } from '../data/valle';
 import { BOT_LEVELS, BOT_NAMES, SOLO_SETUP } from '../data/bots';
+import { BOT_LEVEL_BY_TROPHIES, trophiesForPlace } from '../data/progression';
+import { SaveManager } from '../save/SaveManager';
 import { HIDEOUT_REVEAL_DISTANCE } from '../data/combat';
 import { Combat } from '../entities/Combat';
 import { createObstacle, type PlacedObstacle } from '../entities/Obstacle';
@@ -141,7 +143,7 @@ export class MatchScene extends Phaser.Scene {
     this.fighters.push(this.player);
 
     const names = Phaser.Utils.Array.Shuffle([...BOT_NAMES]);
-    const level = BOT_LEVELS[SOLO_SETUP.botLevel];
+    const level = BOT_LEVELS[this.botLevelIndex()];
     const botCount = Math.min(SOLO_SETUP.botCount, spawns.length);
     for (let i = 0; i < botCount; i++) {
       const bot = new Bot(
@@ -263,6 +265,16 @@ export class MatchScene extends Phaser.Scene {
     return this.fighters.filter((f) => f.isAlive()).length;
   }
 
+  /** Più coppe hai, più i bot sono bravi (principiante → esperto → campione). */
+  private botLevelIndex(): number {
+    const total = SaveManager.getTotalTrophies();
+    let level = SOLO_SETUP.botLevel;
+    BOT_LEVEL_BY_TROPHIES.forEach((min, i) => {
+      if (total >= min) level = Math.max(level, i);
+    });
+    return Math.min(level, BOT_LEVELS.length - 1);
+  }
+
   /** Qualcuno è stato sconfitto: aggiorna il contatore e controlla se la partita è finita. */
   private onDefeated(who: Player): void {
     // chi viene sconfitto lascia cadere i suoi gioielli
@@ -273,20 +285,32 @@ export class MatchScene extends Phaser.Scene {
 
     if (who === this.player) {
       // il posto è quanti erano ancora in gioco prima di essere sconfitto
-      this.endMatch(`Sconfitto — ${alive + 1}° posto`, false);
+      this.endMatch(alive + 1);
     } else if (alive === 1 && this.player.isAlive()) {
-      this.endMatch('VITTORIA!', true);
+      this.endMatch(1);
     }
   }
 
-  private endMatch(title: string, victory: boolean): void {
+  /** Fine partita: salva subito le coppe, mostra la scritta e poi passa ai Risultati. */
+  private endMatch(place: number): void {
     this.over = true;
     this.moveStick.setEnabled(false);
     this.aimStick.setEnabled(false);
     this.superButton.setEnabled(false);
     this.aimIndicator.hide();
     this.player.move(this.dir.set(0, 0));
-    this.time.delayedCall(1100, () => showEndOverlay(this, title, victory, () => this.scene.restart()));
+
+    const characterId = this.player.stats.id;
+    const reward = SaveManager.recordMatch(characterId, place, trophiesForPlace(place));
+    const victory = place === 1;
+    const title = victory ? 'VITTORIA!' : `Sconfitto — ${place}° posto`;
+    this.time.delayedCall(1100, () => showEndOverlay(this, title, victory));
+    this.time.delayedCall(3000, () => {
+      this.cameras.main.fadeOut(300, 20, 33, 61);
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () =>
+        this.scene.start('Results', { ...reward, playerCount: this.fighters.length }),
+      );
+    });
   }
 
   /** Fa uscire `n` gioielli da (x, y): saltano un po' attorno e atterrano sulla sabbia. */

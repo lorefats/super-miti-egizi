@@ -25,6 +25,7 @@ import {
   plankSvg,
   gemSvg,
   stormTileSvg,
+  trophySvg,
 } from './props';
 import {
   bigPyramidRoofSvg,
@@ -68,6 +69,7 @@ export const TEX = {
   asse: 'asse-legno',
   gioiello: 'gioiello',
   tempesta: 'tempesta',
+  coppa: 'coppa',
   // terreni delle zone
   terrenoRoccia: 'terreno-roccia',
   terrenoLastre: 'terreno-lastre',
@@ -211,6 +213,7 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.asse, ...plankSvg() },
     { key: TEX.gioiello, ...gemSvg() },
     { key: TEX.tempesta, ...stormTileSvg() },
+    { key: TEX.coppa, ...trophySvg() },
     { key: TEX.terrenoRoccia, ...V.rockGroundSvg() },
     { key: TEX.terrenoLastre, ...V.pavedGroundSvg() },
     { key: TEX.terrenoAsfalto, ...V.asphaltGroundSvg() },

@@ -45,7 +45,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
 
 ## Fase 3 — Lobby e progressi
 
-- [ ] **Passo 7 — Salvataggio e coppe**
+- [x] **Passo 7 — Salvataggio e coppe**
   > Crea il SaveManager. Dopo ogni partita assegna le coppe secondo la tabella della sezione 4 e salvale per
   > personaggio. Schermata Risultati con posizione, coppe guadagnate (animate) e pulsante per tornare.
 
