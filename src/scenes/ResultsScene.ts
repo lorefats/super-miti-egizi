@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
-import { TEX, characterTexture, getHeldWeapon, getLegs, legTexture, weaponTexture } from '../art';
+import { TEX } from '../art';
 import { PALETTE, css } from '../art/palette';
 import { FONT_FAMILY } from '../config';
 import { getCharacter } from '../data/characters';
 import { TROPHIES_SOLO } from '../data/progression';
 import type { MatchReward } from '../save/SaveManager';
 import { createGoldButton } from '../ui/GoldButton';
+import { createCharacterPose } from '../ui/CharacterPose';
 
 export type ResultsData = MatchReward & { playerCount: number };
 
@@ -60,7 +61,8 @@ export class ResultsScene extends Phaser.Scene {
     const cx = W * 0.27;
     const feetY = H * 0.78;
     this.drawPedestal(cx, feetY);
-    const hero = this.buildCharacter(d.characterId, cx, feetY, victory);
+    // vittoria: scettro puntato in avanti, verso l'alto
+    const hero = createCharacterPose(this, d.characterId, cx, feetY, victory ? 0.45 : 0.18).container;
     hero.setScale(2.1);
     this.add
       .text(cx, feetY + 54, getCharacter(d.characterId).name, {
@@ -129,10 +131,10 @@ export class ResultsScene extends Phaser.Scene {
 
     this.drawPlaceTable(px, panelTop + 330, d.place);
 
-    // ---- pulsante per continuare (per ora riparte una partita; dal Passo 8 tornerà alla Lobby) ----
+    // ---- pulsante per tornare alla Lobby ----
     const btn = createGoldButton(this, px, Math.min(H - 70, panelTop + panelH + 70), 'Continua', () => {
       this.cameras.main.fadeOut(250, 20, 33, 61);
-      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start('Match'));
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start('Lobby'));
     });
     btn.setAlpha(0).disableInteractive();
     const showButton = () => {
@@ -272,29 +274,5 @@ export class ResultsScene extends Phaser.Scene {
     g.fillStyle(0xc9a36a, 1).fillEllipse(cx, feetY, 240, 46);
     g.lineStyle(4, PALETTE.bluNotte, 1).strokeEllipse(cx, feetY, 240, 46);
     g.lineStyle(4, PALETTE.oro, 1).strokeEllipse(cx, feetY, 200, 34);
-  }
-
-  /** Il personaggio intero (gambe, corpo, arma) in posa, con i piedi in (x, y). */
-  private buildCharacter(id: string, x: number, y: number, victory: boolean): Phaser.GameObjects.Container {
-    const c = this.add.container(x, y);
-    c.add(this.add.image(0, 0, TEX.ombra));
-    const legs = getLegs(id);
-    if (legs) {
-      const key = legTexture(id);
-      c.add(this.add.image(legs.hips.back.x, legs.hips.back.y, key).setOrigin(legs.originX, legs.originY).setTint(0xb8b8c8).setRotation(-0.12));
-      c.add(this.add.image(legs.hips.front.x, legs.hips.front.y, key).setOrigin(legs.originX, legs.originY).setRotation(0.1));
-    }
-    c.add(this.add.image(0, 2, characterTexture(id)).setOrigin(0.5, 1));
-    const held = getHeldWeapon(id);
-    if (held) {
-      // vittoria: scettro puntato in avanti, verso l'alto
-      c.add(
-        this.add
-          .image(held.hand.x, held.hand.y, weaponTexture(id))
-          .setOrigin(held.originX, held.originY)
-          .setRotation(victory ? 0.45 : 0.18),
-      );
-    }
-    return c;
   }
 }

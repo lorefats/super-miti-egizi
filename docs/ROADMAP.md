@@ -49,7 +49,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
   > Crea il SaveManager. Dopo ogni partita assegna le coppe secondo la tabella della sezione 4 e salvale per
   > personaggio. Schermata Risultati con posizione, coppe guadagnate (animate) e pulsante per tornare.
 
-- [ ] **Passo 8 — Logo e Lobby**
+- [x] **Passo 8 — Logo e Lobby**
   > Disegna il logo (sezione 1) e una schermata iniziale animata. Poi la Lobby come descritta nella sezione 8,
   > con sfondo che cambia con l'ora e il personaggio scelto sul piedistallo.
 

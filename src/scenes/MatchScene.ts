@@ -135,7 +135,7 @@ export class MatchScene extends Phaser.Scene {
     const spawns = Phaser.Utils.Array.Shuffle([map.spawn, ...(map.botSpawns ?? [])]);
     const mySpawn = spawns.shift()!;
     this.player = new Player(this, mySpawn.x, mySpawn.y, {
-      characterId: 'anubi',
+      characterId: SaveManager.getSelectedCharacter(),
       team: 0,
       combat: this.combat,
       isHuman: true,

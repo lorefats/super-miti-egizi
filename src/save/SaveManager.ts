@@ -18,6 +18,13 @@ export interface SaveData {
   version: number;
   characters: Record<string, CharacterProgress>;
   stats: { matches: number; victories: number };
+  /** valute (si guadagnano dai sarcofagi, dal Passo 9) */
+  scarabs: number;
+  stardust: number;
+  /** sarcofagi vinti e non ancora aperti */
+  pendingSarcophagi: number;
+  /** personaggio scelto nella Lobby */
+  selectedCharacter: string;
 }
 
 /** Risultato di una partita, per la schermata Risultati. */
@@ -32,7 +39,15 @@ export interface MatchReward {
 }
 
 function emptySave(): SaveData {
-  return { version: CURRENT_VERSION, characters: {}, stats: { matches: 0, victories: 0 } };
+  return {
+    version: CURRENT_VERSION,
+    characters: {},
+    stats: { matches: 0, victories: 0 },
+    scarabs: 0,
+    stardust: 0,
+    pendingSarcophagi: 0,
+    selectedCharacter: 'anubi',
+  };
 }
 
 /** Porta un salvataggio di qualsiasi versione alla versione attuale. */
@@ -52,6 +67,11 @@ function migrate(raw: unknown): SaveData {
     data.stats.matches = Math.max(0, Math.floor(Number(r.stats.matches) || 0));
     data.stats.victories = Math.max(0, Math.floor(Number(r.stats.victories) || 0));
   }
+  const count = (v: unknown) => Math.max(0, Math.floor(Number(v) || 0));
+  data.scarabs = count(r.scarabs);
+  data.stardust = count(r.stardust);
+  data.pendingSarcophagi = count(r.pendingSarcophagi);
+  if (typeof r.selectedCharacter === 'string' && r.selectedCharacter) data.selectedCharacter = r.selectedCharacter;
   // quando ci sarà la versione 2: if (r.version === 1) { ...trasforma... }
   return data;
 }
@@ -92,6 +112,18 @@ class SaveManagerImpl {
   /** Coppe totali del giocatore = somma di tutti i personaggi. */
   getTotalTrophies(): number {
     return Object.values(this.data.characters).reduce((sum, c) => sum + c.trophies, 0);
+  }
+
+  getCurrencies(): { scarabs: number; stardust: number } {
+    return { scarabs: this.data.scarabs, stardust: this.data.stardust };
+  }
+
+  getPendingSarcophagi(): number {
+    return this.data.pendingSarcophagi;
+  }
+
+  getSelectedCharacter(): string {
+    return this.data.selectedCharacter;
   }
 
   getStats(): Readonly<SaveData['stats']> {

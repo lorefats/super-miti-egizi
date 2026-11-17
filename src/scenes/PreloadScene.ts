@@ -3,7 +3,7 @@ import { FONT_FAMILY } from '../config';
 import { PALETTE, css } from '../art/palette';
 import { createAllTextures } from '../art';
 
-/** Mostra il titolo mentre disegna tutte le immagini del gioco, poi avvia la partita. */
+/** Mostra il titolo mentre disegna tutte le immagini del gioco, poi mostra il logo. */
 export class PreloadScene extends Phaser.Scene {
   constructor() {
     super('Preload');
@@ -30,6 +30,7 @@ export class PreloadScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     await createAllTextures(this);
-    this.scene.start('Match');
+    // "?partita" nell'indirizzo salta logo e Lobby (comodo per provare)
+    this.scene.start(new URLSearchParams(location.search).has('partita') ? 'Match' : 'Title');
   }
 }
