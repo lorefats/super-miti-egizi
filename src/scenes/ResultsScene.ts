@@ -138,8 +138,13 @@ export class ResultsScene extends Phaser.Scene {
       this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start('Lobby', { newSarcophagi: d.sarcophagiWon }));
     });
     btn.setAlpha(0).disableInteractive();
+    let prestigeShown = false;
     const showButton = () => {
       total.setText(`Coppe totali: ${d.totalTrophies}`);
+      if (d.prestigeReached && !prestigeShown) {
+        prestigeShown = true;
+        this.showPrestige(cx, hero);
+      }
       if (btn.input?.enabled) return;
       btn.setInteractive();
       this.tweens.add({ targets: btn, alpha: 1, duration: 250 });
@@ -154,6 +159,36 @@ export class ResultsScene extends Phaser.Scene {
     );
     // per sicurezza il pulsante compare comunque
     this.time.delayedCall(4500, showButton);
+  }
+
+  /** Il personaggio ha appena raggiunto 1000 coppe: Prestigio 1 con il suo titolo. */
+  private showPrestige(cx: number, hero: Phaser.GameObjects.Container): void {
+    const data = getCharacter(this.result.characterId);
+    this.cameras.main.flash(400, 255, 230, 160);
+    const halo = this.add.image(hero.x, hero.y - 170, TEX.bagliore).setTint(PALETTE.oro).setBlendMode(Phaser.BlendModes.ADD).setScale(0);
+    this.children.moveBelow(halo, hero);
+    this.tweens.add({ targets: halo, scale: 5, alpha: 0.7, duration: 600, ease: 'Back.out' });
+    const box = this.add.container(cx - 30, 200).setScale(0);
+    const g = this.add.graphics();
+    g.fillStyle(PALETTE.bluNotte, 0.92).fillRoundedRect(-200, -52, 400, 104, 22);
+    g.lineStyle(5, PALETTE.oro, 1).strokeRoundedRect(-200, -52, 400, 104, 22);
+    box.add(g);
+    box.add(this.add.image(-152, 0, TEX.stemmaPrestigio).setScale(0.75));
+    box.add(this.add.text(36, -18, 'PRESTIGIO 1!', { fontFamily: FONT_FAMILY, fontSize: '40px', color: css(PALETTE.oro) }).setOrigin(0.5));
+    box.add(this.add.text(36, 24, `${data.name} — ${data.title}`, { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#FFFFFF' }).setOrigin(0.5));
+    this.tweens.add({ targets: box, scale: 1, duration: 450, ease: 'Back.out' });
+    for (let i = 0; i < 24; i++) {
+      const p = this.add.image(hero.x, hero.y - 150, TEX.scintilla).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: p,
+        x: p.x + Phaser.Math.Between(-220, 220),
+        y: p.y - Phaser.Math.Between(40, 260),
+        alpha: 0,
+        angle: 180,
+        duration: Phaser.Math.Between(600, 1200),
+        onComplete: () => p.destroy(),
+      });
+    }
   }
 
   /** Vittoria: "+1 sarcofago", che poi si apre nella Lobby. */

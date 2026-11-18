@@ -38,6 +38,7 @@ import * as V from './valley';
 import * as L from './lobby';
 import { logoCaseSvg, logoLidSvg, logoWinkSvg, logoRaysSvg } from './logo';
 import { prizeCaseSvg, prizeLidSvg, lightBeamSvg } from './sarcophagi';
+import { godSilhouetteSvg, prestigeBadgeSvg, roadStopSvg } from './menus';
 
 /**
  * UNICO punto da cui passano tutte le immagini del gioco.
@@ -145,6 +146,10 @@ export const TEX = {
   pozzo: 'pozzo',
   duna: 'duna',
   cammello: 'cammello',
+  // personaggi e cammino delle coppe
+  sagomaDio: 'sagoma-dio',
+  stemmaPrestigio: 'stemma-prestigio',
+  tappaCammino: 'tappa-cammino',
 } as const;
 
 const suffix = (v: ColorVariant) => (v === 'base' ? '' : `-${v}`);
@@ -191,6 +196,11 @@ const CHARACTER_ART: Record<
     legs: { draw: anubiLegSvg, hips: ANUBI_HIPS },
   },
 };
+
+/** Esiste già il disegno vero di questo personaggio? (Gli altri usano la sagoma colorata.) */
+export function hasCharacterArt(characterId: string): boolean {
+  return characterId in CHARACTER_ART;
+}
 
 /** Dati delle gambe per l'animazione: posizione delle anche e punto di rotazione (0..1). */
 export function getLegs(
@@ -317,6 +327,9 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.pozzo, ...V.wellSvg() },
     { key: TEX.duna, ...V.duneSvg() },
     { key: TEX.cammello, ...V.camelSvg() },
+    { key: TEX.sagomaDio, ...godSilhouetteSvg() },
+    { key: TEX.stemmaPrestigio, ...prestigeBadgeSvg() },
+    { key: TEX.tappaCammino, ...roadStopSvg() },
   ];
   await loadSvgTextures(scene, arts);
 }

@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
-import { TEX } from '../art';
+import { TEX, characterTexture, hasCharacterArt } from '../art';
 import { LOGO_SIZE, LOGO_WINK_EYE } from '../art/logo';
 import { PALETTE, css } from '../art/palette';
 import { PRIZE_SARC_SIZE } from '../art/sarcophagi';
 import { FONT_FAMILY } from '../config';
+import { getRosterEntry } from '../data/characters';
 import { getSarcophagus, rollSarcophagus, type SarcophagusLoot, type SarcophagusTier } from '../data/progression';
 import { SaveManager } from '../save/SaveManager';
 import { createGoldButton } from '../ui/GoldButton';
@@ -22,8 +23,10 @@ interface Reward {
   tex: string;
   amount: number;
   name: string;
-  /** a quale contatore in alto va (0 scarabei, 1 polvere) */
+  /** a quale contatore in alto va (0 scarabei, 1 polvere, -1 nessuno: è un personaggio) */
   pill: number;
+  /** colore dell'icona (per la sagoma dei personaggi senza disegno) */
+  tint?: number;
 }
 
 /**
@@ -33,6 +36,8 @@ interface Reward {
  */
 export class SarcophagusScene extends Phaser.Scene {
   private forcedTier?: SarcophagusTier;
+  /** dove tornare alla fine (la Lobby, o il Cammino delle Coppe se il sarcofago veniva da lì) */
+  private returnTo = 'Lobby';
   private state: State = 'arriving';
   private loot!: SarcophagusLoot;
   private rewards: Reward[] = [];
@@ -53,8 +58,9 @@ export class SarcophagusScene extends Phaser.Scene {
     super('Sarcophagus');
   }
 
-  init(data: { forcedTier?: SarcophagusTier }): void {
+  init(data: { forcedTier?: SarcophagusTier; returnTo?: string }): void {
     this.forcedTier = data?.forcedTier;
+    this.returnTo = data?.returnTo ?? 'Lobby';
     this.state = 'arriving';
     this.rewardIndex = 0;
     this.card = undefined;
@@ -66,7 +72,9 @@ export class SarcophagusScene extends Phaser.Scene {
     const { width: W, height: H } = this.scale;
     const test = this.forcedTier !== undefined;
     const before = SaveManager.getCurrencies();
-    this.loot = rollSarcophagus(this.forcedTier);
+    // prima i sarcofagi del Cammino delle Coppe (tipo già deciso), poi quelli a sorpresa
+    const tier = this.forcedTier ?? SaveManager.nextSarcophagusTier();
+    this.loot = rollSarcophagus(tier, SaveManager.getFindableCharacters());
     if (!test && !SaveManager.openSarcophagus(this.loot)) {
       this.scene.start('Lobby');
       return;
@@ -75,6 +83,17 @@ export class SarcophagusScene extends Phaser.Scene {
       { tex: TEX.scarabeo, amount: this.loot.scarabs, name: "Scarabei d'oro", pill: 0 },
       { tex: TEX.polvereStelle, amount: this.loot.stardust, name: 'Polvere di stelle', pill: 1 },
     ];
+    const newId = this.loot.characterId;
+    if (newId) {
+      const art = hasCharacterArt(newId);
+      this.rewards.push({
+        tex: art ? characterTexture(newId) : TEX.sagomaDio,
+        amount: 0,
+        name: getRosterEntry(newId).name,
+        pill: -1,
+        tint: art ? undefined : getRosterEntry(newId).color,
+      });
+    }
     this.pillValues = [before.scarabs, before.stardust];
 
     this.cameras.main.fadeIn(250, 20, 33, 61);
@@ -284,12 +303,18 @@ export class SarcophagusScene extends Phaser.Scene {
     const amount = this.add
       .text(0, 62, '+0', { fontFamily: FONT_FAMILY, fontSize: '64px', color: '#FFFFFF', stroke: css(PALETTE.bluNotte), strokeThickness: 9 })
       .setOrigin(0.5);
-    const name = this.add.text(0, 114, r.name, { fontFamily: FONT_FAMILY, fontSize: '26px', color: '#DCE4FF' }).setOrigin(0.5);
+    const isHero = r.pill < 0;
+    const name = this.add
+      .text(0, 114, isHero ? 'Nuovo personaggio!' : r.name, { fontFamily: FONT_FAMILY, fontSize: '26px', color: isHero ? css(PALETTE.oro) : '#DCE4FF' })
+      .setOrigin(0.5);
     box.add([g, amount, name]);
     this.tweens.add({ targets: box, scale: 1, duration: 300, ease: 'Back.out' });
 
     // l'icona esce dal sarcofago con un arco e si mette nel riquadro
     const icon = this.add.image(fromX, fromY, r.tex).setScale(0.4);
+    if (r.tint !== undefined) icon.setTint(r.tint);
+    // i personaggi sono alti: più piccoli e più in alto nel riquadro
+    const iconScale = isHero ? 0.62 : 2.6;
     const toX = rx;
     const toY = ry - 40;
     const midX = (fromX + toX) / 2;
@@ -303,11 +328,20 @@ export class SarcophagusScene extends Phaser.Scene {
         const t = tw.getValue() ?? 0;
         const u = 1 - t;
         icon.setPosition(u * u * fromX + 2 * u * t * midX + t * t * toX, u * u * fromY + 2 * u * t * midY + t * t * toY);
-        icon.setScale(0.4 + 2.2 * t).setAngle(360 * t);
+        icon.setScale(0.4 + (iconScale - 0.4) * t).setAngle(360 * t);
       },
       onComplete: () => {
-        this.tweens.add({ targets: icon, scale: 2.8, duration: 120, yoyo: true });
-        this.sparklesAt(toX, toY, 10);
+        this.tweens.add({ targets: icon, scale: iconScale * 1.08, duration: 120, yoyo: true });
+        this.sparklesAt(toX, toY, isHero ? 30 : 10);
+        if (isHero) {
+          this.cameras.main.flash(300, 255, 244, 200);
+          amount.setText(r.name).setColor(css(PALETTE.oro));
+          this.tweens.add({ targets: amount, scale: 1.2, duration: 90, yoyo: true });
+          this.hint.setText('Tocca per prenderlo!');
+          this.tweens.add({ targets: this.hint, alpha: 1, duration: 200 });
+          this.state = 'reward';
+          return;
+        }
         // il numero conta fino al premio
         this.tweens.addCounter({
           from: 0,
@@ -334,6 +368,23 @@ export class SarcophagusScene extends Phaser.Scene {
     if (!r || !card) return;
     this.state = 'busy';
     this.hint.setAlpha(0);
+    if (r.pill < 0) {
+      // il personaggio nuovo sale verso il cielo e va nella collezione
+      this.tweens.add({ targets: card.box, scale: 0, alpha: 0, duration: 250, onComplete: () => card.box.destroy() });
+      this.tweens.add({
+        targets: card.icon,
+        y: -200,
+        alpha: 0,
+        duration: 600,
+        ease: 'Quad.in',
+        onComplete: () => {
+          card.icon.destroy();
+          this.rewardIndex++;
+          this.nextReward();
+        },
+      });
+      return;
+    }
     const target = this.pillIcons[r.pill];
     this.tweens.add({ targets: card.box, scale: 0, alpha: 0, duration: 250, onComplete: () => card.box.destroy() });
     this.tweens.add({
@@ -373,16 +424,21 @@ export class SarcophagusScene extends Phaser.Scene {
     const rx = Math.min(W * 0.76, W / 2 + 360);
     const box = this.add.container(rx, H * 0.36).setScale(0);
     const g = this.add.graphics();
-    g.fillStyle(PALETTE.bluNotte, 0.85).fillRoundedRect(-160, -100, 320, 200, 24);
-    g.lineStyle(4, PALETTE.oro, 1).strokeRoundedRect(-160, -100, 320, 200, 24);
+    const extra = this.rewards.length > 2 ? 64 : 0;
+    g.fillStyle(PALETTE.bluNotte, 0.85).fillRoundedRect(-160, -100, 320, 200 + extra, 24);
+    g.lineStyle(4, PALETTE.oro, 1).strokeRoundedRect(-160, -100, 320, 200 + extra, 24);
     box.add(g);
     box.add(this.add.text(0, -68, 'Hai trovato:', { fontFamily: FONT_FAMILY, fontSize: '30px', color: css(PALETTE.oro) }).setOrigin(0.5));
     this.rewards.forEach((r, i) => {
       const y = -10 + i * 64;
-      box.add(this.add.image(-70, y, r.tex).setScale(0.9));
+      const hero = r.pill < 0;
+      const icon = this.add.image(-70, hero ? y + 26 : y, r.tex).setScale(hero ? 0.3 : 0.9);
+      if (hero) icon.setOrigin(0.5, 1);
+      if (r.tint !== undefined) icon.setTint(r.tint);
+      box.add(icon);
       box.add(
         this.add
-          .text(-30, y, `+${r.amount}`, { fontFamily: FONT_FAMILY, fontSize: '40px', color: '#FFFFFF' })
+          .text(-30, y, hero ? r.name : `+${r.amount}`, { fontFamily: FONT_FAMILY, fontSize: hero ? '34px' : '40px', color: hero ? css(PALETTE.oro) : '#FFFFFF' })
           .setOrigin(0, 0.5),
       );
     });
@@ -390,21 +446,23 @@ export class SarcophagusScene extends Phaser.Scene {
 
     const left = this.forcedTier === undefined ? SaveManager.getPendingSarcophagi() : 0;
     const buttons: Phaser.GameObjects.Container[] = [];
+    const by = H * 0.36 + extra;
     if (left > 0) {
-      buttons.push(createGoldButton(this, rx, H * 0.36 + 170, `Apri il prossimo (${left})`, () => this.leave('Sarcophagus'), 340, 76));
+      buttons.push(createGoldButton(this, rx, by + 170, `Apri il prossimo (${left})`, () => this.leave('Sarcophagus'), 340, 76));
     }
-    buttons.push(createGoldButton(this, rx, H * 0.36 + (left > 0 ? 262 : 180), 'Continua', () => this.leave('Lobby'), 300, 76));
+    buttons.push(createGoldButton(this, rx, by + (left > 0 ? 262 : 180), 'Continua', () => this.leave(this.returnTo), 300, 76));
     for (const b of buttons) {
       b.setAlpha(0);
       this.tweens.add({ targets: b, alpha: 1, delay: 300, duration: 250 });
     }
   }
 
-  private leave(to: 'Lobby' | 'Sarcophagus'): void {
+  private leave(to: string): void {
     if (this.state !== 'done') return;
     this.state = 'busy';
     this.cameras.main.fadeOut(250, 20, 33, 61);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(to, {}));
+    const data = to === 'Sarcophagus' ? { returnTo: this.returnTo } : {};
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(to, data));
   }
 
   // ------------------------------------------------------------ effetti

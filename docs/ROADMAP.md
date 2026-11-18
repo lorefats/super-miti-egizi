@@ -57,7 +57,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
   > Quando vinci, al ritorno in lobby ricevi un sarcofago (sezione 5). Schermata di apertura con animazione
   > (trema, coperchio scivola, luce, premi che volano fuori). Gestisci scarabei d'oro e polvere di stelle.
 
-- [ ] **Passo 10 — Cammino delle Coppe e Prestigi**
+- [x] **Passo 10 — Cammino delle Coppe e Prestigi**
   > Schermata Cammino delle Coppe (sezione 6) con i premi e Rà a 6000 coppe. Prestigio 1 a 1000 coppe per
   > personaggio (sezione 7). Schermata Personaggi con tutti e 24 (quelli bloccati in ombra) e potenziamento livelli.
 

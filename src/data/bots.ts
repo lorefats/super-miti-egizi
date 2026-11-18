@@ -10,13 +10,15 @@ export interface BotLevel {
   attackPause: [number, number];
   /** Fino a che distanza (pixel) il bot si accorge dei nemici. */
   sightRange: number;
+  /** Livello (1-11) del personaggio del bot: più alto = più vita e più danno, come i tuoi potenziamenti. */
+  characterLevel: number;
 }
 
 /** Tre livelli di bravura: crescono con le coppe del giocatore (vedi BOT_LEVEL_BY_TROPHIES in progression.ts). */
 export const BOT_LEVELS: BotLevel[] = [
-  { name: 'principiante', aimErrorDeg: 30, thinkSeconds: 0.4, attackPause: [0.9, 1.6], sightRange: 520 },
-  { name: 'esperto', aimErrorDeg: 16, thinkSeconds: 0.25, attackPause: [0.5, 1.0], sightRange: 700 },
-  { name: 'campione', aimErrorDeg: 7, thinkSeconds: 0.15, attackPause: [0.2, 0.5], sightRange: 850 },
+  { name: 'principiante', aimErrorDeg: 30, thinkSeconds: 0.4, attackPause: [0.9, 1.6], sightRange: 520, characterLevel: 1 },
+  { name: 'esperto', aimErrorDeg: 16, thinkSeconds: 0.25, attackPause: [0.5, 1.0], sightRange: 700, characterLevel: 4 },
+  { name: 'campione', aimErrorDeg: 7, thinkSeconds: 0.15, attackPause: [0.2, 0.5], sightRange: 850, characterLevel: 7 },
 ];
 
 /** Sotto questa frazione di vita il bot scappa; torna a combattere sopra RECOVER. */

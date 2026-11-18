@@ -1,5 +1,9 @@
 import Phaser from 'phaser';
-import { TEX, characterTexture, getHeldWeapon, getLegs, legTexture, weaponTexture } from '../art';
+import { TEX, characterTexture, getHeldWeapon, getLegs, hasCharacterArt, legTexture, weaponTexture } from '../art';
+import { getRosterEntry } from '../data/characters';
+
+/** Colore delle sagome dei personaggi bloccati ("in ombra"). */
+export const SHADOW_TINT = 0x0b1026;
 
 /** Un personaggio intero (gambe, corpo, arma) da mostrare fermo in un menu, con i piedi in (0, 0). */
 export interface CharacterPose {
@@ -8,9 +12,25 @@ export interface CharacterPose {
   weapon: Phaser.GameObjects.Image | null;
 }
 
-export function createCharacterPose(scene: Phaser.Scene, id: string, x: number, y: number, weaponRotation = 0.18): CharacterPose {
+/**
+ * Personaggio fermo per i menu. Se non ha ancora un disegno vero si usa la sagoma nel suo colore;
+ * con `locked` tutto diventa un'ombra scura (personaggio da scoprire).
+ */
+export function createCharacterPose(
+  scene: Phaser.Scene,
+  id: string,
+  x: number,
+  y: number,
+  weaponRotation = 0.18,
+  locked = false,
+): CharacterPose {
   const c = scene.add.container(x, y);
   c.add(scene.add.image(0, 0, TEX.ombra));
+  if (!hasCharacterArt(id)) {
+    const body = scene.add.image(0, 2, TEX.sagomaDio).setOrigin(0.5, 1).setTint(locked ? SHADOW_TINT : getRosterEntry(id).color);
+    c.add(body);
+    return { container: c, body, weapon: null };
+  }
   const legs = getLegs(id);
   if (legs) {
     const key = legTexture(id);
@@ -24,6 +44,9 @@ export function createCharacterPose(scene: Phaser.Scene, id: string, x: number, 
   if (held) {
     weapon = scene.add.image(held.hand.x, held.hand.y, weaponTexture(id)).setOrigin(held.originX, held.originY).setRotation(weaponRotation);
     c.add(weapon);
+  }
+  if (locked) {
+    for (const o of c.list.slice(1)) (o as Phaser.GameObjects.Image).setTintFill(SHADOW_TINT);
   }
   return { container: c, body, weapon };
 }

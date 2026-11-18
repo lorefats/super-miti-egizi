@@ -5,6 +5,7 @@ import { PALETTE, type ColorVariant } from '../art/palette';
 import { REGEN, REVIVE_SECONDS } from '../data/combat';
 import { BUSH, GEM } from '../data/match';
 import { playImprison, playRevive } from '../art/sarcophagusFx';
+import { levelMultiplier } from '../data/progression';
 import { getCharacter, SPEED_VALUES, type CharacterData } from '../data/characters';
 import { getCharacterModule } from '../characters';
 import type { CharacterModule } from '../characters/types';
@@ -53,6 +54,8 @@ export interface FighterOptions {
   name?: string;
   /** È il personaggio controllato dal giocatore? */
   isHuman?: boolean;
+  /** Livello del personaggio (1-11): più vita e più danno. */
+  level?: number;
 }
 
 /** Evento emesso quando il personaggio viene sconfitto. */
@@ -127,6 +130,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   /** Secondi dall'ultima volta che ha colpito o è stato colpito (per la rigenerazione). */
   private sinceCombat = 0;
   protected readonly combat: Combat;
+  /** Moltiplicatore di vita e danno dato dal livello del personaggio. */
+  private readonly levelFactor: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number, opt: FighterOptions) {
     super(scene, x, y);
@@ -136,6 +141,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.isHuman = opt.isHuman ?? false;
     this.displayName = opt.name ?? '';
     this.stats = getCharacter(characterId);
+    this.levelFactor = levelMultiplier(opt.level ?? 1);
     this.module = getCharacterModule(characterId);
     this.team = team;
     this.health = this.maxHealth;
@@ -196,19 +202,19 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Vita massima, compresi i gioielli. */
   get maxHealth(): number {
-    return this.stats.maxHealth * (1 + GEM.healthBonus * this.gems);
+    return this.stats.maxHealth * this.levelFactor * (1 + GEM.healthBonus * this.gems);
   }
 
   /** Danno dell'attacco base, compresi i gioielli. */
   attackDamage(): number {
-    return this.stats.weapon.damage * (1 + GEM.damageBonus * this.gems);
+    return this.stats.weapon.damage * this.levelFactor * (1 + GEM.damageBonus * this.gems);
   }
 
   /** Raccoglie un gioiello: più vita massima (e la stessa vita in più subito) e più danno. */
   addGem(): void {
     if (!this.isAlive()) return;
     this.gems += 1;
-    this.health += this.stats.maxHealth * GEM.healthBonus;
+    this.health += this.stats.maxHealth * this.levelFactor * GEM.healthBonus;
     this.bar.setGems(this.gems);
   }
 

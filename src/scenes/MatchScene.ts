@@ -134,8 +134,10 @@ export class MatchScene extends Phaser.Scene {
     // il giocatore (squadra 0) e i bot (ognuno nella sua squadra: tutti contro tutti); partenze a caso
     const spawns = Phaser.Utils.Array.Shuffle([map.spawn, ...(map.botSpawns ?? [])]);
     const mySpawn = spawns.shift()!;
+    const myId = SaveManager.getSelectedCharacter();
     this.player = new Player(this, mySpawn.x, mySpawn.y, {
-      characterId: SaveManager.getSelectedCharacter(),
+      characterId: myId,
+      level: SaveManager.getLevel(myId),
       team: 0,
       combat: this.combat,
       isHuman: true,
@@ -152,6 +154,7 @@ export class MatchScene extends Phaser.Scene {
         spawns[i].y,
         {
           characterId: 'anubi',
+          level: level.characterLevel,
           team: i + 1,
           combat: this.combat,
           variant: COLOR_VARIANTS[(i % (COLOR_VARIANTS.length - 1)) + 1],

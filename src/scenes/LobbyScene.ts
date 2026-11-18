@@ -4,6 +4,7 @@ import { LOBBY_SKIES, type TimeOfDay } from '../art/lobby';
 import { PALETTE, css } from '../art/palette';
 import { FONT_FAMILY } from '../config';
 import { getCharacter } from '../data/characters';
+import { makePressable } from '../ui/MenuKit';
 import { LOBBY_POSE_EVERY, timeOfDayAt } from '../data/lobby';
 import { SARCOPHAGI, type SarcophagusTier } from '../data/progression';
 import { SaveManager } from '../save/SaveManager';
@@ -161,6 +162,8 @@ export class LobbyScene extends Phaser.Scene {
     const id = SaveManager.getSelectedCharacter();
     const feetY = H - BAR_H - 96;
     this.add.image(W / 2, feetY, TEX.piedistallo).setOrigin(0.5, 34 / 168).setScale(0.8);
+    const prestige = SaveManager.hasPrestige(id);
+    if (prestige) this.drawPrestigeAura(W / 2, feetY);
 
     this.hero = createCharacterPose(this, id, W / 2, feetY);
     const c = this.hero.container.setScale(this.heroScale);
@@ -198,6 +201,37 @@ export class LobbyScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5);
     this.add.image(tr.x - 18, feetY + 74, TEX.coppa).setScale(0.5);
+    if (prestige) {
+      // titolo del Prestigio 1 su un nastro sopra la testa
+      const ribbonY = feetY - 170 * this.heroScale - 30;
+      const t = this.add
+        .text(W / 2, ribbonY, data.title, { fontFamily: FONT_FAMILY, fontSize: '26px', color: css(PALETTE.bluNotte) })
+        .setOrigin(0.5);
+      const rw = t.width + 70;
+      const rg = this.add.graphics();
+      rg.fillStyle(PALETTE.oroOmbra, 1).fillTriangle(-rw / 2 - 18, 4, -rw / 2 + 8, -16, -rw / 2 + 8, 22);
+      rg.fillTriangle(rw / 2 + 18, 4, rw / 2 - 8, -16, rw / 2 - 8, 22);
+      rg.fillStyle(PALETTE.oro, 1).fillRoundedRect(-rw / 2, -20, rw, 40, 10);
+      rg.lineStyle(3, PALETTE.bluNotte, 1).strokeRoundedRect(-rw / 2, -20, rw, 40, 10);
+      rg.setPosition(W / 2, ribbonY);
+      t.setDepth(1);
+      this.add.image(W / 2 - rw / 2 + 4, ribbonY, TEX.stemmaPrestigio).setScale(0.55).setDepth(1);
+    }
+  }
+
+  /** Prestigio 1: alone d'oro dietro al personaggio e scintille che salgono. */
+  private drawPrestigeAura(x: number, feetY: number): void {
+    const halo = this.add.image(x, feetY - 140, TEX.bagliore).setTint(PALETTE.oro).setBlendMode(Phaser.BlendModes.ADD).setScale(4.5).setAlpha(0.55);
+    this.tweens.add({ targets: halo, scale: 5.2, alpha: 0.3, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    this.add.particles(0, 0, TEX.scintilla, {
+      x: { min: x - 110, max: x + 110 },
+      y: { min: feetY - 260, max: feetY },
+      speedY: { min: -50, max: -20 },
+      scale: { start: 0.8, end: 0 },
+      lifespan: 1600,
+      frequency: 120,
+      blendMode: Phaser.BlendModes.ADD,
+    });
   }
 
   /** Alza lo scettro al cielo e lo riabbassa. */
@@ -285,12 +319,24 @@ export class LobbyScene extends Phaser.Scene {
     }
     this.makeButton(pile, 140, 170, () => this.openSarcophagus());
 
-    // Cammino delle Coppe (arriva al Passo 10)
+    // Cammino delle Coppe (con il numerino dei premi da ritirare)
     const road = this.add.container(x, Math.min(H - BAR_H - 110, 420));
+    const claimable = SaveManager.getClaimableRoadCount();
+    if (claimable > 0) {
+      const glow = this.add.image(0, 0, TEX.bagliore).setScale(2).setTint(PALETTE.oro).setAlpha(0.6);
+      road.add(glow);
+      this.tweens.add({ targets: glow, alpha: 0.2, scale: 1.6, duration: 700, yoyo: true, repeat: -1 });
+    }
     road.add(this.add.image(0, 0, TEX.camminoIcona).setScale(0.9));
-    road.add(this.add.image(34, 30, TEX.lucchetto).setScale(0.8));
+    if (claimable > 0) {
+      const b = this.add.graphics();
+      b.fillStyle(PALETTE.rossoDeserto, 1).fillCircle(40, -40, 20);
+      b.lineStyle(3, PALETTE.bluNotte, 1).strokeCircle(40, -40, 20);
+      road.add(b);
+      road.add(this.add.text(40, -41, String(claimable), { fontFamily: FONT_FAMILY, fontSize: '24px', color: '#FFFFFF' }).setOrigin(0.5));
+    }
     road.add(this.label(0, 64, 'Cammino\ndelle Coppe', 20));
-    this.makeButton(road, 130, 150, () => showToast(this, 'Il Cammino delle Coppe\narriva presto!'));
+    this.makeButton(road, 130, 150, () => this.goTo('TrophyRoad'));
   }
 
   /** A destra: scelta Solo/Duo e il grande pulsante GIOCA a forma di cartiglio. */
@@ -341,18 +387,18 @@ export class LobbyScene extends Phaser.Scene {
     const g = this.add.graphics();
     g.fillStyle(PALETTE.bluNotte, 0.9).fillRect(0, H - BAR_H, W, BAR_H);
     g.fillStyle(PALETTE.oro, 1).fillRect(0, H - BAR_H, W, 4);
-    const items: [string, string, string][] = [
-      [TEX.iconaPersonaggi, 'Personaggi', 'La schermata Personaggi\narriva presto!'],
-      [TEX.iconaSarcofagi, 'Sarcofagi', ''],
-      [TEX.iconaCoppe, 'Coppe', 'Il Cammino delle Coppe\narriva presto!'],
-      [TEX.iconaImpostazioni, 'Impostazioni', 'Le impostazioni\narrivano presto!'],
+    const items: [string, string, () => void][] = [
+      [TEX.iconaPersonaggi, 'Personaggi', () => this.goTo('Characters')],
+      [TEX.iconaSarcofagi, 'Sarcofagi', () => this.openSarcophagus()],
+      [TEX.iconaCoppe, 'Coppe', () => this.goTo('TrophyRoad')],
+      [TEX.iconaImpostazioni, 'Impostazioni', () => showToast(this, 'Le impostazioni\narrivano presto!')],
     ];
     const step = Math.min(170, (W - 520) / 4);
-    items.forEach(([tex, name, msg], i) => {
+    items.forEach(([tex, name, action], i) => {
       const b = this.add.container(W / 2 + (i - 1.5) * step, H - BAR_H / 2 + 2);
       b.add(this.add.image(0, -12, tex).setScale(0.72));
       b.add(this.add.text(0, 30, name, { fontFamily: FONT_FAMILY, fontSize: '18px', color: '#FFFFFF' }).setOrigin(0.5));
-      this.makeButton(b, step - 10, BAR_H - 6, () => (msg ? showToast(this, msg) : this.openSarcophagus()));
+      this.makeButton(b, step - 10, BAR_H - 6, action);
     });
   }
 
@@ -370,26 +416,8 @@ export class LobbyScene extends Phaser.Scene {
       .setOrigin(0.5);
   }
 
-  /** Rende toccabile un gruppo: si schiaccia un po' sotto il dito e reagisce al rilascio. */
   private makeButton(c: Phaser.GameObjects.Container, w: number, h: number, onPress: () => void): void {
-    c.setSize(w, h).setInteractive({ useHandCursor: true });
-    let pressed = false;
-    const base = () => (c.getData('s') as number | undefined) ?? 1;
-    c.on('pointerdown', () => {
-      pressed = true;
-      c.setData('s', c.scaleX);
-      c.setScale(base() * 0.93);
-    });
-    c.on('pointerout', () => {
-      if (pressed) c.setScale(base());
-      pressed = false;
-    });
-    c.on('pointerup', () => {
-      if (!pressed) return;
-      pressed = false;
-      c.setScale(base());
-      onPress();
-    });
+    makePressable(c, w, h, onPress);
   }
 
   // ------------------------------------------------------------ sarcofagi
@@ -440,6 +468,14 @@ export class LobbyScene extends Phaser.Scene {
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () =>
       this.scene.start('Sarcophagus', { forcedTier: testTier }),
     );
+  }
+
+  /** Va a un'altra schermata (Personaggi, Cammino delle Coppe). */
+  private goTo(key: string): void {
+    if (this.leaving) return;
+    this.leaving = true;
+    this.cameras.main.fadeOut(250, 20, 33, 61);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(key));
   }
 
   private startMatch(): void {
