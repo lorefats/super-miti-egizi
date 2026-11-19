@@ -14,6 +14,7 @@ export function createGoldButton(
   onPress: () => void,
   width = 320,
   height = 84,
+  fontSize = 40,
 ): Phaser.GameObjects.Container {
   const btn = scene.add.container(x, y);
   const g = scene.add.graphics();
@@ -22,7 +23,7 @@ export function createGoldButton(
   g.fillStyle(0xffffff, 0.25).fillRoundedRect(-width / 2 + 10, -height / 2 + 6, width - 20, height * 0.32, 14);
   g.lineStyle(5, PALETTE.bluNotte, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, 22);
   const text = scene.add
-    .text(0, -2, label, { fontFamily: FONT_FAMILY, fontSize: '40px', color: css(PALETTE.bluNotte) })
+    .text(0, -2, label, { fontFamily: FONT_FAMILY, fontSize: `${fontSize}px`, color: css(PALETTE.bluNotte) })
     .setOrigin(0.5);
   btn.add([g, text]);
   btn.setSize(width, height + 8).setInteractive({ useHandCursor: true });

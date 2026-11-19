@@ -111,6 +111,8 @@ export class Combat {
         const tolerance = Math.atan2(d.hitRadius, dist);
         if (diff > halfArc + tolerance) continue;
       }
+      // i colpi non passano attraverso i muri
+      if (this.lineBlocked(from.x, from.y, d.x, d.y)) continue;
       d.takeDamage(damage);
       hit.push(d);
     }
@@ -128,7 +130,9 @@ export class Combat {
 
   /** Colpisce tutti i nemici dentro una linea dritta (lunga `length`, larga `width`). Restituisce chi è stato colpito. */
   hitLine(from: Attacker, angle: number, length: number, width: number, damage: number): Damageable[] {
-    const hit = this.alongLine(from.x, from.y, angle, length, width, from.team);
+    const hit = this.alongLine(from.x, from.y, angle, length, width, from.team).filter(
+      (d) => !this.lineBlocked(from.x, from.y, d.x, d.y),
+    );
     for (const d of hit) d.takeDamage(damage);
     const chargers = hit.filter((d) => d.kind !== 'baule').length;
     if (chargers) from.onDealtDamage?.(damage * chargers);
@@ -175,6 +179,20 @@ export class Combat {
       best = d;
     }
     return best;
+  }
+
+  /** Tra (x1, y1) e (x2, y2) c'è un muro in mezzo? */
+  lineBlocked(x1: number, y1: number, x2: number, y2: number): boolean {
+    if (!this.walls) return false;
+    const line = new Phaser.Geom.Line(x1, y1, x2, y2);
+    const rect = new Phaser.Geom.Rectangle();
+    for (const child of this.walls.getChildren()) {
+      const body = (child as Phaser.GameObjects.Zone).body as Phaser.Physics.Arcade.StaticBody | null;
+      if (!body) continue;
+      rect.setTo(body.x, body.y, body.width, body.height);
+      if (Phaser.Geom.Intersects.LineToRectangle(line, rect)) return true;
+    }
+    return false;
   }
 
   /** Il cerchio (x, y, r) tocca un muro o esce dalla mappa? */

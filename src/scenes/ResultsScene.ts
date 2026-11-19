@@ -132,12 +132,20 @@ export class ResultsScene extends Phaser.Scene {
 
     this.drawPlaceTable(px, panelTop + 330, d.place);
 
-    // ---- pulsante per tornare alla Lobby ----
-    const btn = createGoldButton(this, px, Math.min(H - 70, panelTop + panelH + 70), 'Continua', () => {
+    // ---- pulsanti: tornare alla Lobby o rigiocare subito ----
+    const btnY = Math.min(H - 70, panelTop + panelH + 70);
+    let leaving = false;
+    const leave = (scene: string, data: object) => {
+      if (leaving) return;
+      leaving = true;
       this.cameras.main.fadeOut(250, 20, 33, 61);
-      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start('Lobby', { newSarcophagi: d.sarcophagiWon }));
-    });
-    btn.setAlpha(0).disableInteractive();
+      this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(scene, data));
+    };
+    // i sarcofagi vinti restano salvati: si aprono la prossima volta che si passa dalla Lobby
+    const lobbyBtn = createGoldButton(this, px - 128, btnY, 'Lobby', () => leave('Lobby', { newSarcophagi: d.sarcophagiWon }), 236, 84, 36);
+    const againBtn = createGoldButton(this, px + 128, btnY, 'Gioca ancora', () => leave('Match', {}), 236, 84, 32);
+    const buttons = [lobbyBtn, againBtn];
+    for (const b of buttons) b.setAlpha(0).disableInteractive();
     let prestigeShown = false;
     const showButton = () => {
       total.setText(`Coppe totali: ${d.totalTrophies}`);
@@ -145,9 +153,9 @@ export class ResultsScene extends Phaser.Scene {
         prestigeShown = true;
         this.showPrestige(cx, hero);
       }
-      if (btn.input?.enabled) return;
-      btn.setInteractive();
-      this.tweens.add({ targets: btn, alpha: 1, duration: 250 });
+      if (lobbyBtn.input?.enabled) return;
+      for (const b of buttons) b.setInteractive();
+      this.tweens.add({ targets: buttons, alpha: 1, duration: 250 });
     };
 
     // ---- sequenza animata ----

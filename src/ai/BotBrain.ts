@@ -116,7 +116,9 @@ export class BotBrain {
     }
     // chi tira da lontano (es. Horus con l'arco) non si fa venire addosso: indietreggia girando attorno
     const sniper = bot.stats.weapon.kind === 'linea' && range >= SNIPER_RANGE;
-    if (dist - t.hitRadius > range * 0.6) this.headTo(t.x, t.y);
+    // con un muro in mezzo i colpi non passano: prima bisogna girarci attorno
+    const wallBetween = this.combat.lineBlocked(bot.x, bot.y, t.x, t.y);
+    if (wallBetween || dist - t.hitRadius > range * 0.6) this.headTo(t.x, t.y);
     else if (strafe && sniper && dist < range * 0.35) {
       this.wanted
         .set(-toTarget.y * this.strafeSign, toTarget.x * this.strafeSign)
@@ -131,7 +133,7 @@ export class BotBrain {
 
     const angle = Phaser.Math.Angle.Between(bot.x, bot.y, t.x, t.y);
     const error = () => Phaser.Math.DegToRad(Phaser.Math.FloatBetween(-this.level.aimErrorDeg, this.level.aimErrorDeg));
-    if (this.attackWait > 0) return;
+    if (this.attackWait > 0 || wallBetween) return;
     // 4) super carica e bersaglio a portata (solo contro i personaggi)
     if (strafe && bot.canUseSuper() && dist < bot.stats.super.range * 0.85) {
       bot.tryUseSuper(angle + error() * 0.5, dist);
