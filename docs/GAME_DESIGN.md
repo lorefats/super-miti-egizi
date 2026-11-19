@@ -13,6 +13,11 @@ Sotto, la scritta **SUPER MITI EGIZI** in lettere spesse color oro con contorno 
 - **Duo:** 5 squadre da 2. Il tuo compagno è un bot. Vince l'ultima squadra rimasta.
   (Serve per la super di Anubi sui compagni, di Iside, Hathor, ecc.)
 - **Allenamento:** mappa piccola con bersagli fermi, per provare i personaggi.
+- **Calcio del Nilo** (si sblocca a **220 coppe totali**): 3 contro 3 (tu + 2 compagni bot contro 3 bot).
+  Una palla da portare o calciare nella porta avversaria; vince chi segna 2 gol (o di più allo scadere).
+  Il campo è diviso dal **Nilo che scorre** in mezzo: l'acqua trascina piano chi ci entra (e la palla),
+  si attraversa sui ponti. Chi viene sconfitto riappare dopo qualche secondo nella sua metà campo.
+  Prima di 220 coppe il pulsante della modalità ha il lucchetto.
 
 Durata partita: 2-4 minuti. Bot con 3 livelli di bravura che crescono con le coppe del giocatore.
 
@@ -39,6 +44,11 @@ Oggetti nella mappa:
   Da fuori sembrano normali e **non si vede chi c'è dentro** (né le barre della vita). Quando entri, la piramide
   diventa trasparente e si vede la sala: pavimento decorato, torce, un sarcofago. È un nascondiglio:
   i nemici fuori ti vedono solo se sono molto vicini. Chi passa **dietro** una piramide grande la vede semitrasparente.
+
+### Seconda mappa: "Il Grande Nilo"
+Mappa per Solo e Duo con il **Nilo che scorre in mezzo** da un lato all'altro: la corrente trascina
+chi nuota (e rallenta), ci sono ponti, feluche e isolotti di papiro dove nascondersi.
+Sulle due rive villaggi, templi e palmeti. A ogni partita si gioca su una mappa a caso tra le due.
 
 ## 4. Valute e ricompense
 | Nome | Dove si trova | A cosa serve |
@@ -91,7 +101,8 @@ cornice dorata attorno all'icona, effetto luminoso sul personaggio in lobby e un
 - **In alto:** coppe totali, scarabei d'oro, polvere di stelle.
 - **A destra:** grande pulsante **GIOCA** a forma di cartiglio dorato; sopra, la scelta Solo / Duo.
 - **A sinistra:** pila dei sarcofagi da aprire (con numerino), Cammino delle Coppe.
-- **In basso:** barra con Personaggi, Sarcofagi, Coppe, Impostazioni (icone a geroglifico).
+- **In basso:** barra con Personaggi, Sarcofagi, Coppe, Club, Impostazioni (icone a geroglifico).
+  Il Club per ora è solo il pulsante ("arriva presto").
 
 ## 9. Rarità dei personaggi
 Sabbia (comune) → Bronzo → Turchese → Lapislazzuli → Oro → **Sole** (leggendario).

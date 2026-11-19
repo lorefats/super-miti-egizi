@@ -212,7 +212,7 @@ export function trophyRoadIconSvg() {
 }
 
 /** Icone a geroglifico per la barra in basso. Tutte 72x72. */
-export function navIconSvg(kind: 'personaggi' | 'sarcofagi' | 'coppe' | 'impostazioni') {
+export function navIconSvg(kind: 'personaggi' | 'sarcofagi' | 'coppe' | 'club' | 'impostazioni') {
   const ink = LINE;
   const st = `stroke="${ink}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"`;
   const glyph: Record<typeof kind, string> = {
@@ -224,6 +224,12 @@ export function navIconSvg(kind: 'personaggi' | 'sarcofagi' | 'coppe' | 'imposta
     coppe: `<path d="M18 8 L54 8 Q54 36 36 42 Q18 36 18 8 Z" fill="${GOLD}" stroke="${ink}" stroke-width="4"/>
       <path d="M18 14 Q6 14 8 24 Q10 32 20 32 M54 14 Q66 14 64 24 Q62 32 52 32" ${st}/>
       <path d="M36 42 V54 M24 64 H48 L44 54 H28 Z" fill="${GOLD}" stroke="${ink}" stroke-width="4"/>`,
+    // scudo con tre teste: un gruppo di amici
+    club: `<path d="M36 6 L60 14 V34 Q60 56 36 66 Q12 56 12 34 V14 Z" fill="${TURQ}" stroke="${ink}" stroke-width="4"/>
+      <circle cx="24" cy="32" r="6" fill="${GOLD}" stroke="${ink}" stroke-width="3"/>
+      <circle cx="48" cy="32" r="6" fill="${GOLD}" stroke="${ink}" stroke-width="3"/>
+      <circle cx="36" cy="27" r="7" fill="${GOLD}" stroke="${ink}" stroke-width="3"/>
+      <path d="M16 50 Q24 38 32 46 M40 46 Q48 38 56 50 M26 50 Q36 34 46 50" ${st}/>`,
     // ruota del sole con raggi (le impostazioni)
     impostazioni: `<path d="M36 6 V16 M36 56 V66 M6 36 H16 M56 36 H66 M15 15 L22 22 M50 50 L57 57 M57 15 L50 22 M22 50 L15 57" ${st}/>
       <circle cx="36" cy="36" r="17" fill="${GOLD}" stroke="${ink}" stroke-width="4"/>

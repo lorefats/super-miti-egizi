@@ -382,7 +382,7 @@ export class LobbyScene extends Phaser.Scene {
     this.makeButton(play, 360, 140, () => this.startMatch());
   }
 
-  /** In basso: Personaggi, Sarcofagi, Coppe, Impostazioni. */
+  /** In basso: Personaggi, Sarcofagi, Coppe, Club, Impostazioni. */
   private drawBottomBar(W: number, H: number): void {
     const g = this.add.graphics();
     g.fillStyle(PALETTE.bluNotte, 0.9).fillRect(0, H - BAR_H, W, BAR_H);
@@ -391,11 +391,12 @@ export class LobbyScene extends Phaser.Scene {
       [TEX.iconaPersonaggi, 'Personaggi', () => this.goTo('Characters')],
       [TEX.iconaSarcofagi, 'Sarcofagi', () => this.openSarcophagus()],
       [TEX.iconaCoppe, 'Coppe', () => this.goTo('TrophyRoad')],
+      [TEX.iconaClub, 'Club', () => showToast(this, 'Il Club\narriva presto!')],
       [TEX.iconaImpostazioni, 'Impostazioni', () => showToast(this, 'Le impostazioni\narrivano presto!')],
     ];
-    const step = Math.min(170, (W - 520) / 4);
+    const step = Math.min(160, (W - 480) / items.length);
     items.forEach(([tex, name, action], i) => {
-      const b = this.add.container(W / 2 + (i - 1.5) * step, H - BAR_H / 2 + 2);
+      const b = this.add.container(W / 2 + (i - (items.length - 1) / 2) * step, H - BAR_H / 2 + 2);
       b.add(this.add.image(0, -12, tex).setScale(0.72));
       b.add(this.add.text(0, 30, name, { fontFamily: FONT_FAMILY, fontSize: '18px', color: '#FFFFFF' }).setOrigin(0.5));
       this.makeButton(b, step - 10, BAR_H - 6, action);

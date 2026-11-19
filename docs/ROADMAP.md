@@ -73,6 +73,19 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
 - [ ] Modalità Duo con compagno bot (necessaria per provare le super sui compagni)
 - [ ] I bot usano personaggi diversi a caso
 
+## Fase 4½ — Calcio e Nilo (idee del cugino)
+
+- [ ] **Mappa "Il Grande Nilo"**
+  > Costruisci la seconda mappa per Solo descritta in GAME_DESIGN.md (sezione 3, "Il Grande Nilo"): il Nilo
+  > scorre in mezzo e la corrente trascina chi ci entra, ponti, feluche, isolotti di papiro. Ogni partita
+  > sceglie a caso tra le due mappe. Minimappa e bot devono funzionare anche qui.
+
+- [ ] **Modalità Calcio del Nilo (si sblocca a 220 coppe)**
+  > Aggiungi la modalità Calcio come in GAME_DESIGN.md (sezione 2): 3 contro 3 con compagni bot, palla,
+  > porte, campo diviso dal Nilo che scorre, ricomparsa dopo la sconfitta, punteggio e coppe.
+  > Nella Lobby un pulsante per sceglierla, con il lucchetto finché non si hanno 220 coppe totali.
+  > I bot devono saper passare, tirare in porta e difendere.
+
 ## Fase 5 — Rifinitura e pubblicazione
 
 - [ ] Suoni ed effetti (generati o file gratuiti), musica in lobby, vibrazione del telefono
