@@ -16,6 +16,7 @@ import { khnumSvg, khnumLegSvg } from './characters/khnum';
 import * as T from './godFxTurchese';
 import * as LZ from './godFxLapis';
 import * as GO from './godFxOro';
+import { raSvg, raLegSvg } from './characters/ra';
 import { ammitSvg, ammitLegSvg } from './characters/ammit';
 import { amonSvg, amonLegSvg } from './characters/amon';
 import { maatSvg, maatLegSvg } from './characters/maat';
@@ -213,6 +214,9 @@ export const TEX = {
   geroglifico1: 'geroglifico-1',
   geroglifico2: 'geroglifico-2',
   bilancia: 'bilancia',
+  // Rà
+  discoSolare: 'disco-solare',
+  barcaSole: 'barca-sole',
 } as const;
 
 const suffix = (v: ColorVariant) => (v === 'base' ? '' : `-${v}`);
@@ -286,6 +290,7 @@ const CHARACTER_ART: Record<
   kek: { body: kekSvg, legs: { draw: kekLegSvg, hips: HIPS } },
   thoth: { body: thothSvg, legs: { draw: thothLegSvg, hips: HIPS } },
   nefti: { body: neftiSvg, legs: { draw: neftiLegSvg, hips: HIPS } },
+  ra: { body: raSvg, legs: { draw: raLegSvg, hips: HIPS } },
 };
 
 /** Esiste già il disegno vero di questo personaggio? (Gli altri usano la sagoma colorata.) */
@@ -455,6 +460,8 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.geroglifico1, ...GO.glyphSvg(1) },
     { key: TEX.geroglifico2, ...GO.glyphSvg(2) },
     { key: TEX.bilancia, ...GO.bigScaleSvg() },
+    { key: TEX.discoSolare, ...LZ.sunOrbSvg() },
+    { key: TEX.barcaSole, ...LZ.sunBoatSvg() },
   ];
   await loadSvgTextures(scene, arts);
 }

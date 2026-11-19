@@ -92,3 +92,30 @@ export function guardianObeliskSvg() {
   <path d="M26 64 L34 64 M30 60 L30 76 M25 86 Q30 80 35 86 M27 100 L33 100 L30 108 Z" fill="none" stroke="#7A6440" stroke-width="2.2" stroke-linecap="round"/>`;
   return { width: 60, height: 148, body };
 }
+
+// --- Rà (Sole) ---
+
+/** Sfera di fuoco del Disco Solare. */
+export function sunOrbSvg() {
+  const body = `
+  <defs><radialGradient id="s" cx="0.4" cy="0.38" r="0.65">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.35" stop-color="#FFE08A"/><stop offset="0.75" stop-color="#FF9F1C"/><stop offset="1" stop-color="#E8590C"/>
+  </radialGradient></defs>
+  <path d="M28 2 L32 12 L42 6 L40 17 L52 16 L44 25 L54 30 L43 34 L48 45 L37 41 L34 53 L28 44 L22 53 L19 41 L8 45 L13 34 L2 30 L12 25 L4 16 L16 17 L14 6 L24 12 Z" fill="#FF7B1C" opacity="0.85"/>
+  <circle cx="28" cy="28" r="15" fill="url(#s)" stroke="${LINE}" stroke-width="2.6"/>`;
+  return { width: 56, height: 56, body };
+}
+
+/** La Barca del Sole: barca dorata con il disco del sole sopra (punta verso destra). */
+export function sunBoatSvg() {
+  const body = `
+  <defs><radialGradient id="s" cx="0.4" cy="0.38" r="0.65">
+    <stop offset="0" stop-color="#FFFFFF"/><stop offset="0.4" stop-color="#FFE08A"/><stop offset="1" stop-color="#FF9F1C"/>
+  </radialGradient></defs>
+  <circle cx="70" cy="34" r="26" fill="url(#s)" stroke="${LINE}" stroke-width="3"/>
+  <path d="M6 58 Q20 50 26 62 L114 62 Q120 50 134 58 Q128 82 104 86 L36 86 Q12 82 6 58 Z" fill="${GOLD}" stroke="${LINE}" stroke-width="3.2" stroke-linejoin="round"/>
+  <path d="M30 70 L110 70" stroke="#A86A0C" stroke-width="2.4"/>
+  <path d="M44 76 L48 76 M66 76 L74 76 M92 76 L96 76" stroke="#2EC4B6" stroke-width="3" stroke-linecap="round"/>
+  <path d="M6 58 Q2 46 10 40 M134 58 Q138 46 130 40" fill="none" stroke="${LINE}" stroke-width="4" stroke-linecap="round"/>`;
+  return { width: 140, height: 90, body };
+}

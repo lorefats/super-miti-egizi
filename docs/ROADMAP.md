@@ -69,7 +69,7 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
 - [x] Osiride, Hathor, Geb, Khepri, Khnum (Turchese)
 - [x] Iside, Seth, Sekhmet, Khonsu, Nut, Ptah (Lapislazzuli)
 - [x] Ammit, Amon, Maat, Kek, Thoth, Nefti (Oro)
-- [ ] Rà (Sole)
+- [x] Rà (Sole)
 - [ ] Modalità Duo con compagno bot (necessaria per provare le super sui compagni)
 - [ ] I bot usano personaggi diversi a caso
 

@@ -980,6 +980,41 @@ export const CHARACTERS: Record<string, CharacterData> = {
       },
     },
   },
+  ra: {
+    ...getRosterEntry('ra'),
+    weapon: {
+      name: 'Disco Solare',
+      kind: 'linea',
+      damage: 760, // a chi viene colpito in pieno
+      range: 620,
+      arcDegrees: 0,
+      aimWidth: 40,
+      maxAmmo: 3,
+      reloadSeconds: 1.5,
+      attackDelay: 0.5,
+      params: {
+        speed: 850,
+        radius: 22,
+        /** esplosione: raggio e danno a chi sta vicino */
+        blastRadius: 110,
+        blastDamage: 380,
+      },
+    },
+    super: {
+      name: 'Barca del Sole',
+      chargeDamage: 4200,
+      range: 2400, // attraversa tutta la mappa
+      aim: 'linea',
+      aimWidth: 130,
+      params: {
+        /** velocità della barca che porta il raggio (pixel al secondo) */
+        speed: 2600,
+        damage: 1600,
+        /** quanto resta acceso il raggio dopo il passaggio (secondi) */
+        glowSeconds: 0.8,
+      },
+    },
+  },
 };
 
 /** Il personaggio si può già usare in partita (ha arma e super)? Gli altri arrivano nella Fase 4. */

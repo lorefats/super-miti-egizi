@@ -22,10 +22,11 @@ import { maat } from './maat';
 import { kek } from './kek';
 import { thoth } from './thoth';
 import { nefti } from './nefti';
+import { ra } from './ra';
 
 /** Elenco dei moduli personaggio: per aggiungerne uno basta importarlo e metterlo qui. */
 const MODULES: Record<string, CharacterModule> = Object.fromEntries(
-  [anubi, horus, sobek, bastet, tefnut, shu, osiride, hathor, geb, khepri, khnum, iside, seth, sekhmet, khonsu, nut, ptah, ammit, amon, maat, kek, thoth, nefti].map((m) => [m.id, m]),
+  [anubi, horus, sobek, bastet, tefnut, shu, osiride, hathor, geb, khepri, khnum, iside, seth, sekhmet, khonsu, nut, ptah, ammit, amon, maat, kek, thoth, nefti, ra].map((m) => [m.id, m]),
 );
 
 export function getCharacterModule(id: string): CharacterModule {
