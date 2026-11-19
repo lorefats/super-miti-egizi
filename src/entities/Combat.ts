@@ -161,6 +161,8 @@ export class Combat {
 
   /** Fa danno a un bersaglio. Se è un nemico vero (non un baule) carica la super di chi attacca. */
   damage(from: Attacker, target: Damageable, amount: number): void {
+    // i compagni di squadra non si fanno male tra loro
+    if (target.team === from.team) return;
     target.takeDamage(amount);
     target.noteAttacker?.(from);
     if (target.kind !== 'baule') from.onDealtDamage?.(amount);

@@ -13,6 +13,7 @@ import {
   SARCOPHAGI_PER_VICTORY,
   TROPHY_ROAD,
   UPGRADE_COST,
+  type GameMode,
   type RoadReward,
   type SarcophagusLoot,
   type SarcophagusTier,
@@ -48,6 +49,8 @@ export interface SaveData {
   pendingSarcophagi: number;
   /** personaggio scelto nella Lobby */
   selectedCharacter: string;
+  /** modalità scelta nella Lobby (Solo o Duo) */
+  mode: GameMode;
   /** personaggi sbloccati (Anubi c'è sempre) */
   unlocked: string[];
   /** tappe del Cammino delle Coppe già ritirate (coppe della tappa) */
@@ -83,6 +86,7 @@ function emptySave(): SaveData {
     stardust: 0,
     pendingSarcophagi: 0,
     selectedCharacter: STARTER,
+    mode: 'solo',
     unlocked: [STARTER],
     roadClaimed: [],
     sarcophagusQueue: [],
@@ -125,6 +129,7 @@ function migrate(raw: unknown): SaveData {
     const tiers = new Set<string>(SARCOPHAGI.map((s) => s.tier));
     data.sarcophagusQueue = r.sarcophagusQueue.filter((t): t is SarcophagusTier => tiers.has(t));
   }
+  if (r.mode === 'duo') data.mode = 'duo';
   const sel = r.selectedCharacter;
   if (typeof sel === 'string' && data.unlocked.includes(sel) && isPlayable(sel)) data.selectedCharacter = sel;
   return data;
@@ -180,6 +185,16 @@ class SaveManagerImpl {
   /** Tipo del prossimo sarcofago da aprire, se è già deciso (viene dal Cammino). */
   nextSarcophagusTier(): SarcophagusTier | undefined {
     return this.data.sarcophagusQueue[0];
+  }
+
+  /** Modalità scelta nella Lobby. */
+  getMode(): GameMode {
+    return this.data.mode;
+  }
+
+  setMode(mode: GameMode): void {
+    this.data.mode = mode;
+    this.save();
   }
 
   getSelectedCharacter(): string {

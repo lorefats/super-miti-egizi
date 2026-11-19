@@ -6,7 +6,7 @@ import { FONT_FAMILY } from '../config';
 import { getCharacter } from '../data/characters';
 import { makePressable } from '../ui/MenuKit';
 import { LOBBY_POSE_EVERY, timeOfDayAt } from '../data/lobby';
-import { SARCOPHAGI, type SarcophagusTier } from '../data/progression';
+import { SARCOPHAGI, type GameMode, type SarcophagusTier } from '../data/progression';
 import { SaveManager } from '../save/SaveManager';
 import { createCharacterPose, type CharacterPose } from '../ui/CharacterPose';
 import { fullscreenOnFirstTap } from '../ui/fullscreen';
@@ -344,25 +344,35 @@ export class LobbyScene extends Phaser.Scene {
     const x = W - 206;
     const playY = H - BAR_H - 90;
 
-    // Solo / Duo
+    // Solo / Duo: quello scelto è acceso (turchese), l'altro spento
     const modeY = playY - 112;
-    const solo = this.add.container(x - 76, modeY);
-    const soloBg = this.add.graphics();
-    soloBg.fillStyle(PALETTE.turchese, 1).fillRoundedRect(-70, -26, 140, 52, 16);
-    soloBg.lineStyle(4, PALETTE.bluNotte, 1).strokeRoundedRect(-70, -26, 140, 52, 16);
-    solo.add([soloBg, this.add.text(0, -2, 'Solo', { fontFamily: FONT_FAMILY, fontSize: '30px', color: css(PALETTE.bluNotte) }).setOrigin(0.5)]);
-    this.makeButton(solo, 140, 52, () => showToast(this, 'Solo: tu contro 9 bot!'));
-
-    const duo = this.add.container(x + 76, modeY);
-    const duoBg = this.add.graphics();
-    duoBg.fillStyle(0x4a5578, 1).fillRoundedRect(-70, -26, 140, 52, 16);
-    duoBg.lineStyle(4, PALETTE.bluNotte, 1).strokeRoundedRect(-70, -26, 140, 52, 16);
-    duo.add([
-      duoBg,
-      this.add.text(-10, -2, 'Duo', { fontFamily: FONT_FAMILY, fontSize: '30px', color: '#AEB6CF' }).setOrigin(0.5),
-      this.add.image(42, 0, TEX.lucchetto).setScale(0.7),
-    ]);
-    this.makeButton(duo, 140, 52, () => showToast(this, 'La modalità Duo\narriva presto!'));
+    const makeMode = (mode: GameMode, label: string, dx: number) => {
+      const c = this.add.container(x + dx, modeY);
+      const bg = this.add.graphics();
+      const text = this.add.text(0, -2, label, { fontFamily: FONT_FAMILY, fontSize: '30px' }).setOrigin(0.5);
+      c.add([bg, text]);
+      return { mode, c, bg, text };
+    };
+    const buttons = [makeMode('solo', 'Solo', -76), makeMode('duo', 'Duo', 76)];
+    const paint = () => {
+      const current = SaveManager.getMode();
+      for (const b of buttons) {
+        const on = b.mode === current;
+        b.bg.clear();
+        b.bg.fillStyle(on ? PALETTE.turchese : 0x4a5578, 1).fillRoundedRect(-70, -26, 140, 52, 16);
+        b.bg.lineStyle(4, on ? 0xffffff : PALETTE.bluNotte, 1).strokeRoundedRect(-70, -26, 140, 52, 16);
+        b.text.setColor(on ? css(PALETTE.bluNotte) : '#AEB6CF');
+      }
+    };
+    paint();
+    for (const b of buttons) {
+      this.makeButton(b.c, 140, 52, () => {
+        SaveManager.setMode(b.mode);
+        paint();
+        this.tweens.add({ targets: b.c, scale: { from: 1.15, to: 1 }, duration: 200, ease: 'Back.out' });
+        showToast(this, b.mode === 'solo' ? 'Solo: tu contro 9 bot!' : 'Duo: tu e un compagno\ncontro 4 squadre!');
+      });
+    }
 
     // GIOCA
     const play = this.add.container(x, playY);

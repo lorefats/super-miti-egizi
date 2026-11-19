@@ -4,8 +4,8 @@ import { COLOR_VARIANTS } from '../art/palette';
 import { AIM_STICK, AUTO_AIM_RANGE_FACTOR, CAMERA_LERP, DEPTH, JOYSTICK } from '../config';
 import type { GroundKind, MapData, ZoneData } from '../data/maps';
 import { MAPPA_VALLE } from '../data/valle';
-import { BOT_LEVELS, BOT_NAMES, SOLO_SETUP } from '../data/bots';
-import { BOT_LEVEL_BY_TROPHIES, trophiesForPlace } from '../data/progression';
+import { BOT_LEVELS, BOT_NAMES, DUO_SETUP, SOLO_SETUP } from '../data/bots';
+import { BOT_LEVEL_BY_TROPHIES, trophiesForPlace, type GameMode } from '../data/progression';
 import { SaveManager } from '../save/SaveManager';
 import { isPlayable } from '../data/characters';
 import { HIDEOUT_REVEAL_DISTANCE } from '../data/combat';
@@ -31,6 +31,7 @@ import { SuperButton } from '../ui/SuperButton';
 import { MatchHud } from '../ui/MatchHud';
 import { showEndOverlay } from '../ui/EndOverlay';
 import { fullscreenOnFirstTap } from '../ui/fullscreen';
+import { showToast } from '../ui/Toast';
 
 /** Terreno di ogni zona → disegno da ripetere. */
 const GROUND_TEXTURE: Record<GroundKind, string> = {
@@ -45,7 +46,7 @@ const GROUND_TEXTURE: Record<GroundKind, string> = {
 
 type KeyName = 'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space' | 'e';
 
-/** La partita Solo: tu contro i bot, vince l'ultimo rimasto. */
+/** La partita: Solo (tu contro 9 bot, vince l'ultimo rimasto) o Duo (5 squadre da 2, vince l'ultima squadra). */
 export class MatchScene extends Phaser.Scene {
   private player!: Player;
   private fighters: Player[] = [];
@@ -72,6 +73,7 @@ export class MatchScene extends Phaser.Scene {
   private keys?: Record<KeyName, Phaser.Input.Keyboard.Key>;
   private readonly dir = new Phaser.Math.Vector2();
   private over = false;
+  private mode: GameMode = 'solo';
 
   constructor() {
     super('Match');
@@ -135,7 +137,12 @@ export class MatchScene extends Phaser.Scene {
     );
     this.stormTick = 0;
 
-    // il giocatore (squadra 0) e i bot (ognuno nella sua squadra: tutti contro tutti); partenze a caso
+    // "?duo" nell'indirizzo forza la modalità Duo (solo per le prove)
+    this.mode = new URLSearchParams(location.search).has('duo') ? 'duo' : SaveManager.getMode();
+    const duo = this.mode === 'duo';
+
+    // partenze a caso. Solo: ognuno nella sua squadra (tutti contro tutti).
+    // Duo: 5 squadre da 2, i compagni partono vicini (squadra 0 = tu e il tuo compagno).
     const spawns = Phaser.Utils.Array.Shuffle([map.spawn, ...(map.botSpawns ?? [])]);
     const mySpawn = spawns.shift()!;
     // "?eroe=horus" nell'indirizzo: prova subito un personaggio (solo per le prove)
@@ -150,26 +157,46 @@ export class MatchScene extends Phaser.Scene {
     });
     this.fighters.push(this.player);
 
+    // posti di partenza dei bot, con la loro squadra
+    const seats: { x: number; y: number; team: number; ally: boolean }[] = [];
+    const nextTo = (sp: { x: number; y: number }) => {
+      const a = Math.random() * Math.PI * 2;
+      return this.combat.freeSpot(sp.x, sp.y, sp.x + Math.cos(a) * DUO_SETUP.teammateGap, sp.y + Math.sin(a) * DUO_SETUP.teammateGap, 30);
+    };
+    if (duo) {
+      seats.push({ ...nextTo(mySpawn), team: 0, ally: true });
+      for (let t = 1; t < DUO_SETUP.teams && t - 1 < spawns.length; t++) {
+        const sp = spawns[t - 1];
+        seats.push({ x: sp.x, y: sp.y, team: t, ally: false }, { ...nextTo(sp), team: t, ally: false });
+      }
+    } else {
+      const botCount = Math.min(SOLO_SETUP.botCount, spawns.length);
+      for (let i = 0; i < botCount; i++) seats.push({ x: spawns[i].x, y: spawns[i].y, team: i + 1, ally: false });
+    }
+
     const names = Phaser.Utils.Array.Shuffle([...BOT_NAMES]);
     const level = BOT_LEVELS[this.botLevelIndex()];
-    const botCount = Math.min(SOLO_SETUP.botCount, spawns.length);
-    for (let i = 0; i < botCount; i++) {
-      const bot = new Bot(
+    seats.forEach((seat, i) => {
+      const bot: Bot = new Bot(
         this,
-        spawns[i].x,
-        spawns[i].y,
+        seat.x,
+        seat.y,
         {
           characterId: 'anubi',
           level: level.characterLevel,
-          team: i + 1,
+          team: seat.team,
           combat: this.combat,
-          variant: COLOR_VARIANTS[(i % (COLOR_VARIANTS.length - 1)) + 1],
-          name: names[i % names.length],
+          // il compagno ha i colori veri; le squadre nemiche un colore per squadra
+          variant: seat.ally ? 'base' : COLOR_VARIANTS[((duo ? seat.team : i) % (COLOR_VARIANTS.length - 1)) + 1],
+          name: seat.ally ? `${names[i % names.length]} (amico)` : names[i % names.length],
+          ally: seat.ally,
         },
         level,
         {
           width: map.width,
           height: map.height,
+          stayClose: DUO_SETUP.stayClose,
+          teammate: duo ? () => this.fighters.find((f) => f !== bot && f.team === seat.team && f.isAlive()) ?? null : undefined,
           safeZone: () => ({ x: this.storm.cx, y: this.storm.cy, r: this.storm.radius }),
           nearestGem: (x, y, maxDist) => {
             let best: Gem | null = null;
@@ -206,7 +233,7 @@ export class MatchScene extends Phaser.Scene {
         },
       );
       this.fighters.push(bot);
-    }
+    });
 
     for (const f of this.fighters) {
       this.physics.add.collider(f, walls);
@@ -253,7 +280,7 @@ export class MatchScene extends Phaser.Scene {
     this.aimIndicator = new AimIndicator(this);
     this.blindVeil = new BlindVeil(this);
     this.hud = new MatchHud(this);
-    this.hud.setRemaining(this.aliveCount());
+    this.updateRemaining();
     this.minimap = new Minimap(this, map);
     addFpsMeter(this);
 
@@ -280,6 +307,22 @@ export class MatchScene extends Phaser.Scene {
     return this.fighters.filter((f) => f.isAlive()).length;
   }
 
+  /** Quante squadre hanno ancora almeno un personaggio in piedi. */
+  private aliveTeams(): number {
+    return new Set(this.fighters.filter((f) => f.isAlive()).map((f) => f.team)).size;
+  }
+
+  /** Il contatore in alto: giocatori rimasti (Solo) o squadre rimaste (Duo). */
+  private updateRemaining(): void {
+    if (this.mode === 'duo') this.hud.setRemaining(this.aliveTeams(), 'Squadre');
+    else this.hud.setRemaining(this.aliveCount());
+  }
+
+  /** Il compagno di squadra ancora in piedi (Duo), oppure null. */
+  private aliveTeammate(): Player | null {
+    return this.fighters.find((f) => f !== this.player && f.team === this.player.team && f.isAlive()) ?? null;
+  }
+
   /** Più coppe hai, più i bot sono bravi (principiante → esperto → campione). */
   private botLevelIndex(): number {
     const total = SaveManager.getTotalTrophies();
@@ -295,8 +338,30 @@ export class MatchScene extends Phaser.Scene {
     // chi viene sconfitto lascia cadere i suoi gioielli
     if (who.gems > 0) this.spawnGems(who.x, who.y, who.gems);
     const alive = this.aliveCount();
-    this.hud.setRemaining(alive);
+    this.updateRemaining();
     if (this.over) return;
+
+    if (this.mode === 'duo') {
+      const teams = this.aliveTeams();
+      const mate = this.aliveTeammate();
+      const myTeamIn = this.player.isAlive() || !!mate;
+      if (!myTeamIn) {
+        // la squadra è fuori: il posto è quante squadre erano ancora in gioco
+        this.endMatch(teams + 1);
+      } else if (teams === 1) {
+        this.endMatch(1);
+      } else if (who === this.player && mate) {
+        // tu sei fuori ma il compagno combatte ancora: la telecamera segue lui
+        this.moveStick.setEnabled(false);
+        this.aimStick.setEnabled(false);
+        this.superButton.setEnabled(false);
+        this.aimIndicator.hide();
+        this.cameras.main.startFollow(mate, true, CAMERA_LERP, CAMERA_LERP);
+      } else if (who.team === this.player.team) {
+        showToast(this, 'Il tuo compagno è stato sconfitto!');
+      }
+      return;
+    }
 
     if (who === this.player) {
       // il posto è quanti erano ancora in gioco prima di essere sconfitto
@@ -316,14 +381,18 @@ export class MatchScene extends Phaser.Scene {
     this.player.move(this.dir.set(0, 0));
 
     const characterId = this.player.stats.id;
-    const reward = SaveManager.recordMatch(characterId, place, trophiesForPlace(place));
+    const reward = SaveManager.recordMatch(characterId, place, trophiesForPlace(place, this.mode));
     const victory = place === 1;
-    const title = victory ? 'VITTORIA!' : `Sconfitto — ${place}° posto`;
+    const title = victory ? 'VITTORIA!' : this.mode === 'duo' ? `Squadra sconfitta — ${place}° posto` : `Sconfitto — ${place}° posto`;
     this.time.delayedCall(1100, () => showEndOverlay(this, title, victory));
     this.time.delayedCall(3000, () => {
       this.cameras.main.fadeOut(300, 20, 33, 61);
       this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () =>
-        this.scene.start('Results', { ...reward, playerCount: this.fighters.length }),
+        this.scene.start('Results', {
+          ...reward,
+          mode: this.mode,
+          playerCount: this.mode === 'duo' ? new Set(this.fighters.map((f) => f.team)).size : this.fighters.length,
+        }),
       );
     });
   }
@@ -370,7 +439,8 @@ export class MatchScene extends Phaser.Scene {
     }
     const inStorm = this.player.isAlive() && this.storm.isInside(this.player.x, this.player.y);
     let msg: string;
-    if (inStorm) msg = 'Esci dalla tempesta!';
+    if (!this.player.isAlive() && this.aliveTeammate()) msg = 'Il tuo compagno combatte ancora!';
+    else if (inStorm) msg = 'Esci dalla tempesta!';
     else if (this.storm.secondsToStart > 0) msg = `Tempesta tra ${Math.ceil(this.storm.secondsToStart)}`;
     else if (!this.storm.finished) msg = 'La tempesta si stringe!';
     else msg = '';
@@ -400,7 +470,8 @@ export class MatchScene extends Phaser.Scene {
       if (f === me) continue;
       const near = Phaser.Math.Distance.Between(f.x, f.y, me.x, me.y) < HIDEOUT_REVEAL_DISTANCE;
       // con l'Occhio di Horus si vedono tutti, anche quelli nascosti
-      f.setRevealed(!f.hideout || f.hideout === me.hideout || near || me.seesAll());
+      // il compagno di squadra si vede sempre
+      f.setRevealed(!f.hideout || f.hideout === me.hideout || near || me.seesAll() || f.team === me.team);
     }
   }
 
@@ -435,7 +506,8 @@ export class MatchScene extends Phaser.Scene {
     }
     this.updateZone(dt);
     this.culler.update(this.cameras.main);
-    this.minimap.update({ x: this.player.x, y: this.player.y, alive: this.player.isAlive() }, this.storm);
+    const mate = this.mode === 'duo' ? this.aliveTeammate() : null;
+    this.minimap.update({ x: this.player.x, y: this.player.y, alive: this.player.isAlive() }, this.storm, mate);
     this.updateHideouts(delta / 1000);
     this.updateStorm(delta / 1000);
     this.pickUpGems();

@@ -34,13 +34,22 @@ export class Minimap {
   }
 
   /** Disegna la tempesta e il giocatore (da chiamare ogni fotogramma). */
-  update(player: { x: number; y: number; alive: boolean }, storm: { cx: number; cy: number; radius: number }): void {
+  update(
+    player: { x: number; y: number; alive: boolean },
+    storm: { cx: number; cy: number; radius: number },
+    mate: { x: number; y: number } | null = null,
+  ): void {
     const k = this.k;
     const g = this.dyn;
     g.clear();
     // il cerchio sicuro della tempesta (resta dentro la minimappa)
     const r = storm.radius * k;
     g.lineStyle(3, 0xc1440e, 0.95).strokeCircle(MARGIN + storm.cx * k, MARGIN + storm.cy * k, r);
+    if (mate) {
+      // il compagno di squadra (Duo): pallino azzurro
+      g.fillStyle(PALETTE.bluNotte, 1).fillCircle(MARGIN + mate.x * k, MARGIN + mate.y * k, 5);
+      g.fillStyle(PALETTE.turchese, 1).fillCircle(MARGIN + mate.x * k, MARGIN + mate.y * k, 3.5);
+    }
     if (player.alive) {
       const px = MARGIN + player.x * k;
       const py = MARGIN + player.y * k;

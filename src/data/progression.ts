@@ -4,9 +4,21 @@
 export const TROPHIES_SOLO = [10, 8, 6, 4, 2, 0, -1, -2, -3, -4];
 
 /** Coppe per un posto in classifica (1 = vittoria). Oltre il 10° vale come il 10°. */
-export function trophiesForPlace(place: number): number {
-  const i = clamp(place - 1, 0, TROPHIES_SOLO.length - 1);
-  return TROPHIES_SOLO[i];
+/** Coppe per la posizione della squadra in Duo (5 squadre da 2). */
+export const TROPHIES_DUO = [10, 6, 2, -2, -4];
+
+/** Modalità di gioco: Solo (tutti contro tutti) o Duo (squadre da 2, con un compagno bot). */
+export type GameMode = 'solo' | 'duo';
+
+/** Tabella delle coppe della modalità. */
+export function trophyTable(mode: GameMode): number[] {
+  return mode === 'duo' ? TROPHIES_DUO : TROPHIES_SOLO;
+}
+
+export function trophiesForPlace(place: number, mode: GameMode = 'solo'): number {
+  const table = trophyTable(mode);
+  const i = clamp(place - 1, 0, table.length - 1);
+  return table[i];
 }
 
 function clamp(v: number, min: number, max: number): number {

@@ -4,7 +4,7 @@ import { BLIND } from '../data/combat';
 import type { Combat, Damageable } from '../entities/Combat';
 import type { Player } from '../entities/Player';
 
-type Mode = 'tempesta' | 'scappa' | 'nascondi' | 'combatti' | 'baule' | 'gioiello' | 'esplora';
+type Mode = 'tempesta' | 'scappa' | 'nascondi' | 'combatti' | 'baule' | 'gioiello' | 'esplora' | 'segui';
 
 /** Cosa sa un bot della mappa. */
 export interface BotWorld {
@@ -21,6 +21,10 @@ export interface BotWorld {
   nearestBush?(x: number, y: number, maxDist: number): { x: number; y: number } | null;
   /** Gioiello a terra più vicino entro maxDist, oppure null. */
   nearestGem?(x: number, y: number, maxDist: number): { x: number; y: number } | null;
+  /** Compagno di squadra da non lasciare solo (Duo), oppure null. */
+  teammate?(): { x: number; y: number } | null;
+  /** Entro quanti pixel restare vicino al compagno quando non si combatte. */
+  stayClose?: number;
 }
 
 /** Da questa portata in su (pixel) un'arma "a linea" è da tiratore: il bot tiene i nemici lontani. */
@@ -80,6 +84,7 @@ export class BotBrain {
     switch (this.mode) {
       case 'tempesta':
       case 'gioiello':
+      case 'segui':
         this.headTo(this.goal.x, this.goal.y);
         break;
       case 'nascondi':
@@ -190,6 +195,16 @@ export class BotBrain {
       if (this.mode !== 'combatti' || this.target !== enemy) this.attackWait = Math.max(this.attackWait, this.randomPause());
       this.mode = 'combatti';
       this.target = enemy;
+      return;
+    }
+
+    // 4b) in squadra: se il compagno è lontano, raggiungilo (si combatte meglio in due)
+    const mate = this.world.teammate?.();
+    const close = this.world.stayClose ?? 320;
+    if (mate && Phaser.Math.Distance.Between(bot.x, bot.y, mate.x, mate.y) > close * (this.mode === 'segui' ? 0.5 : 1)) {
+      this.mode = 'segui';
+      this.goal.set(mate.x, mate.y);
+      this.target = null;
       return;
     }
 

@@ -70,7 +70,7 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
 - [x] Iside, Seth, Sekhmet, Khonsu, Nut, Ptah (Lapislazzuli)
 - [x] Ammit, Amon, Maat, Kek, Thoth, Nefti (Oro)
 - [x] Rà (Sole)
-- [ ] Modalità Duo con compagno bot (necessaria per provare le super sui compagni)
+- [x] Modalità Duo con compagno bot (necessaria per provare le super sui compagni)
 - [ ] I bot usano personaggi diversi a caso
 
 ## Fase 4½ — Calcio e Nilo (idee del cugino)

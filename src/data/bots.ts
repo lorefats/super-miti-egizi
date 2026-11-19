@@ -28,6 +28,15 @@ export const BOT_RECOVER_HEALTH = 0.6;
 /** Nomi dei bot (mostrati sopra la testa). */
 export const BOT_NAMES = ['Kha', 'Neb', 'Seti', 'Tiye', 'Meri', 'Huy', 'Ahmose', 'Nofret', 'Ipi'];
 
+/** Partita Duo: 5 squadre da 2 (tu + un compagno bot, contro 4 squadre di bot). */
+export const DUO_SETUP = {
+  teams: 5,
+  /** il compagno parte a questa distanza (pixel) */
+  teammateGap: 90,
+  /** quando non combatte, il bot resta entro questa distanza dal compagno (pixel) */
+  stayClose: 320,
+};
+
 /** Partita Solo: quanti bot (tu + 9 = 10 giocatori) e di che livello. */
 export const SOLO_SETUP = {
   botCount: 9,

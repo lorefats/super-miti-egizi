@@ -56,6 +56,8 @@ export interface FighterOptions {
   isHuman?: boolean;
   /** Livello del personaggio (1-11): più vita e più danno. */
   level?: number;
+  /** È il compagno di squadra del giocatore (Duo)? La sua barra è azzurra. */
+  ally?: boolean;
 }
 
 /** Evento emesso quando il personaggio viene sconfitto. */
@@ -212,7 +214,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
       this.weapon = scene.add.image(0, 0, weaponTexture(characterId, variant)).setOrigin(held.originX, held.originY);
       this.add(this.weapon);
     }
-    this.bar = new HealthBar(scene, this.isHuman ? PALETTE.verdeNilo : PALETTE.rossoDeserto, this.isHuman, this.displayName);
+    const barColor = this.isHuman ? PALETTE.verdeNilo : opt.ally ? PALETTE.turchese : PALETTE.rossoDeserto;
+    this.bar = new HealthBar(scene, barColor, this.isHuman, this.displayName);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);

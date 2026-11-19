@@ -50,8 +50,9 @@ export class MatchHud {
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => scene.scale.off(Phaser.Scale.Events.RESIZE, this.layout, this));
   }
 
-  setRemaining(n: number): void {
-    this.text.setText(`Rimasti: ${n}`);
+  /** `label` = cosa si conta ("Rimasti" in Solo, "Squadre" in Duo). */
+  setRemaining(n: number, label = 'Rimasti'): void {
+    this.text.setText(`${label}: ${n}`);
     this.layout();
     this.scene.tweens.add({ targets: this.text, scale: { from: 1.3, to: 1 }, duration: 250, ease: 'Back.out' });
   }

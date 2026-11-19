@@ -3,12 +3,13 @@ import { TEX } from '../art';
 import { PALETTE, css } from '../art/palette';
 import { FONT_FAMILY } from '../config';
 import { getCharacter } from '../data/characters';
-import { TROPHIES_SOLO } from '../data/progression';
+import { trophyTable, type GameMode } from '../data/progression';
 import type { MatchReward } from '../save/SaveManager';
 import { createGoldButton } from '../ui/GoldButton';
 import { createCharacterPose } from '../ui/CharacterPose';
 
-export type ResultsData = MatchReward & { playerCount: number };
+/** `playerCount` = giocatori (Solo) o squadre (Duo). */
+export type ResultsData = MatchReward & { playerCount: number; mode?: GameMode };
 
 /** Al massimo quante coppette volano verso il contatore (con +10 ne volano 10). */
 const MAX_FLYING = 10;
@@ -50,7 +51,7 @@ export class ResultsScene extends Phaser.Scene {
       .setScale(0.3);
     this.tweens.add({ targets: title, scale: 1, duration: 450, ease: 'Back.out' });
     this.add
-      .text(W / 2, 146, victory ? 'Sei l’ultimo rimasto!' : `su ${d.playerCount} giocatori`, {
+      .text(W / 2, 146, this.subtitle(victory), {
         fontFamily: FONT_FAMILY,
         fontSize: '28px',
         color: '#DCE4FF',
@@ -274,13 +275,21 @@ export class ResultsScene extends Phaser.Scene {
   }
 
   /** Tabellina dei posti: quante coppe dà ogni posizione, con la tua evidenziata. */
+  /** Riga sotto il titolo: com'è andata, in Solo o in Duo. */
+  private subtitle(victory: boolean): string {
+    const d = this.result;
+    if (d.mode === 'duo') return victory ? 'La tua squadra è l’ultima rimasta!' : `su ${d.playerCount} squadre`;
+    return victory ? 'Sei l’ultimo rimasto!' : `su ${d.playerCount} giocatori`;
+  }
+
   private drawPlaceTable(cx: number, y: number, place: number): void {
-    const n = TROPHIES_SOLO.length;
-    const cellW = 44;
+    const table = trophyTable(this.result.mode ?? 'solo');
+    const n = table.length;
+    const cellW = n <= 5 ? 74 : 44;
     const gap = 3;
     const startX = cx - ((cellW + gap) * n - gap) / 2 + cellW / 2;
     const g = this.add.graphics();
-    TROPHIES_SOLO.forEach((t, i) => {
+    table.forEach((t, i) => {
       const x = startX + i * (cellW + gap);
       const mine = i + 1 === place;
       g.fillStyle(mine ? PALETTE.oro : 0x24345e, 1).fillRoundedRect(x - cellW / 2, y - 30, cellW, 60, 8);
