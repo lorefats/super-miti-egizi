@@ -115,6 +115,10 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   /** Direzione a caso mentre è confuso, e fra quanto cambia. */
   private readonly confusedDir = new Phaser.Math.Vector2();
   private confusedTimer = 0;
+  /** Rapidità degli attacchi cambiata per qualche secondo (nome → secondi rimasti e moltiplicatore). */
+  private readonly rateMods = new Map<string, { left: number; factor: number }>();
+  /** Da dove scappa quando è spaventato. */
+  private readonly scaredFrom = new Phaser.Math.Vector2();
   /** Secondi rimasti sotto terra (si muove ma non si vede, non si colpisce e non attacca). */
   private undergroundTime = 0;
   /** Sta saltando o si sta tuffando (lo muove la super, non il giocatore). */
@@ -296,6 +300,34 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     return f;
   }
 
+  /** Cambia la rapidità degli attacchi e della ricarica per qualche secondo (0.4 = al rallentatore, 2 = il doppio). */
+  changeAttackRate(name: string, seconds: number, factor: number): void {
+    if (!this.isAlive()) return;
+    if (factor < 1 && !this.isTargetable()) return;
+    const old = this.rateMods.get(name);
+    this.rateMods.set(name, { left: Math.max(old?.left ?? 0, seconds), factor });
+  }
+
+  /** Moltiplicatore della rapidità degli attacchi. */
+  attackRate(): number {
+    let f = 1;
+    for (const m of this.rateMods.values()) f *= m.factor;
+    return f;
+  }
+
+  /** Spaventato: per qualche secondo scappa lontano dal punto (x, y) e non lo si comanda. */
+  scare(x: number, y: number, seconds: number): void {
+    if (!this.isTargetable()) return;
+    this.scaredFrom.set(x, y);
+    this.addBuff('paura', seconds);
+  }
+
+  /** Vede solo vicino a sé per qualche secondo (tempesta di sabbia di Seth). */
+  blind(seconds: number): void {
+    if (!this.isTargetable()) return;
+    this.addBuff('accecato', seconds);
+  }
+
   /** Confuso per qualche secondo: si muove a caso (il giocatore o il bot non lo comandano). */
   confuse(seconds: number): void {
     if (!this.isTargetable()) return;
@@ -318,7 +350,12 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
       this.moving = false;
       return;
     }
-    if (this.hasBuff('confuso')) {
+    if (this.hasBuff('paura')) {
+      // spaventato: scappa dritto lontano da chi l'ha spaventato
+      this.confusedDir.set(this.x - this.scaredFrom.x, this.y - this.scaredFrom.y);
+      if (this.confusedDir.lengthSq() < 1) this.confusedDir.set(1, 0);
+      dir = this.confusedDir.normalize();
+    } else if (this.hasBuff('confuso')) {
       // confuso: cammina dove vuole lui, cambiando direzione ogni tanto
       this.confusedTimer -= this.scene.game.loop.delta / 1000;
       if (this.confusedTimer <= 0) {
@@ -340,13 +377,14 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   }
 
   /** Attacca nella direzione `angle` (radianti). Restituisce false se non ci sono colpi pronti. */
-  tryAttack(angle: number): boolean {
+  tryAttack(angle: number, distance?: number): boolean {
     if (!this.canAttack()) {
       if (this.ammo < 1) this.bar.flashAmmo();
       return false;
     }
     this.ammo -= 1;
     this.attackCooldown = this.stats.weapon.attackDelay;
+    this.attackDistance = Phaser.Math.Clamp(distance ?? this.stats.weapon.range, 0, this.stats.weapon.range);
     this.startSwing(angle, false);
     return true;
   }
@@ -538,7 +576,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   autoAttack(maxDistance: number): boolean {
     const target = this.combat.nearestEnemy(this.x, this.y, this.team, maxDistance, this.hideout, undefined, this.seesAll());
     const angle = target ? Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y) : this.facing > 0 ? 0 : Math.PI;
-    return this.tryAttack(angle);
+    const distance = target ? Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y) : undefined;
+    return this.tryAttack(angle, distance);
   }
 
   takeDamage(amount: number): void {
@@ -628,8 +667,13 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
     // ricarica: un colpo alla volta
     const w = this.stats.weapon;
-    if (this.ammo < w.maxAmmo) this.ammo = Math.min(w.maxAmmo, this.ammo + dt / w.reloadSeconds);
-    if (this.attackCooldown > 0) this.attackCooldown -= dt;
+    const rate = this.attackRate();
+    if (this.ammo < w.maxAmmo) this.ammo = Math.min(w.maxAmmo, this.ammo + (dt * rate) / w.reloadSeconds);
+    if (this.attackCooldown > 0) this.attackCooldown -= dt * rate;
+    for (const [name, m] of this.rateMods) {
+      m.left -= dt;
+      if (m.left <= 0) this.rateMods.delete(name);
+    }
 
     // poteri temporanei che scadono
     for (const [name, left] of this.buffs) {
@@ -718,7 +762,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
     if (this.attackTime >= 0) {
       this.attackTime += dt;
-      const windup = this.module.swingSeconds * (this.attackIsSuper ? 2.2 : 1);
+      const windup = (this.module.swingSeconds * (this.attackIsSuper ? 2.2 : 1)) / Math.max(0.3, this.attackRate());
       const t = this.attackTime;
       let lean: number; // -1 indietro … +1 in avanti
       if (t < windup) {
@@ -732,7 +776,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
           this.attackFired = true;
           if (this.canAct()) {
             if (this.attackIsSuper) this.module.useSuper(this, this.attackAngle, this.combat, this.attackDistance);
-            else this.module.attack(this, this.attackAngle, this.combat);
+            else this.module.attack(this, this.attackAngle, this.combat, this.attackDistance);
             dustPuff(this.scene, this.x, this.y, this.attackAngle, this.y - 1);
           }
         }

@@ -23,6 +23,8 @@ export interface ProjectileOptions {
   bounces?: number;
   /** Quanto cresce fino a fine portata (1.2 = +120% di grandezza, anche per colpire). */
   grow?: number;
+  /** Boomerang: a fine portata (o contro un muro) torna da chi l'ha lanciato, colpendo di nuovo lungo la strada. */
+  boomerang?: boolean;
   /** Bersagli da non toccare (es. chi è già stato colpito dal vaso intero, per le schegge). */
   ignore?: Damageable[];
   /** Chiamato quando finisce (colpito, muro o portata finita). */
@@ -48,6 +50,7 @@ export class Projectile extends Phaser.GameObjects.Container {
   private readonly alreadyHit = new Set<Damageable>();
   private heading: number;
   private bouncesLeft: number;
+  private returning = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -74,12 +77,26 @@ export class Projectile extends Phaser.GameObjects.Container {
     const dt = delta / 1000;
     this.time += dt;
     const step = this.opt.speed * dt;
+    if (this.returning) {
+      // il boomerang torna da chi l'ha lanciato
+      const owner = this.opt.owner;
+      this.heading = Phaser.Math.Angle.Between(this.x, this.y, owner.x, owner.y);
+      if (!owner.isAlive() || Phaser.Math.Distance.Between(this.x, this.y, owner.x, owner.y) < 34 || this.travelled > this.opt.range * 3) {
+        this.finish();
+        return;
+      }
+    }
     const dx = Math.cos(this.heading) * step;
     const dy = Math.sin(this.heading) * step;
     this.x += dx;
     this.y += dy;
     this.travelled += step;
-    if (this.bouncesLeft > 0 && this.hitsWall(this.x, this.y)) this.bounce(dx, dy);
+    if (!this.returning && this.bouncesLeft > 0 && this.hitsWall(this.x, this.y)) this.bounce(dx, dy);
+    // una cupola dei nemici (Iside) ferma il proiettile
+    if (this.opt.combat.shieldedAt(this.x, this.y, this.opt.owner.team)) {
+      this.finish();
+      return;
+    }
     this.head.rotation += dt * (this.opt.spin ?? 14);
     const size = 1 + (this.opt.grow ?? 0) * Math.min(1, this.travelled / this.opt.range);
     if (this.opt.grow) {
@@ -112,7 +129,13 @@ export class Projectile extends Phaser.GameObjects.Container {
         return;
       }
     }
-    if (this.travelled >= this.opt.range || this.hitsWall(this.x, this.y)) this.finish();
+    if (this.returning) return;
+    if (this.travelled >= this.opt.range || this.hitsWall(this.x, this.y)) {
+      if (this.opt.boomerang) {
+        this.returning = true;
+        this.alreadyHit.clear(); // al ritorno può colpire di nuovo
+      } else this.finish();
+    }
   }
 
   /** Torna indietro di un passo e rimbalza: gira la direzione dal lato del muro che ha toccato. */

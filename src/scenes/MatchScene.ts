@@ -25,7 +25,7 @@ import { Minimap } from '../ui/Minimap';
 import { addFpsMeter } from '../ui/FpsMeter';
 import { Target } from '../entities/Target';
 import { VirtualStick } from '../ui/VirtualStick';
-import { AimIndicator } from '../ui/AimIndicator';
+import { AimIndicator, LOB_MIN } from '../ui/AimIndicator';
 import { SuperButton } from '../ui/SuperButton';
 import { MatchHud } from '../ui/MatchHud';
 import { showEndOverlay } from '../ui/EndOverlay';
@@ -242,7 +242,10 @@ export class MatchScene extends Phaser.Scene {
     });
     this.aimStick.onRelease = (r) => {
       if (r.tap) this.player.autoAttack(this.player.stats.weapon.range * AUTO_AIM_RANGE_FACTOR);
-      else if (r.aimed) this.player.tryAttack(r.angle);
+      else if (r.aimed) {
+        const w = this.player.stats.weapon;
+        this.player.tryAttack(r.angle, w.kind === 'lancio' ? Math.max(LOB_MIN, w.range * (r.strength ?? 1)) : undefined);
+      }
       // se il dito è tornato al centro dopo aver mirato: attacco annullato
     };
     this.aimIndicator = new AimIndicator(this);
@@ -462,7 +465,7 @@ export class MatchScene extends Phaser.Scene {
         this.aimIndicator.showLine(me.x, me.y, a, sup.range, sup.aimWidth);
       }
     } else if (this.aimStick.engaged) {
-      this.aimIndicator.show(this.player.x, this.player.y, this.aimStick.angle, this.player.stats.weapon, this.player.ammo >= 1);
+      this.aimIndicator.show(this.player.x, this.player.y, this.aimStick.angle, this.player.stats.weapon, this.player.ammo >= 1, this.aimStick.strength);
     } else {
       this.aimIndicator.hide();
     }

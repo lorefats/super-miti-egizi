@@ -24,3 +24,6 @@ export const SLIP = {
   /** rapidità con cui raggiunge la velocità voluta (normale: 18) */
   accel: 2.2,
 };
+
+/** Chi è accecato (tempesta di sabbia di Seth) vede solo fino a questa distanza (pixel). */
+export const BLIND = { sight: 220 };

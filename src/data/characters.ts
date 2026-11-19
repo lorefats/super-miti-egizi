@@ -23,8 +23,9 @@ export const SPEED_NAMES: Record<SpeedClass, string> = {
  * Forma dell'arma (serve per l'indicatore di mira):
  * - "ventaglio": colpo ravvicinato davanti al personaggio (usa `arcDegrees`)
  * - "linea": tiro dritto, come una freccia o un getto (usa `aimWidth`)
+ * - "lancio": tiro a parabola sopra i muri, in un punto fino a `range` (`aimWidth` = diametro dello scoppio)
  */
-export type WeaponKind = 'ventaglio' | 'linea';
+export type WeaponKind = 'ventaglio' | 'linea' | 'lancio';
 
 /** Arma (attacco base). */
 export interface WeaponData {
@@ -555,6 +556,221 @@ export const CHARACTERS: Record<string, CharacterData> = {
         punchDelay: 0.9,
         /** da quanto lontano vede i nemici */
         sight: 650,
+      },
+    },
+  },
+  iside: {
+    ...getRosterEntry('iside'),
+    weapon: {
+      name: 'Ankh Luminoso',
+      kind: 'linea',
+      damage: 640,
+      range: 620,
+      arcDegrees: 0,
+      aimWidth: 34,
+      maxAmmo: 3,
+      reloadSeconds: 1.3,
+      attackDelay: 0.4,
+      params: {
+        /** velocità dell'ankh (pixel al secondo) */
+        speed: 1000,
+        radius: 20,
+        /** dopo aver colpito rimbalza su un altro nemico entro questa distanza */
+        chainRange: 300,
+        /** danno del rimbalzo (0.7 = 70%) */
+        chainDamage: 0.7,
+      },
+    },
+    super: {
+      name: 'Ali Protettrici',
+      chargeDamage: 3400,
+      range: 400, // i bot la usano quando un nemico è più vicino di così
+      aim: 'sestesso',
+      aimWidth: 0,
+      params: {
+        /** quanto dura la cupola che blocca i proiettili (secondi) */
+        seconds: 3,
+        radius: 210,
+      },
+    },
+  },
+  seth: {
+    ...getRosterEntry('seth'),
+    weapon: {
+      name: 'Lancia del Caos',
+      kind: 'linea',
+      damage: 720,
+      range: 560,
+      arcDegrees: 0,
+      aimWidth: 30,
+      maxAmmo: 3,
+      reloadSeconds: 1.4,
+      attackDelay: 0.45,
+      params: {
+        /** velocità della lancia (pixel al secondo) */
+        speed: 1100,
+        radius: 18,
+        /** alla fine si divide in pezzi */
+        pieces: 3,
+        pieceDamage: 300,
+        pieceRange: 220,
+        /** apertura dei pezzi (gradi) */
+        spreadDegrees: 50,
+      },
+    },
+    super: {
+      name: 'Tempesta di Sabbia',
+      chargeDamage: 3800,
+      range: 620,
+      aim: 'zona',
+      aimWidth: 520,
+      params: {
+        /** quanto dura la tempesta (secondi) */
+        seconds: 5,
+        radius: 260,
+        /** danno al secondo a chi è dentro */
+        damagePerSecond: 380,
+      },
+    },
+  },
+  sekhmet: {
+    ...getRosterEntry('sekhmet'),
+    weapon: {
+      name: 'Soffio Ardente',
+      kind: 'ventaglio',
+      damage: 300, // per ogni fiammata
+      range: 230,
+      arcDegrees: 36,
+      aimWidth: 0,
+      maxAmmo: 3,
+      reloadSeconds: 1.2,
+      attackDelay: 0.4,
+      params: {
+        /** fiammate per ogni attacco e secondi tra una e l'altra */
+        bursts: 3,
+        gapSeconds: 0.09,
+      },
+    },
+    super: {
+      name: 'Furia della Leonessa',
+      chargeDamage: 3600,
+      range: 300, // i bot la usano quando un nemico è più vicino di così
+      aim: 'sestesso',
+      aimWidth: 0,
+      params: {
+        /** i nemici entro questo raggio scappano per un po' */
+        roarRadius: 320,
+        fearSeconds: 1.5,
+        /** poi per qualche secondo attacca più veloce (2 = il doppio) */
+        furySeconds: 5,
+        furyRate: 2,
+      },
+    },
+  },
+  khonsu: {
+    ...getRosterEntry('khonsu'),
+    weapon: {
+      name: 'Falce Lunare',
+      kind: 'linea',
+      damage: 520, // all'andata e di nuovo al ritorno
+      range: 460,
+      arcDegrees: 0,
+      aimWidth: 48,
+      maxAmmo: 3,
+      reloadSeconds: 1.4,
+      attackDelay: 0.45,
+      params: {
+        /** velocità della falce (pixel al secondo) */
+        speed: 820,
+        radius: 26,
+      },
+    },
+    super: {
+      name: 'Eclissi',
+      chargeDamage: 3600,
+      range: 600,
+      aim: 'zona',
+      aimWidth: 500,
+      params: {
+        /** quanto dura il rallentatore (secondi) */
+        seconds: 3,
+        radius: 250,
+        /** velocità e rapidità di attacco dei nemici dentro (0.4 = al 40%) */
+        slowFactor: 0.4,
+      },
+    },
+  },
+  nut: {
+    ...getRosterEntry('nut'),
+    weapon: {
+      name: 'Stelle Cadenti',
+      kind: 'lancio',
+      damage: 820,
+      range: 560,
+      arcDegrees: 0,
+      aimWidth: 140, // diametro dello scoppio
+      maxAmmo: 3,
+      reloadSeconds: 1.5,
+      attackDelay: 0.5,
+      params: {
+        /** secondi di volo della stella */
+        flightSeconds: 0.6,
+        /** quanto sale in alto la parabola (pixel) */
+        arcHeight: 170,
+      },
+    },
+    super: {
+      name: 'Volta Celeste',
+      chargeDamage: 3800,
+      range: 650,
+      aim: 'zona',
+      aimWidth: 560,
+      params: {
+        /** secondi di avviso prima che cadano le meteore */
+        warnSeconds: 1,
+        radius: 280,
+        meteors: 10,
+        /** secondi in cui cadono tutte le meteore */
+        rainSeconds: 1.2,
+        meteorRadius: 90,
+        meteorDamage: 520,
+      },
+    },
+  },
+  ptah: {
+    ...getRosterEntry('ptah'),
+    weapon: {
+      name: 'Martello del Creatore',
+      kind: 'linea',
+      damage: 950,
+      range: 540,
+      arcDegrees: 0,
+      aimWidth: 36,
+      maxAmmo: 3,
+      reloadSeconds: 1.5,
+      attackDelay: 0.5,
+      params: {
+        /** velocità del martello (pixel al secondo) */
+        speed: 850,
+        radius: 22,
+        /** rimbalzi sui muri */
+        bounces: 1,
+      },
+    },
+    super: {
+      name: 'Obelisco Guardiano',
+      chargeDamage: 4000,
+      range: 350,
+      aim: 'zona',
+      aimWidth: 120,
+      params: {
+        /** quanto resta l'obelisco (secondi) */
+        seconds: 12,
+        health: 2600,
+        /** raggi: danno, distanza e ogni quanto spara */
+        damage: 360,
+        shootRange: 480,
+        shootDelay: 0.8,
       },
     },
   },

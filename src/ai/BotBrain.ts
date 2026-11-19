@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BOT_FLEE_HEALTH, BOT_RECOVER_HEALTH, type BotLevel } from '../data/bots';
+import { BLIND } from '../data/combat';
 import type { Combat, Damageable } from '../entities/Combat';
 import type { Player } from '../entities/Player';
 
@@ -143,7 +144,7 @@ export class BotBrain {
     }
     // 3) attacca quando è a tiro, dopo un piccolo "tempo di reazione"
     if (dist - t.hitRadius < range * 0.95 && bot.canAttack()) {
-      bot.tryAttack(angle + (strafe ? error() : 0));
+      bot.tryAttack(angle + (strafe ? error() : 0), dist);
       this.attackWait = strafe ? this.randomPause() : 0.15;
     }
   }
@@ -151,7 +152,8 @@ export class BotBrain {
   private think(): void {
     const bot = this.bot;
     const lifeFrac = bot.health / bot.maxHealth;
-    const sight = this.level.sightRange;
+    // nella tempesta di sabbia si vede solo vicino
+    const sight = bot.hasBuff('accecato') ? BLIND.sight : this.level.sightRange;
 
     // 1) tempesta: rientra verso il centro del cerchio sicuro
     const zone = this.world.safeZone?.();

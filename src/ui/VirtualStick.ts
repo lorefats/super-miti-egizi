@@ -90,6 +90,9 @@ export class VirtualStick {
     return this.direction.angle();
   }
 
+  /** Quanto è tirato il pomello: 0 = appena fuori dalla zona morta, 1 = fino in fondo. */
+  strength = 0;
+
   private restPosition(): { x: number; y: number } {
     const { width, height } = this.scene.scale;
     const off = this.opt.margin + this.opt.radius;
@@ -135,7 +138,7 @@ export class VirtualStick {
   private onUp(pointer: Phaser.Input.Pointer): void {
     if (pointer.id !== this.pointerId) return;
     this.follow(pointer);
-    const release: StickRelease = { tap: !this.everEngaged, aimed: this.engaged, angle: this.angle };
+    const release: StickRelease = { tap: !this.everEngaged, aimed: this.engaged, angle: this.angle, strength: this.strength };
     this.reset();
     this.onRelease?.(release);
   }
@@ -147,7 +150,9 @@ export class VirtualStick {
     const r = this.opt.radius;
     const k = dist > r ? r / dist : 1;
     this.knob.setPosition(this.center.x + dx * k, this.center.y + dy * k);
-    if (dist < r * this.opt.deadZone) {
+    const dz = this.opt.deadZone;
+    this.strength = Phaser.Math.Clamp((Math.min(dist, r) / r - dz) / (1 - dz), 0, 1);
+    if (dist < r * dz) {
       this.direction.set(0, 0);
     } else {
       this.direction.set(dx / dist, dy / dist);

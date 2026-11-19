@@ -3,6 +3,9 @@ import { DEPTH } from '../config';
 import { PALETTE } from '../art/palette';
 import type { WeaponData } from '../data/characters';
 
+/** Distanza minima dei lanci a parabola (pixel): non si lancia sui propri piedi. */
+export const LOB_MIN = 90;
+
 /** Disegno sulla sabbia che mostra dove colpirà l'arma (ventaglio o linea) o la super mentre si mira. */
 export class AimIndicator {
   private readonly g: Phaser.GameObjects.Graphics;
@@ -11,9 +14,20 @@ export class AimIndicator {
     this.g = scene.add.graphics().setDepth(DEPTH.groundMarks).setVisible(false);
   }
 
-  show(x: number, y: number, angle: number, weapon: WeaponData, ready: boolean): void {
+  /** `strength` (0..1) = quanto lontano si lancia, per le armi "a lancio". */
+  show(x: number, y: number, angle: number, weapon: WeaponData, ready: boolean, strength = 1): void {
     const g = this.g;
     const color = ready ? 0xffffff : PALETTE.rossoDeserto;
+    if (weapon.kind === 'lancio') {
+      const d = Math.max(LOB_MIN, weapon.range * strength);
+      const cx = x + Math.cos(angle) * d;
+      const cy = y + Math.sin(angle) * d;
+      g.clear().setVisible(true);
+      g.lineStyle(4, color, 0.5).lineBetween(x, y, cx, cy);
+      g.fillStyle(color, 0.28).fillCircle(cx, cy, weapon.aimWidth / 2);
+      g.lineStyle(3, color, 0.9).strokeCircle(cx, cy, weapon.aimWidth / 2);
+      return;
+    }
     if (weapon.kind === 'linea') {
       this.drawLine(x, y, angle, weapon.range, weapon.aimWidth, color, 0.28);
       return;

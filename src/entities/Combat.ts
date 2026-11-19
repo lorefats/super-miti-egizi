@@ -38,6 +38,20 @@ export interface Damageable {
   changeSpeed?(name: string, seconds: number, factor: number): void;
   /** Confuso per qualche secondo: si muove a caso. */
   confuse?(seconds: number): void;
+  /** Spaventato: scappa lontano dal punto (x, y) per qualche secondo. */
+  scare?(x: number, y: number, seconds: number): void;
+  /** Cambia la rapidità degli attacchi e della ricarica (0.4 = al rallentatore, 2 = il doppio). */
+  changeAttackRate?(name: string, seconds: number, factor: number): void;
+  /** Vede solo vicino a sé per qualche secondo (tempesta di sabbia). */
+  blind?(seconds: number): void;
+}
+
+/** Cupola che ferma i proiettili dei nemici (super di Iside). */
+export interface Shield {
+  x: number;
+  y: number;
+  radius: number;
+  team: number;
 }
 
 /** Chi attacca: posizione, squadra, e (facoltativo) cosa succede quando fa danno a un nemico, non a un baule (per caricare la super). */
@@ -57,6 +71,16 @@ export class Combat {
   walls: Phaser.Physics.Arcade.StaticGroup | null = null;
   /** Bordi della mappa (per non saltare o tuffarsi fuori). */
   bounds: Phaser.Geom.Rectangle | null = null;
+  /** Cupole che fermano i proiettili. */
+  readonly shields: Shield[] = [];
+
+  /** Un proiettile della squadra `team` in (x, y) è fermato da una cupola dei nemici? */
+  shieldedAt(x: number, y: number, team: number): Shield | null {
+    for (const s of this.shields) {
+      if (s.team !== team && Phaser.Math.Distance.Between(x, y, s.x, s.y) < s.radius) return s;
+    }
+    return null;
+  }
 
   add(d: Damageable): void {
     this.list.push(d);

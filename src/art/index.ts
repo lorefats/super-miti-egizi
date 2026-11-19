@@ -14,6 +14,13 @@ import { gebSvg, gebLegSvg } from './characters/geb';
 import { khepriSvg, khepriLegSvg } from './characters/khepri';
 import { khnumSvg, khnumLegSvg } from './characters/khnum';
 import * as T from './godFxTurchese';
+import * as LZ from './godFxLapis';
+import { isideSvg, isideLegSvg } from './characters/iside';
+import { sethSvg, sethLegSvg } from './characters/seth';
+import { sekhmetSvg, sekhmetLegSvg } from './characters/sekhmet';
+import { khonsuSvg, khonsuLegSvg } from './characters/khonsu';
+import { nutSvg, nutLegSvg } from './characters/nut';
+import { ptahSvg, ptahLegSvg } from './characters/ptah';
 import { arrowSvg, jawSvg, dropSvg, rainCloudSvg, tornadoSvg, horusEyeSvg, smallFeatherSvg } from './godFx';
 import {
   shadowSvg,
@@ -183,6 +190,15 @@ export const TEX = {
   vaso: 'vaso-argilla',
   coccio: 'coccio',
   golem: 'golem-argilla',
+  // effetti degli dèi Lapislazzuli
+  lancia: 'lancia-caos',
+  fiamma: 'fiamma',
+  falceLuna: 'falce-luna',
+  eclissi: 'eclissi',
+  stellaCadente: 'stella-cadente',
+  meteora: 'meteora',
+  martello: 'martello',
+  obeliscoGuardiano: 'obelisco-guardiano',
 } as const;
 
 const suffix = (v: ColorVariant) => (v === 'base' ? '' : `-${v}`);
@@ -244,6 +260,12 @@ const CHARACTER_ART: Record<
   geb: { body: gebSvg, legs: { draw: gebLegSvg, hips: HIPS } },
   khepri: { body: khepriSvg, legs: { draw: khepriLegSvg, hips: HIPS } },
   khnum: { body: khnumSvg, legs: { draw: khnumLegSvg, hips: HIPS } },
+  iside: { body: isideSvg, legs: { draw: isideLegSvg, hips: HIPS } },
+  seth: { body: sethSvg, legs: { draw: sethLegSvg, hips: HIPS } },
+  sekhmet: { body: sekhmetSvg, legs: { draw: sekhmetLegSvg, hips: HIPS } },
+  khonsu: { body: khonsuSvg, legs: { draw: khonsuLegSvg, hips: HIPS } },
+  nut: { body: nutSvg, legs: { draw: nutLegSvg, hips: HIPS } },
+  ptah: { body: ptahSvg, legs: { draw: ptahLegSvg, hips: HIPS } },
 };
 
 /** Esiste già il disegno vero di questo personaggio? (Gli altri usano la sagoma colorata.) */
@@ -399,6 +421,14 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.vaso, ...T.clayPotSvg() },
     { key: TEX.coccio, ...T.shardSvg() },
     { key: TEX.golem, ...T.golemSvg() },
+    { key: TEX.lancia, ...LZ.spearSvg() },
+    { key: TEX.fiamma, ...LZ.flameSvg() },
+    { key: TEX.falceLuna, ...LZ.moonSickleSvg() },
+    { key: TEX.eclissi, ...LZ.eclipseSvg() },
+    { key: TEX.stellaCadente, ...LZ.fallingStarSvg() },
+    { key: TEX.meteora, ...LZ.meteorSvg() },
+    { key: TEX.martello, ...LZ.hammerSvg() },
+    { key: TEX.obeliscoGuardiano, ...LZ.guardianObeliskSvg() },
   ];
   await loadSvgTextures(scene, arts);
 }
