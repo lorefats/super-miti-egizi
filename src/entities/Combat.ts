@@ -27,7 +27,7 @@ export interface Damageable {
   heal?(fraction: number): void;
 }
 
-/** Chi attacca: posizione, squadra, e (facoltativo) cosa succede quando fa danno (per caricare la super). */
+/** Chi attacca: posizione, squadra, e (facoltativo) cosa succede quando fa danno a un nemico, non a un baule (per caricare la super). */
 export interface Attacker {
   readonly x: number;
   readonly y: number;
@@ -102,7 +102,9 @@ export class Combat {
       d.takeDamage(damage);
       hit.push(d);
     }
-    if (hit.length) from.onDealtDamage?.(damage * hit.length);
+    // la super si carica solo colpendo i nemici: i bauli non contano
+    const chargers = hit.filter((d) => d.kind !== 'baule').length;
+    if (chargers) from.onDealtDamage?.(damage * chargers);
     return hit;
   }
 
