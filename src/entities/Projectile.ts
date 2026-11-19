@@ -19,6 +19,12 @@ export interface ProjectileOptions {
   pierce?: boolean;
   /** Quanto gira su sé stesso (radianti al secondo). 0 = vola dritto con la punta in avanti. */
   spin?: number;
+  /** Quante volte rimbalza sui muri invece di fermarsi. */
+  bounces?: number;
+  /** Quanto cresce fino a fine portata (1.2 = +120% di grandezza, anche per colpire). */
+  grow?: number;
+  /** Bersagli da non toccare (es. chi è già stato colpito dal vaso intero, per le schegge). */
+  ignore?: Damageable[];
   /** Chiamato quando finisce (colpito, muro o portata finita). */
   onEnd?: (x: number, y: number) => void;
   /** Disegna la scia ogni fotogramma (da dove è partito fino a dove è ora). */
@@ -40,6 +46,8 @@ export class Projectile extends Phaser.GameObjects.Container {
   private time = 0;
   private done = false;
   private readonly alreadyHit = new Set<Damageable>();
+  private heading: number;
+  private bouncesLeft: number;
 
   constructor(
     scene: Phaser.Scene,
@@ -50,6 +58,9 @@ export class Projectile extends Phaser.GameObjects.Container {
     super(scene, x, y);
     this.startX = x;
     this.startY = y;
+    this.heading = opt.angle;
+    this.bouncesLeft = opt.bounces ?? 0;
+    for (const t of opt.ignore ?? []) this.alreadyHit.add(t);
     this.shadow = scene.add.image(0, 0, TEX.ombra).setScale(0.45);
     this.head = scene.add.image(0, -opt.height, opt.texture);
     if (opt.spin === 0) this.head.setRotation(opt.angle);
@@ -63,10 +74,20 @@ export class Projectile extends Phaser.GameObjects.Container {
     const dt = delta / 1000;
     this.time += dt;
     const step = this.opt.speed * dt;
-    this.x += Math.cos(this.opt.angle) * step;
-    this.y += Math.sin(this.opt.angle) * step;
+    const dx = Math.cos(this.heading) * step;
+    const dy = Math.sin(this.heading) * step;
+    this.x += dx;
+    this.y += dy;
     this.travelled += step;
+    if (this.bouncesLeft > 0 && this.hitsWall(this.x, this.y)) this.bounce(dx, dy);
     this.head.rotation += dt * (this.opt.spin ?? 14);
+    const size = 1 + (this.opt.grow ?? 0) * Math.min(1, this.travelled / this.opt.range);
+    if (this.opt.grow) {
+      this.head.setScale(size);
+      this.head.y = -this.opt.height * size; // una palla che rotola resta appoggiata a terra
+      this.shadow.setScale(0.45 * size);
+    }
+    const radius = this.opt.radius * size;
     this.setDepth(this.y + 1);
 
     if (this.trail && this.opt.drawTrail) {
@@ -76,26 +97,41 @@ export class Projectile extends Phaser.GameObjects.Container {
     }
 
     if (this.opt.pierce) {
-      for (const t of this.opt.combat.touchingAll(this.x, this.y, this.opt.radius, this.opt.owner)) {
+      for (const t of this.opt.combat.touchingAll(this.x, this.y, radius, this.opt.owner)) {
         if (this.alreadyHit.has(t)) continue;
         this.alreadyHit.add(t);
         this.opt.onHit(t, this.x, this.y, this.travelled);
       }
     } else {
-      const target = this.opt.combat.touching(this.x, this.y, this.opt.radius, this.opt.owner);
+      const target = this.opt.combat
+        .touchingAll(this.x, this.y, radius, this.opt.owner)
+        .find((t) => !this.alreadyHit.has(t));
       if (target) {
         this.opt.onHit(target, this.x, this.y, this.travelled);
         this.finish();
         return;
       }
     }
-    if (this.travelled >= this.opt.range || this.hitsWall()) this.finish();
+    if (this.travelled >= this.opt.range || this.hitsWall(this.x, this.y)) this.finish();
   }
 
-  private hitsWall(): boolean {
+  /** Torna indietro di un passo e rimbalza: gira la direzione dal lato del muro che ha toccato. */
+  private bounce(dx: number, dy: number): void {
+    this.bouncesLeft -= 1;
+    this.x -= dx;
+    this.y -= dy;
+    const hitX = this.hitsWall(this.x + dx, this.y);
+    const hitY = this.hitsWall(this.x, this.y + dy);
+    if (hitX) this.heading = Math.PI - this.heading;
+    if (hitY) this.heading = -this.heading;
+    if (!hitX && !hitY) this.heading += Math.PI;
+    if (this.opt.spin === 0) this.head.setRotation(this.heading);
+  }
+
+  private hitsWall(x: number, y: number): boolean {
     const walls = this.opt.combat.walls;
     if (!walls) return false;
-    const circle = new Phaser.Geom.Circle(this.x, this.y, this.opt.radius * 0.5);
+    const circle = new Phaser.Geom.Circle(x, y, this.opt.radius * 0.5);
     for (const child of walls.getChildren()) {
       const body = (child as Phaser.GameObjects.Zone).body as Phaser.Physics.Arcade.StaticBody | null;
       if (!body) continue;

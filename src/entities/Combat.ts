@@ -34,6 +34,10 @@ export interface Damageable {
   slip?(seconds: number): void;
   /** Cura una frazione della vita massima. */
   heal?(fraction: number): void;
+  /** Cambia la velocità per qualche secondo (0.7 = più lento, 1.3 = più veloce). `name` = da cosa viene. */
+  changeSpeed?(name: string, seconds: number, factor: number): void;
+  /** Confuso per qualche secondo: si muove a caso. */
+  confuse?(seconds: number): void;
 }
 
 /** Chi attacca: posizione, squadra, e (facoltativo) cosa succede quando fa danno a un nemico, non a un baule (per caricare la super). */

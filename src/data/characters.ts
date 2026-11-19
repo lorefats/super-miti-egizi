@@ -368,6 +368,196 @@ export const CHARACTERS: Record<string, CharacterData> = {
       },
     },
   },
+  osiride: {
+    ...getRosterEntry('osiride'),
+    weapon: {
+      name: 'Flagello e Pastorale',
+      kind: 'ventaglio',
+      damage: 780,
+      range: 230,
+      arcDegrees: 80,
+      aimWidth: 0,
+      maxAmmo: 3,
+      reloadSeconds: 1.3,
+      attackDelay: 0.45,
+      params: {
+        /** chi viene colpito va più piano per qualche secondo */
+        slowSeconds: 1.2,
+        /** velocità dei nemici rallentati (0.7 = 70%) */
+        slowFactor: 0.7,
+      },
+    },
+    super: {
+      name: 'Rinascita del Nilo',
+      chargeDamage: 3600,
+      range: 600,
+      aim: 'zona',
+      aimWidth: 480,
+      params: {
+        /** quanto dura il campo di grano (secondi) */
+        seconds: 6,
+        radius: 240,
+        /** cura ai compagni dentro (frazione della vita massima al secondo) */
+        healPerSecond: 0.07,
+        /** velocità dei nemici dentro il campo */
+        slowFactor: 0.55,
+      },
+    },
+  },
+  hathor: {
+    ...getRosterEntry('hathor'),
+    weapon: {
+      name: 'Sistro Sonoro',
+      kind: 'linea',
+      damage: 620,
+      range: 760, // strada totale, anche dopo i rimbalzi
+      arcDegrees: 0,
+      aimWidth: 40,
+      maxAmmo: 3,
+      reloadSeconds: 1.3,
+      attackDelay: 0.4,
+      params: {
+        /** velocità dell'onda sonora (pixel al secondo) */
+        speed: 900,
+        radius: 24,
+        /** quante volte rimbalza sui muri */
+        bounces: 2,
+      },
+    },
+    super: {
+      name: 'Danza della Gioia',
+      chargeDamage: 3400,
+      range: 320, // i bot la usano quando un nemico è più vicino di così
+      aim: 'sestesso',
+      aimWidth: 0,
+      params: {
+        /** quanto dura la musica (secondi) */
+        seconds: 5,
+        /** fin dove arriva la musica attorno a lei */
+        radius: 320,
+        /** velocità dei compagni (1.3 = +30%) */
+        speedFactor: 1.3,
+        /** cura ai compagni (frazione della vita massima al secondo) */
+        healPerSecond: 0.06,
+      },
+    },
+  },
+  geb: {
+    ...getRosterEntry('geb'),
+    weapon: {
+      name: 'Pugno di Roccia',
+      kind: 'linea',
+      damage: 900,
+      range: 420,
+      arcDegrees: 0,
+      aimWidth: 70,
+      maxAmmo: 3,
+      reloadSeconds: 1.5,
+      attackDelay: 0.5,
+      params: {
+        /** velocità dell'onda d'urto nel terreno (pixel al secondo) */
+        waveSpeed: 1100,
+      },
+    },
+    super: {
+      name: 'Prigione di Pietra',
+      chargeDamage: 4200,
+      range: 600,
+      aim: 'zona',
+      aimWidth: 340,
+      params: {
+        /** raggio dell'anello di rocce */
+        radius: 170,
+        /** quanto restano le rocce (secondi) */
+        seconds: 3,
+        /** danno a chi è dentro quando spuntano le rocce */
+        damage: 600,
+      },
+    },
+  },
+  khepri: {
+    ...getRosterEntry('khepri'),
+    weapon: {
+      name: 'Palla di Sabbia',
+      kind: 'linea',
+      damage: 480, // all'inizio; la palla cresce e fa più danno mentre rotola
+      range: 560,
+      arcDegrees: 0,
+      aimWidth: 50,
+      maxAmmo: 3,
+      reloadSeconds: 1.2,
+      attackDelay: 0.4,
+      params: {
+        /** velocità della palla (pixel al secondo) */
+        speed: 650,
+        radius: 18,
+        /** quanto cresce a fine strada (1.2 = +120% di grandezza) */
+        grow: 1.2,
+        /** danno in più a fine strada (1 = +100%) */
+        farBonus: 1,
+      },
+    },
+    super: {
+      name: "Rinascita dell'Alba",
+      chargeDamage: 3400,
+      range: 500, // i bot la usano quando un nemico è più vicino di così
+      aim: 'sestesso',
+      aimWidth: 0,
+      params: {
+        /** secondi sotto terra (non si può colpire) */
+        seconds: 3,
+        /** velocità sotto terra (1.6 = +60%) */
+        speedFactor: 1.6,
+        /** esplosione di sabbia quando riemerge */
+        radius: 180,
+        damage: 1400,
+        push: 600,
+      },
+    },
+  },
+  khnum: {
+    ...getRosterEntry('khnum'),
+    weapon: {
+      name: "Vasi d'Argilla",
+      kind: 'linea',
+      damage: 700,
+      range: 520,
+      arcDegrees: 0,
+      aimWidth: 34,
+      maxAmmo: 3,
+      reloadSeconds: 1.4,
+      attackDelay: 0.45,
+      params: {
+        /** velocità del vaso (pixel al secondo) */
+        speed: 800,
+        radius: 20,
+        /** schegge quando si rompe, e il loro danno e la loro portata */
+        shards: 6,
+        shardDamage: 220,
+        shardRange: 150,
+        shardSpeed: 600,
+      },
+    },
+    super: {
+      name: "Golem d'Argilla",
+      chargeDamage: 3800,
+      range: 400,
+      aim: 'zona',
+      aimWidth: 120,
+      params: {
+        /** quanto resta il golem (secondi) */
+        seconds: 10,
+        health: 3000,
+        speed: 230,
+        /** pugno del golem */
+        damage: 650,
+        punchRange: 110,
+        punchDelay: 0.9,
+        /** da quanto lontano vede i nemici */
+        sight: 650,
+      },
+    },
+  },
 };
 
 /** Il personaggio si può già usare in partita (ha arma e super)? Gli altri arrivano nella Fase 4. */

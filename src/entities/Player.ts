@@ -110,6 +110,13 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   private slipTime = 0;
   /** Poteri temporanei (nome → secondi rimasti), es. l'Occhio di Horus. */
   private readonly buffs = new Map<string, number>();
+  /** Velocità cambiate per qualche secondo (nome → secondi rimasti e moltiplicatore). */
+  private readonly speedMods = new Map<string, { left: number; factor: number }>();
+  /** Direzione a caso mentre è confuso, e fra quanto cambia. */
+  private readonly confusedDir = new Phaser.Math.Vector2();
+  private confusedTimer = 0;
+  /** Secondi rimasti sotto terra (si muove ma non si vede, non si colpisce e non attacca). */
+  private undergroundTime = 0;
   /** Sta saltando o si sta tuffando (lo muove la super, non il giocatore). */
   private dashing = false;
   /** Stelline che girano sulla testa quando è stordito. */
@@ -214,12 +221,12 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Il personaggio può sparare adesso? */
   canAttack(): boolean {
-    return this.canAct() && this.ammo >= 1 && this.attackCooldown <= 0 && this.attackTime < 0;
+    return this.canAct() && !this.isUnderground() && this.ammo >= 1 && this.attackCooldown <= 0 && this.attackTime < 0;
   }
 
   /** La super è carica e si può usare adesso? */
   canUseSuper(): boolean {
-    return this.canAct() && this.superCharge >= 1 && this.attackTime < 0;
+    return this.canAct() && !this.isUnderground() && this.superCharge >= 1 && this.attackTime < 0;
   }
 
   /** Vita massima, compresi i gioielli. */
@@ -246,7 +253,54 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   }
 
   isTargetable(): boolean {
-    return this.isAlive() && !this.reviving && !this.dashing;
+    return this.isAlive() && !this.reviving && !this.dashing && !this.isUnderground();
+  }
+
+  /** È sotto terra (super di Khepri)? */
+  isUnderground(): boolean {
+    return this.undergroundTime > 0;
+  }
+
+  /**
+   * Va sotto terra per qualche secondo: si muove ancora (comandato dal giocatore o dal bot)
+   * ma non si vede, non si può colpire e non attacca. Chi guarda vede solo la terra smossa (la disegna la super).
+   */
+  goUnderground(seconds: number): void {
+    if (!this.canAct()) return;
+    this.undergroundTime = seconds;
+    this.attackTime = -1;
+    for (const p of this.bodyParts() as Phaser.GameObjects.Image[]) p.setVisible(false);
+    this.shadow.setVisible(false);
+    if (!this.isHuman) this.bar.setVisible(false);
+  }
+
+  private comeUp(): void {
+    this.undergroundTime = 0;
+    for (const p of this.bodyParts() as Phaser.GameObjects.Image[]) p.setVisible(true);
+    this.shadow.setVisible(true);
+    this.bar.setVisible(this.revealed);
+  }
+
+  /** Cambia la velocità per qualche secondo (0.7 = più lento, 1.3 = più veloce). Si rinnova se arriva di nuovo. */
+  changeSpeed(name: string, seconds: number, factor: number): void {
+    if (!this.isAlive()) return;
+    if (factor < 1 && !this.isTargetable()) return; // i rallentamenti non arrivano a chi non si può colpire
+    const old = this.speedMods.get(name);
+    this.speedMods.set(name, { left: Math.max(old?.left ?? 0, seconds), factor });
+  }
+
+  /** Moltiplicatore della velocità dato da tutti i cambi di velocità attivi. */
+  private speedFactor(): number {
+    let f = 1;
+    for (const m of this.speedMods.values()) f *= m.factor;
+    return f;
+  }
+
+  /** Confuso per qualche secondo: si muove a caso (il giocatore o il bot non lo comandano). */
+  confuse(seconds: number): void {
+    if (!this.isTargetable()) return;
+    if (!this.hasBuff('confuso')) this.confusedTimer = 0;
+    this.addBuff('confuso', seconds);
   }
 
   /** Chiamato da Combat quando i colpi di questo personaggio vanno a segno: carica la super. */
@@ -264,7 +318,16 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
       this.moving = false;
       return;
     }
-    const speed = SPEED_VALUES[this.stats.speed] * this.terrainSpeed;
+    if (this.hasBuff('confuso')) {
+      // confuso: cammina dove vuole lui, cambiando direzione ogni tanto
+      this.confusedTimer -= this.scene.game.loop.delta / 1000;
+      if (this.confusedTimer <= 0) {
+        this.confusedTimer = Phaser.Math.FloatBetween(0.3, 0.6);
+        this.confusedDir.setToPolar(Math.random() * Math.PI * 2, 1);
+      }
+      dir = this.confusedDir;
+    }
+    const speed = SPEED_VALUES[this.stats.speed] * this.terrainSpeed * this.speedFactor();
     this.targetVel.set(dir.x * speed, dir.y * speed);
     const wasMoving = this.moving;
     this.moving = dir.lengthSq() > 0;
@@ -327,7 +390,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
    * "sarcofago" = chiuso nel sarcofago di Anubi, "stelle" = stelline che girano sulla testa.
    */
   stun(seconds: number, style: StunStyle = 'sarcofago'): void {
-    if (!this.isAlive() || this.reviving || this.dashing) return;
+    if (!this.isAlive() || this.reviving || this.dashing || this.isUnderground()) return;
     this.stunTime = Math.max(this.stunTime, seconds);
     this.attackTime = -1;
     this.body.setVelocity(0, 0);
@@ -544,7 +607,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     if (!this.isAlive() || on === this.revealed) return;
     this.revealed = on;
     this.setVisible(on);
-    this.bar.setVisible(on);
+    this.bar.setVisible(on && (this.isHuman || !this.isUnderground()));
   }
 
   /** Aspetto "nascosto": il giocatore si vede semitrasparente quando è in un nascondiglio. */
@@ -572,6 +635,14 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     for (const [name, left] of this.buffs) {
       if (left - dt <= 0) this.buffs.delete(name);
       else this.buffs.set(name, left - dt);
+    }
+    for (const [name, m] of this.speedMods) {
+      m.left -= dt;
+      if (m.left <= 0) this.speedMods.delete(name);
+    }
+    if (this.undergroundTime > 0) {
+      this.undergroundTime -= dt;
+      if (this.undergroundTime <= 0) this.comeUp();
     }
     if (this.slipTime > 0) {
       this.slipTime -= dt;

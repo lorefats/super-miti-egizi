@@ -8,6 +8,12 @@ import { sobekSvg, sobekLegSvg } from './characters/sobek';
 import { bastetSvg, bastetLegSvg } from './characters/bastet';
 import { tefnutSvg, tefnutLegSvg } from './characters/tefnut';
 import { shuSvg, shuLegSvg } from './characters/shu';
+import { osirideSvg, osirideLegSvg } from './characters/osiride';
+import { hathorSvg, hathorLegSvg } from './characters/hathor';
+import { gebSvg, gebLegSvg } from './characters/geb';
+import { khepriSvg, khepriLegSvg } from './characters/khepri';
+import { khnumSvg, khnumLegSvg } from './characters/khnum';
+import * as T from './godFxTurchese';
 import { arrowSvg, jawSvg, dropSvg, rainCloudSvg, tornadoSvg, horusEyeSvg, smallFeatherSvg } from './godFx';
 import {
   shadowSvg,
@@ -166,6 +172,17 @@ export const TEX = {
   tornado: 'tornado',
   occhioHorus: 'occhio-horus',
   piumetta: 'piumetta',
+  // effetti degli dèi Turchese
+  spiga: 'spiga-grano',
+  loto: 'fiore-loto',
+  ondaSonora: 'onda-sonora',
+  nota: 'nota-musicale',
+  roccia: 'roccia-appuntita',
+  pallaSabbia: 'palla-sabbia',
+  mucchioTerra: 'mucchio-terra',
+  vaso: 'vaso-argilla',
+  coccio: 'coccio',
+  golem: 'golem-argilla',
 } as const;
 
 const suffix = (v: ColorVariant) => (v === 'base' ? '' : `-${v}`);
@@ -222,6 +239,11 @@ const CHARACTER_ART: Record<
   bastet: { body: bastetSvg, legs: { draw: bastetLegSvg, hips: HIPS } },
   tefnut: { body: tefnutSvg, legs: { draw: tefnutLegSvg, hips: HIPS } },
   shu: { body: shuSvg, legs: { draw: shuLegSvg, hips: HIPS } },
+  osiride: { body: osirideSvg, legs: { draw: osirideLegSvg, hips: HIPS } },
+  hathor: { body: hathorSvg, legs: { draw: hathorLegSvg, hips: HIPS } },
+  geb: { body: gebSvg, legs: { draw: gebLegSvg, hips: HIPS } },
+  khepri: { body: khepriSvg, legs: { draw: khepriLegSvg, hips: HIPS } },
+  khnum: { body: khnumSvg, legs: { draw: khnumLegSvg, hips: HIPS } },
 };
 
 /** Esiste già il disegno vero di questo personaggio? (Gli altri usano la sagoma colorata.) */
@@ -367,6 +389,16 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.tornado, ...tornadoSvg() },
     { key: TEX.occhioHorus, ...horusEyeSvg() },
     { key: TEX.piumetta, ...smallFeatherSvg() },
+    { key: TEX.spiga, ...T.wheatSvg() },
+    { key: TEX.loto, ...T.lotusSvg() },
+    { key: TEX.ondaSonora, ...T.soundWaveSvg() },
+    { key: TEX.nota, ...T.musicNoteSvg() },
+    { key: TEX.roccia, ...T.rockSpikeSvg() },
+    { key: TEX.pallaSabbia, ...T.sandBallSvg() },
+    { key: TEX.mucchioTerra, ...T.dirtMoundSvg() },
+    { key: TEX.vaso, ...T.clayPotSvg() },
+    { key: TEX.coccio, ...T.shardSvg() },
+    { key: TEX.golem, ...T.golemSvg() },
   ];
   await loadSvgTextures(scene, arts);
 }

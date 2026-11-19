@@ -118,7 +118,8 @@ export class BotBrain {
     const sniper = bot.stats.weapon.kind === 'linea' && range >= SNIPER_RANGE;
     // con un muro in mezzo i colpi non passano: prima bisogna girarci attorno
     const wallBetween = this.combat.lineBlocked(bot.x, bot.y, t.x, t.y);
-    if (wallBetween || dist - t.hitRadius > range * 0.6) this.headTo(t.x, t.y);
+    // sotto terra (Khepri) corre dritto verso il nemico per riemergere addosso a lui
+    if (bot.isUnderground() || wallBetween || dist - t.hitRadius > range * 0.6) this.headTo(t.x, t.y);
     else if (strafe && sniper && dist < range * 0.35) {
       this.wanted
         .set(-toTarget.y * this.strafeSign, toTarget.x * this.strafeSign)
