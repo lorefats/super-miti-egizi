@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import { TEX } from '../art';
 import { hitSpark } from '../art/effects';
 import { DEPTH } from '../config';
-import { BLIND } from '../data/combat';
 import type { Damageable } from '../entities/Combat';
 import { FieldEffect } from '../entities/FieldEffect';
 import { Projectile } from '../entities/Projectile';
@@ -94,10 +93,6 @@ export const seth: CharacterModule = {
     });
     sand.setDepth(DEPTH.overhead - 30);
 
-    // chi gioca, se è dentro, vede tutto scuro tranne vicino a sé
-    const cam = scene.cameras.main;
-    const veil = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH.ui - 50).setVisible(false);
-
     let tick = 0;
     const fx = new FieldEffect(
       scene,
@@ -106,26 +101,16 @@ export const seth: CharacterModule = {
       p.seconds,
       (_f, dt) => {
         tick -= dt;
-        let humanInside: Damageable | null = null;
+        if (tick > 0) return;
+        tick = STORM_TICK;
+        // chi è dentro prende danno e vede solo vicino a sé
         for (const t of combat.inCircle(cx, cy, r, (o) => o.team !== user.team)) {
-          if (t.isHuman) humanInside = t;
-          if (tick <= 0) {
-            combat.damage(user, t, user.scaledDamage(p.damagePerSecond * STORM_TICK));
-            t.blind?.(STORM_TICK + 0.2);
-          }
-        }
-        if (tick <= 0) tick = STORM_TICK;
-        veil.setVisible(!!humanInside);
-        if (humanInside) {
-          const sx = (humanInside.x - cam.worldView.x) * cam.zoom;
-          const sy = (humanInside.y - 60 - cam.worldView.y) * cam.zoom;
-          const big = Math.max(scene.scale.width, scene.scale.height) * 2;
-          veil.clear().lineStyle(big, 0x6b3a1a, 0.9).strokeCircle(sx, sy, BLIND.sight * cam.zoom + big / 2);
+          combat.damage(user, t, user.scaledDamage(p.damagePerSecond * STORM_TICK));
+          t.blind?.(STORM_TICK + 0.2);
         }
       },
       () => {
         sand.stop();
-        veil.destroy();
         scene.time.delayedCall(900, () => sand.destroy());
       },
     );

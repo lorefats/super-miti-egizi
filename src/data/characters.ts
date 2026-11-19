@@ -774,6 +774,212 @@ export const CHARACTERS: Record<string, CharacterData> = {
       },
     },
   },
+  ammit: {
+    ...getRosterEntry('ammit'),
+    weapon: {
+      name: 'Morsi Rapidi',
+      kind: 'ventaglio',
+      damage: 340, // per ogni morso
+      range: 145,
+      arcDegrees: 70,
+      aimWidth: 0,
+      maxAmmo: 3,
+      reloadSeconds: 1,
+      attackDelay: 0.32,
+      params: {
+        /** morsi per ogni attacco e secondi tra uno e l'altro */
+        bites: 3,
+        gapSeconds: 0.08,
+      },
+    },
+    super: {
+      name: 'Divora-Cuori',
+      chargeDamage: 3600,
+      range: 460,
+      aim: 'linea',
+      aimWidth: 90,
+      params: {
+        /** durata dello scatto (secondi) */
+        dashSeconds: 0.35,
+        /** morso alla fine dello scatto */
+        damage: 1700,
+        biteRadius: 120,
+        /** se sconfigge qualcuno: si cura tutta e diventa più grande per un po' */
+        growSeconds: 5,
+        growScale: 1.35,
+      },
+    },
+  },
+  amon: {
+    ...getRosterEntry('amon'),
+    weapon: {
+      name: 'Piume del Vento',
+      kind: 'linea',
+      damage: 420, // per ogni piuma
+      range: 600,
+      arcDegrees: 0,
+      aimWidth: 40,
+      maxAmmo: 3,
+      reloadSeconds: 1.2,
+      attackDelay: 0.4,
+      params: {
+        /** piume per ogni attacco e quanto si aprono (gradi) */
+        feathers: 2,
+        spreadDegrees: 22,
+        speed: 900,
+        radius: 18,
+        /** quanto curvano verso il nemico (radianti al secondo) e da quanto lontano lo sentono */
+        turnRate: 4,
+        homingRange: 380,
+      },
+    },
+    super: {
+      name: 'Il Nascosto',
+      chargeDamage: 3200,
+      range: 500, // i bot la usano quando un nemico è più vicino di così
+      aim: 'sestesso',
+      aimWidth: 0,
+      params: {
+        /** secondi da invisibile */
+        seconds: 4,
+        /** il primo colpo dopo fa più danno (2 = doppio), se arriva entro qualche secondo */
+        nextHitFactor: 2,
+        nextHitSeconds: 7,
+      },
+    },
+  },
+  maat: {
+    ...getRosterEntry('maat'),
+    weapon: {
+      name: 'Piuma della Verità',
+      kind: 'linea',
+      damage: 620,
+      range: 860,
+      arcDegrees: 0,
+      aimWidth: 24,
+      maxAmmo: 3,
+      reloadSeconds: 1.6,
+      attackDelay: 0.45,
+      params: {
+        speed: 1500,
+        radius: 16,
+        /** danno in più contro chi ha più vita di lei, in percentuale (0.6 = +60%) */
+        justiceBonus: 0.6,
+      },
+    },
+    super: {
+      name: 'La Bilancia',
+      chargeDamage: 3400,
+      range: 650,
+      aim: 'linea',
+      aimWidth: 80,
+      params: {
+        /** cerca un nemico entro questo angolo dalla mira (gradi) */
+        aimCone: 30,
+        /** al massimo quanta vita si scambia (0.5 = 50%) */
+        maxSwap: 0.5,
+      },
+    },
+  },
+  kek: {
+    ...getRosterEntry('kek'),
+    weapon: {
+      name: "Bolle d'Ombra",
+      kind: 'linea',
+      damage: 640,
+      range: 540,
+      arcDegrees: 0,
+      aimWidth: 52,
+      maxAmmo: 3,
+      reloadSeconds: 1.3,
+      attackDelay: 0.45,
+      params: {
+        /** le bolle sono lente */
+        speed: 460,
+        radius: 26,
+        /** chi viene colpito va più piano */
+        slowSeconds: 1.5,
+        slowFactor: 0.6,
+      },
+    },
+    super: {
+      name: 'Notte Primordiale',
+      chargeDamage: 3800,
+      range: 700, // i bot la usano quando un nemico è più vicino di così
+      aim: 'sestesso',
+      aimWidth: 0,
+      params: {
+        /** secondi di buio per i nemici (Kek vede tutto) */
+        seconds: 5,
+      },
+    },
+  },
+  thoth: {
+    ...getRosterEntry('thoth'),
+    weapon: {
+      name: 'Raffica di Geroglifici',
+      kind: 'linea',
+      damage: 330, // per ogni geroglifico
+      range: 680,
+      arcDegrees: 0,
+      aimWidth: 30,
+      maxAmmo: 3,
+      reloadSeconds: 1.4,
+      attackDelay: 0.5,
+      params: {
+        glyphs: 3,
+        gapSeconds: 0.12,
+        speed: 1100,
+        radius: 18,
+      },
+    },
+    super: {
+      name: 'Libro di Thoth',
+      chargeDamage: 3400,
+      range: 600,
+      aim: 'linea',
+      aimWidth: 60,
+      params: {
+        /** se nessun nemico l'ha ancora colpito: cerchio di geroglifici tutto attorno */
+        ringGlyphs: 12,
+        ringDamage: 420,
+      },
+    },
+  },
+  nefti: {
+    ...getRosterEntry('nefti'),
+    weapon: {
+      name: 'Lame del Crepuscolo',
+      kind: 'linea',
+      damage: 360, // per ogni lama
+      range: 400,
+      arcDegrees: 0,
+      aimWidth: 90,
+      maxAmmo: 3,
+      reloadSeconds: 1.1,
+      attackDelay: 0.4,
+      params: {
+        blades: 3,
+        spreadDegrees: 28,
+        speed: 1000,
+        radius: 18,
+      },
+    },
+    super: {
+      name: "Passo nell'Ombra",
+      chargeDamage: 3200,
+      range: 650,
+      aim: 'sestesso',
+      aimWidth: 0,
+      params: {
+        /** atterra dietro al nemico, a questa distanza */
+        behindGap: 75,
+        /** il colpo successivo fa più danno (1.6 = +60%), se arriva entro qualche secondo */
+        nextHitFactor: 1.6,
+        nextHitSeconds: 4,
+      },
+    },
+  },
 };
 
 /** Il personaggio si può già usare in partita (ha arma e super)? Gli altri arrivano nella Fase 4. */

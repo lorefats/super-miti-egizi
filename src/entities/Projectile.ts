@@ -25,6 +25,8 @@ export interface ProjectileOptions {
   grow?: number;
   /** Boomerang: a fine portata (o contro un muro) torna da chi l'ha lanciato, colpendo di nuovo lungo la strada. */
   boomerang?: boolean;
+  /** Curva verso il nemico più vicino entro `range`, girando al massimo di `turnRate` radianti al secondo. */
+  homing?: { turnRate: number; range: number };
   /** Bersagli da non toccare (es. chi è già stato colpito dal vaso intero, per le schegge). */
   ignore?: Damageable[];
   /** Chiamato quando finisce (colpito, muro o portata finita). */
@@ -84,6 +86,15 @@ export class Projectile extends Phaser.GameObjects.Container {
       if (!owner.isAlive() || Phaser.Math.Distance.Between(this.x, this.y, owner.x, owner.y) < 34 || this.travelled > this.opt.range * 3) {
         this.finish();
         return;
+      }
+    }
+    if (this.opt.homing && !this.returning) {
+      const h = this.opt.homing;
+      const prey = this.opt.combat.nearestEnemy(this.x, this.y, this.opt.owner.team, h.range, null, ['personaggio', 'bersaglio']);
+      if (prey) {
+        const want = Phaser.Math.Angle.Between(this.x, this.y, prey.x, prey.y);
+        this.heading = Phaser.Math.Angle.RotateTo(this.heading, want, h.turnRate * dt);
+        if (this.opt.spin === 0) this.head.setRotation(this.heading);
       }
     }
     const dx = Math.cos(this.heading) * step;

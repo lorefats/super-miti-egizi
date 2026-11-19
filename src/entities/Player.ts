@@ -67,8 +67,12 @@ export const DEFEATED_EVENT = 'sconfitto';
  * Munizioni, ricarica e vita sono qui; cosa fa l'attacco lo decide il modulo del personaggio.
  */
 export class Player extends Phaser.GameObjects.Container implements Damageable, Attacker {
+  /** "Nascondiglio" speciale di chi è invisibile (super di Amon): nessuno lo vede se non da vicino. */
+  static readonly INVISIBLE = {};
   declare body: Phaser.Physics.Arcade.Body;
-  readonly stats: CharacterData;
+  private readonly ownStats: CharacterData;
+  /** Dati presi in prestito per un attimo (il Libro di Thoth usa la super di un altro). */
+  private borrowedStats: CharacterData | null = null;
   readonly team: number;
   readonly kind = 'personaggio' as const;
   readonly hitRadius = 26;
@@ -117,6 +121,10 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   private confusedTimer = 0;
   /** Rapidità degli attacchi cambiata per qualche secondo (nome → secondi rimasti e moltiplicatore). */
   private readonly rateMods = new Map<string, { left: number; factor: number }>();
+  /** Moltiplicatore del prossimo colpo (Amon, Nefti). */
+  private nextHitFactor = 1;
+  /** Ultima super nemica da cui è stato colpito (Libro di Thoth). */
+  lastEnemySuper: string | null = null;
   /** Da dove scappa quando è spaventato. */
   private readonly scaredFrom = new Phaser.Math.Vector2();
   /** Secondi rimasti sotto terra (si muove ma non si vede, non si colpisce e non attacca). */
@@ -169,7 +177,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.combat = combat;
     this.isHuman = opt.isHuman ?? false;
     this.displayName = opt.name ?? '';
-    this.stats = getCharacter(characterId);
+    this.ownStats = getCharacter(characterId);
     this.levelFactor = levelMultiplier(opt.level ?? 1);
     this.module = getCharacterModule(characterId);
     this.team = team;
@@ -212,6 +220,30 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.body.setOffset(-FEET_W / 2, -FEET_H / 2);
     this.body.setCollideWorldBounds(true);
     combat.add(this);
+  }
+
+  /** Numeri del personaggio (arma, super, vita...). */
+  get stats(): CharacterData {
+    return this.borrowedStats ?? this.ownStats;
+  }
+
+  /** Esegue `fn` facendo finta di essere un altro personaggio (solo per i numeri). Serve al Libro di Thoth. */
+  withBorrowedStats(data: CharacterData, fn: () => void): void {
+    this.borrowedStats = data;
+    try {
+      fn();
+    } finally {
+      this.borrowedStats = null;
+    }
+  }
+
+  /** Sparisce e riappare subito in (x, y) (Passo nell'Ombra di Nefti). */
+  teleportTo(x: number, y: number): void {
+    if (!this.canAct()) return;
+    this.body.reset(x, y);
+    this.setPosition(x, y);
+    this.walkVel.set(0, 0);
+    this.impulse.set(0, 0);
   }
 
   isAlive(): boolean {
@@ -320,6 +352,52 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     if (!this.isTargetable()) return;
     this.scaredFrom.set(x, y);
     this.addBuff('paura', seconds);
+  }
+
+  /** Di quale personaggio è la super (la può copiare Thoth). */
+  get superSource(): string {
+    return this.ownStats.id;
+  }
+
+  noteAttacker(from: Attacker): void {
+    if (from.team !== this.team && from.superSource) this.lastEnemySuper = from.superSource;
+  }
+
+  healthFraction(): number {
+    return this.health / this.maxHealth;
+  }
+
+  /** Mette la vita a una frazione della vita massima (la Bilancia di Maat). */
+  setHealthFraction(f: number): void {
+    if (!this.isTargetable()) return;
+    this.health = Phaser.Math.Clamp(f, 0.01, 1) * this.maxHealth;
+  }
+
+  /** Invisibile per qualche secondo (super di Amon): i nemici lo vedono solo da vicino. */
+  goInvisible(seconds: number): void {
+    this.addBuff('invisibile', seconds);
+  }
+
+  isInvisible(): boolean {
+    return this.hasBuff('invisibile');
+  }
+
+  /** Toglie un potere prima del tempo. */
+  removeBuff(name: string): void {
+    this.buffs.delete(name);
+  }
+
+  /** Il prossimo colpo farà più danno (`factor` = moltiplicatore), se arriva entro `seconds`. */
+  grantNextHitBonus(factor: number, seconds: number): void {
+    this.nextHitFactor = factor;
+    this.addBuff('colpoForte', seconds);
+  }
+
+  /** Usa il bonus del prossimo colpo (se c'è) e restituisce il moltiplicatore. */
+  consumeNextHitBonus(): number {
+    if (!this.hasBuff('colpoForte')) return 1;
+    this.removeBuff('colpoForte');
+    return this.nextHitFactor;
   }
 
   /** Vede solo vicino a sé per qualche secondo (tempesta di sabbia di Seth). */
@@ -484,7 +562,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Vede tutti i nemici, anche quelli nascosti (Occhio di Horus). */
   seesAll(): boolean {
-    return this.hasBuff('occhio');
+    return this.hasBuff('occhio') || this.hasBuff('notte');
   }
 
   /**

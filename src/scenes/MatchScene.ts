@@ -26,6 +26,7 @@ import { addFpsMeter } from '../ui/FpsMeter';
 import { Target } from '../entities/Target';
 import { VirtualStick } from '../ui/VirtualStick';
 import { AimIndicator, LOB_MIN } from '../ui/AimIndicator';
+import { BlindVeil } from '../ui/BlindVeil';
 import { SuperButton } from '../ui/SuperButton';
 import { MatchHud } from '../ui/MatchHud';
 import { showEndOverlay } from '../ui/EndOverlay';
@@ -65,6 +66,7 @@ export class MatchScene extends Phaser.Scene {
   private aimStick!: VirtualStick;
   private superButton!: SuperButton;
   private aimIndicator!: AimIndicator;
+  private blindVeil!: BlindVeil;
   private hud!: MatchHud;
   private combat!: Combat;
   private keys?: Record<KeyName, Phaser.Input.Keyboard.Key>;
@@ -249,6 +251,7 @@ export class MatchScene extends Phaser.Scene {
       // se il dito è tornato al centro dopo aver mirato: attacco annullato
     };
     this.aimIndicator = new AimIndicator(this);
+    this.blindVeil = new BlindVeil(this);
     this.hud = new MatchHud(this);
     this.hud.setRemaining(this.aliveCount());
     this.minimap = new Minimap(this, map);
@@ -380,7 +383,7 @@ export class MatchScene extends Phaser.Scene {
     for (const f of this.fighters) {
       const place = this.pyramids.find((p) => p.contains(f.x, f.y)) ?? this.bushes.find((b) => b.contains(f.x, f.y)) ?? null;
       // chi ha appena attaccato da un cespuglio si vede per un attimo
-      f.hideout = place instanceof BushPatch && f.revealedUntil > now ? null : place;
+      f.hideout = f.isInvisible() ? Player.INVISIBLE : place instanceof BushPatch && f.revealedUntil > now ? null : place;
       // terreno: nell'acqua si va più piano
       f.terrainSpeed = (this.map.water ?? []).some((w) => f.x > w.x && f.x < w.x + w.w && f.y > w.y && f.y < w.y + w.h)
         ? WATER.speedFactor
@@ -452,6 +455,7 @@ export class MatchScene extends Phaser.Scene {
     this.player.move(this.dir);
 
     this.superButton.update(this.player.superCharge, delta / 1000);
+    this.blindVeil.update(this.player.x, this.player.y, this.player.isAlive() && this.player.hasBuff('accecato'), delta / 1000);
     const sup = this.player.stats.super;
     const me = this.player;
     if (this.superButton.engaged) {

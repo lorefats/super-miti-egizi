@@ -44,6 +44,12 @@ export interface Damageable {
   changeAttackRate?(name: string, seconds: number, factor: number): void;
   /** Vede solo vicino a sé per qualche secondo (tempesta di sabbia). */
   blind?(seconds: number): void;
+  /** Vita rimasta da 0 a 1. */
+  healthFraction?(): number;
+  /** Mette la vita a una frazione della vita massima (la Bilancia di Maat). */
+  setHealthFraction?(f: number): void;
+  /** Si ricorda chi l'ha colpito (Thoth copia la sua super). */
+  noteAttacker?(from: Attacker): void;
 }
 
 /** Cupola che ferma i proiettili dei nemici (super di Iside). */
@@ -60,6 +66,8 @@ export interface Attacker {
   readonly y: number;
   readonly team: number;
   onDealtDamage?(amount: number): void;
+  /** Di quale personaggio è la super che si può copiare da lui (Libro di Thoth). */
+  readonly superSource?: string;
 }
 
 const targetable = (d: Damageable) => d.isAlive() && (d.isTargetable ? d.isTargetable() : true);
@@ -142,6 +150,7 @@ export class Combat {
       // i colpi non passano attraverso i muri
       if (this.lineBlocked(from.x, from.y, d.x, d.y)) continue;
       d.takeDamage(damage);
+      d.noteAttacker?.(from);
       hit.push(d);
     }
     // la super si carica solo colpendo i nemici: i bauli non contano
@@ -153,6 +162,7 @@ export class Combat {
   /** Fa danno a un bersaglio. Se è un nemico vero (non un baule) carica la super di chi attacca. */
   damage(from: Attacker, target: Damageable, amount: number): void {
     target.takeDamage(amount);
+    target.noteAttacker?.(from);
     if (target.kind !== 'baule') from.onDealtDamage?.(amount);
   }
 
@@ -161,7 +171,10 @@ export class Combat {
     const hit = this.alongLine(from.x, from.y, angle, length, width, from.team).filter(
       (d) => !this.lineBlocked(from.x, from.y, d.x, d.y),
     );
-    for (const d of hit) d.takeDamage(damage);
+    for (const d of hit) {
+      d.takeDamage(damage);
+      d.noteAttacker?.(from);
+    }
     const chargers = hit.filter((d) => d.kind !== 'baule').length;
     if (chargers) from.onDealtDamage?.(damage * chargers);
     return hit;
