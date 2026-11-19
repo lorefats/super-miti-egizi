@@ -7,6 +7,7 @@ import { MAPPA_VALLE } from '../data/valle';
 import { BOT_LEVELS, BOT_NAMES, SOLO_SETUP } from '../data/bots';
 import { BOT_LEVEL_BY_TROPHIES, trophiesForPlace } from '../data/progression';
 import { SaveManager } from '../save/SaveManager';
+import { isPlayable } from '../data/characters';
 import { HIDEOUT_REVEAL_DISTANCE } from '../data/combat';
 import { Combat } from '../entities/Combat';
 import { createObstacle, type PlacedObstacle } from '../entities/Obstacle';
@@ -101,6 +102,7 @@ export class MatchScene extends Phaser.Scene {
 
     const walls = this.physics.add.staticGroup();
     this.combat.walls = walls;
+    this.combat.bounds = new Phaser.Geom.Rectangle(0, 0, map.width, map.height);
     this.tallThings = [];
     this.culler = new Culler();
     for (const o of map.obstacles) {
@@ -134,7 +136,9 @@ export class MatchScene extends Phaser.Scene {
     // il giocatore (squadra 0) e i bot (ognuno nella sua squadra: tutti contro tutti); partenze a caso
     const spawns = Phaser.Utils.Array.Shuffle([map.spawn, ...(map.botSpawns ?? [])]);
     const mySpawn = spawns.shift()!;
-    const myId = SaveManager.getSelectedCharacter();
+    // "?eroe=horus" nell'indirizzo: prova subito un personaggio (solo per le prove)
+    const forced = new URLSearchParams(location.search).get('eroe');
+    const myId = forced && isPlayable(forced) ? forced : SaveManager.getSelectedCharacter();
     this.player = new Player(this, mySpawn.x, mySpawn.y, {
       characterId: myId,
       level: SaveManager.getLevel(myId),
@@ -224,8 +228,10 @@ export class MatchScene extends Phaser.Scene {
     });
     this.superButton = new SuperButton(this);
     this.superButton.onRelease = (r) => {
-      if (r.tap) this.player.autoSuper(this.player.stats.super.range);
-      else if (r.aimed) this.player.tryUseSuper(r.angle);
+      const sup = this.player.stats.super;
+      if (r.tap) this.player.autoSuper(sup.range);
+      else if (sup.aim === 'sestesso') this.player.tryUseSuper(this.player.facingSign > 0 ? 0 : Math.PI);
+      else if (r.aimed) this.player.tryUseSuper(r.angle, sup.range * (r.strength ?? 1));
     };
     this.aimStick = new VirtualStick(this, {
       side: 'right',
@@ -387,7 +393,8 @@ export class MatchScene extends Phaser.Scene {
     for (const f of this.fighters) {
       if (f === me) continue;
       const near = Phaser.Math.Distance.Between(f.x, f.y, me.x, me.y) < HIDEOUT_REVEAL_DISTANCE;
-      f.setRevealed(!f.hideout || f.hideout === me.hideout || near);
+      // con l'Occhio di Horus si vedono tutti, anche quelli nascosti
+      f.setRevealed(!f.hideout || f.hideout === me.hideout || near || me.seesAll());
     }
   }
 
@@ -443,8 +450,17 @@ export class MatchScene extends Phaser.Scene {
 
     this.superButton.update(this.player.superCharge, delta / 1000);
     const sup = this.player.stats.super;
+    const me = this.player;
     if (this.superButton.engaged) {
-      this.aimIndicator.showLine(this.player.x, this.player.y, this.superButton.angle, sup.range, sup.aimWidth);
+      const a = this.superButton.angle;
+      if (sup.aim === 'zona') {
+        const d = sup.range * this.superButton.strength;
+        this.aimIndicator.showArea(me.x, me.y, me.x + Math.cos(a) * d, me.y + Math.sin(a) * d, sup.aimWidth / 2);
+      } else if (sup.aim === 'sestesso') {
+        this.aimIndicator.showSelf(me.x, me.y, 90);
+      } else {
+        this.aimIndicator.showLine(me.x, me.y, a, sup.range, sup.aimWidth);
+      }
     } else if (this.aimStick.engaged) {
       this.aimIndicator.show(this.player.x, this.player.y, this.aimStick.angle, this.player.stats.weapon, this.player.ammo >= 1);
     } else {

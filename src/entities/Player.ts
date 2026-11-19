@@ -2,14 +2,14 @@ import Phaser from 'phaser';
 import { TEX, characterTexture, weaponTexture, legTexture, getHeldWeapon, getLegs } from '../art';
 import { dustPuff, footstepDust, turnToSand } from '../art/effects';
 import { PALETTE, type ColorVariant } from '../art/palette';
-import { REGEN, REVIVE_SECONDS } from '../data/combat';
+import { PUSH, REGEN, REVIVE_SECONDS, SLIP } from '../data/combat';
 import { BUSH, GEM } from '../data/match';
 import { playImprison, playRevive } from '../art/sarcophagusFx';
 import { levelMultiplier } from '../data/progression';
 import { getCharacter, SPEED_VALUES, type CharacterData } from '../data/characters';
 import { getCharacterModule } from '../characters';
 import type { CharacterModule } from '../characters/types';
-import type { Attacker, Combat, Damageable } from './Combat';
+import type { Attacker, Combat, Damageable, StunStyle } from './Combat';
 import { HealthBar } from '../ui/HealthBar';
 import { showDamageNumber } from '../ui/DamageNumber';
 
@@ -21,7 +21,7 @@ const BAR_OFFSET_Y = 182;
 /** Durata del fendente e del ritorno in posizione, in secondi (la carica dipende dal personaggio). */
 const STRIKE_TIME = 0.1;
 const RECOVER_TIME = 0.16;
-/** Rotazioni dell'arma in mano (radianti): alzata all'indietro, colpo in avanti. */
+/** Rotazioni dell'arma in mano (radianti): alzata all'indietro, colpo in avanti (se il disegno non dice altro). */
 const WEAPON_WINDUP = -1.25;
 const WEAPON_STRIKE = 1.9;
 /** Leggera inclinazione dell'arma quando si è fermi. */
@@ -98,6 +98,24 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   private reviving = false;
   /** Il colpo in corso è una super? */
   private attackIsSuper = false;
+  /** Fin dove è stata mirata la super (pixel), per le super "a zona". */
+  private attackDistance = 0;
+  /** Velocità della camminata (senza spinte). */
+  private readonly walkVel = new Phaser.Math.Vector2();
+  /** Spinta ricevuta (vento, acqua, onde): si smorza da sola. */
+  private readonly impulse = new Phaser.Math.Vector2();
+  /** Corrente che lo trascina in questo fotogramma (tornado). */
+  private readonly flow = new Phaser.Math.Vector2();
+  /** Secondi in cui scivola. */
+  private slipTime = 0;
+  /** Poteri temporanei (nome → secondi rimasti), es. l'Occhio di Horus. */
+  private readonly buffs = new Map<string, number>();
+  /** Sta saltando o si sta tuffando (lo muove la super, non il giocatore). */
+  private dashing = false;
+  /** Stelline che girano sulla testa quando è stordito. */
+  private dizzy: Phaser.GameObjects.Container | null = null;
+  private weaponWindup = WEAPON_WINDUP;
+  private weaponStrike = WEAPON_STRIKE;
 
   private readonly module: CharacterModule;
   private readonly shadow: Phaser.GameObjects.Image;
@@ -129,7 +147,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   private facing = 1; // 1 = destra, -1 = sinistra
   /** Secondi dall'ultima volta che ha colpito o è stato colpito (per la rigenerazione). */
   private sinceCombat = 0;
-  protected readonly combat: Combat;
+  readonly combat: Combat;
   /** Moltiplicatore di vita e danno dato dal livello del personaggio. */
   private readonly levelFactor: number;
 
@@ -168,6 +186,10 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
       this.hand.x = held.hand.x;
       this.hand.y = held.hand.y + 2;
       this.weaponOriginX = held.originX;
+      if (held.swing) {
+        this.weaponWindup = held.swing.windup;
+        this.weaponStrike = held.swing.strike;
+      }
       this.weapon = scene.add.image(0, 0, weaponTexture(characterId, variant)).setOrigin(held.originX, held.originY);
       this.add(this.weapon);
     }
@@ -187,7 +209,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Può agire (non è chiuso nel sarcofago e non sta resuscitando)? */
   canAct(): boolean {
-    return this.isAlive() && this.stunTime <= 0 && !this.reviving;
+    return this.isAlive() && this.stunTime <= 0 && !this.reviving && !this.dashing;
   }
 
   /** Il personaggio può sparare adesso? */
@@ -207,7 +229,12 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Danno dell'attacco base, compresi i gioielli. */
   attackDamage(): number {
-    return this.stats.weapon.damage * this.levelFactor * (1 + GEM.damageBonus * this.gems);
+    return this.scaledDamage(this.stats.weapon.damage);
+  }
+
+  /** Un danno base (scritto nei dati) con il bonus del livello e dei gioielli. */
+  scaledDamage(base: number): number {
+    return base * this.levelFactor * (1 + GEM.damageBonus * this.gems);
   }
 
   /** Raccoglie un gioiello: più vita massima (e la stessa vita in più subito) e più danno. */
@@ -219,7 +246,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   }
 
   isTargetable(): boolean {
-    return this.isAlive() && !this.reviving;
+    return this.isAlive() && !this.reviving && !this.dashing;
   }
 
   /** Chiamato da Combat quando i colpi di questo personaggio vanno a segno: carica la super. */
@@ -232,7 +259,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   move(dir: Phaser.Math.Vector2): void {
     if (!this.isAlive()) return;
     if (!this.canAct()) {
-      this.body.setVelocity(0, 0);
+      // la velocità la decide preUpdate (fermo, oppure trascinato da una spinta)
       this.targetVel.set(0, 0);
       this.moving = false;
       return;
@@ -261,10 +288,14 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     return true;
   }
 
-  /** Usa la super nella direzione `angle`. Restituisce false se non è carica. */
-  tryUseSuper(angle: number): boolean {
+  /**
+   * Usa la super nella direzione `angle`. `distance` = fin dove è stata mirata (per le super "a zona";
+   * se manca, tutta la portata). Restituisce false se non è carica.
+   */
+  tryUseSuper(angle: number, distance?: number): boolean {
     if (!this.canUseSuper()) return false;
     this.superCharge = 0;
+    this.attackDistance = Phaser.Math.Clamp(distance ?? this.stats.super.range, 0, this.stats.super.range);
     this.startSwing(angle, true);
     // luce dorata sulla testa mentre lancia la super
     const glow = this.scene.add.image(this.facing * 20, -120, TEX.bagliore).setTint(0xffd27a).setBlendMode(Phaser.BlendModes.ADD).setScale(0.4);
@@ -275,9 +306,10 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Super automatica verso il nemico più vicino. */
   autoSuper(maxDistance: number): boolean {
-    const target = this.combat.nearestEnemy(this.x, this.y, this.team, maxDistance, this.hideout);
+    const target = this.combat.nearestEnemy(this.x, this.y, this.team, maxDistance, this.hideout, undefined, this.seesAll());
     const angle = target ? Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y) : this.facing > 0 ? 0 : Math.PI;
-    return this.tryUseSuper(angle);
+    const distance = target ? Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y) : this.stats.super.range * 0.6;
+    return this.tryUseSuper(angle, distance);
   }
 
   private startSwing(angle: number, isSuper: boolean): void {
@@ -290,15 +322,124 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     if (Math.abs(Math.cos(angle)) > 0.05) this.facing = Math.cos(angle) < 0 ? -1 : 1;
   }
 
-  /** Chiuso nel sarcofago per qualche secondo: non si muove né attacca. */
-  stun(seconds: number): void {
-    if (!this.isAlive() || this.reviving) return;
+  /**
+   * Stordito per qualche secondo: non si muove né attacca.
+   * "sarcofago" = chiuso nel sarcofago di Anubi, "stelle" = stelline che girano sulla testa.
+   */
+  stun(seconds: number, style: StunStyle = 'sarcofago'): void {
+    if (!this.isAlive() || this.reviving || this.dashing) return;
     this.stunTime = Math.max(this.stunTime, seconds);
     this.attackTime = -1;
     this.body.setVelocity(0, 0);
-    if (!this.releaseFromPrison) {
+    this.walkVel.set(0, 0);
+    if (style === 'stelle') {
+      if (!this.dizzy) this.showDizzyStars();
+    } else if (!this.releaseFromPrison) {
       this.releaseFromPrison = playImprison(this.scene, this, this.bodyParts(), this.isHuman);
     }
+  }
+
+  /** Tre stelline che girano sopra la testa. */
+  private showDizzyStars(): void {
+    const c = this.scene.add.container(0, -150);
+    for (let i = 0; i < 3; i++) {
+      c.add(this.scene.add.image(0, 0, TEX.scintilla).setScale(1.9).setTint(0xffe08a));
+    }
+    this.add(c);
+    this.dizzy = c;
+  }
+
+  private clearDizzy(): void {
+    this.dizzy?.destroy();
+    this.dizzy = null;
+  }
+
+  /** Spinta improvvisa (vento, acqua, onde) che poi si smorza. */
+  push(vx: number, vy: number): void {
+    if (!this.isTargetable()) return;
+    this.impulse.add({ x: vx, y: vy });
+  }
+
+  /** Corrente che lo trascina solo per questo fotogramma (il risucchio del tornado). */
+  addFlow(vx: number, vy: number): void {
+    if (!this.isTargetable()) return;
+    this.flow.add({ x: vx, y: vy });
+  }
+
+  /** Scivola per qualche secondo: fermarsi e girare diventa difficile. */
+  slip(seconds: number): void {
+    if (!this.isTargetable()) return;
+    this.slipTime = Math.max(this.slipTime, seconds);
+  }
+
+  /** Dà un potere temporaneo (es. "occhio" per l'Occhio di Horus). */
+  addBuff(name: string, seconds: number): void {
+    this.buffs.set(name, Math.max(this.buffs.get(name) ?? 0, seconds));
+  }
+
+  hasBuff(name: string): boolean {
+    return (this.buffs.get(name) ?? 0) > 0;
+  }
+
+  /** Vede tutti i nemici, anche quelli nascosti (Occhio di Horus). */
+  seesAll(): boolean {
+    return this.hasBuff('occhio');
+  }
+
+  /**
+   * Salto o tuffo comandato dalla super: va da dove si trova a (tx, ty) in `seconds`, passando sopra i muri.
+   * Intanto non si può colpire né comandare. `hidden` = sparisce sotto terra; `hop` = quanto sale in aria (pixel).
+   */
+  dashTo(tx: number, ty: number, seconds: number, opt: { hidden?: boolean; hop?: number; onArrive?: () => void } = {}): void {
+    if (!this.isAlive() || this.dashing) return;
+    this.dashing = true;
+    this.attackTime = -1;
+    this.walkVel.set(0, 0);
+    this.impulse.set(0, 0);
+    this.targetVel.set(0, 0);
+    this.body.setVelocity(0, 0);
+    this.body.checkCollision.none = true;
+    const parts = this.bodyParts() as Phaser.GameObjects.Image[];
+    if (opt.hidden) {
+      for (const p of parts) p.setVisible(false);
+      this.shadow.setVisible(false);
+      this.bar.setVisible(false);
+    }
+    const baseY = parts.map((p) => p.y);
+    const fx = this.x;
+    const fy = this.y;
+    const hop = opt.hop ?? 0;
+    const proxy = { t: 0 };
+    this.scene.tweens.add({
+      targets: proxy,
+      t: 1,
+      duration: Math.max(60, seconds * 1000),
+      ease: opt.hidden ? 'Sine.inOut' : 'Linear',
+      onUpdate: () => {
+        if (!this.isAlive()) return;
+        this.setPosition(fx + (tx - fx) * proxy.t, fy + (ty - fy) * proxy.t);
+        this.setDepth(this.y);
+        if (hop) {
+          const h = Math.sin(proxy.t * Math.PI) * hop;
+          parts.forEach((p, i) => (p.y = baseY[i] - h));
+          this.shadow.setScale(1 - (h / hop) * 0.4);
+        }
+        this.bar.setPosition(this.x, this.y - BAR_OFFSET_Y - (hop ? Math.sin(proxy.t * Math.PI) * hop : 0));
+      },
+      onComplete: () => {
+        this.dashing = false;
+        this.body.checkCollision.none = false;
+        if (!this.isAlive()) return;
+        parts.forEach((p, i) => (p.y = baseY[i]));
+        this.shadow.setScale(1);
+        if (opt.hidden) {
+          for (const p of parts) p.setVisible(true);
+          this.shadow.setVisible(true);
+          this.bar.setVisible(this.revealed);
+        }
+        opt.onArrive?.();
+      },
+    });
   }
 
   /** Cura una frazione della vita massima (con numero verde). */
@@ -332,7 +473,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Attacco automatico verso il nemico più vicino (tocco veloce). */
   autoAttack(maxDistance: number): boolean {
-    const target = this.combat.nearestEnemy(this.x, this.y, this.team, maxDistance, this.hideout);
+    const target = this.combat.nearestEnemy(this.x, this.y, this.team, maxDistance, this.hideout, undefined, this.seesAll());
     const angle = target ? Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y) : this.facing > 0 ? 0 : Math.PI;
     return this.tryAttack(angle);
   }
@@ -356,6 +497,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Invece di essere sconfitto, resuscita dal suo sarcofago con parte della vita. */
   private revive(): void {
+    this.clearDizzy();
     this.extraLives -= 1;
     this.bar.setExtraLife(this.extraLives > 0);
     this.health = 1; // resta "vivo" ma non si può colpire mentre resuscita
@@ -377,6 +519,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Sconfitto: diventa sabbia e sparisce. Avvisa la partita con l'evento DEFEATED_EVENT. */
   private defeat(): void {
+    this.clearDizzy();
     if (this.releaseFromPrison) {
       this.releaseFromPrison();
       this.releaseFromPrison = null;
@@ -425,27 +568,56 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     if (this.ammo < w.maxAmmo) this.ammo = Math.min(w.maxAmmo, this.ammo + dt / w.reloadSeconds);
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
 
-    // chiuso nel sarcofago o mentre resuscita: niente animazioni del corpo
+    // poteri temporanei che scadono
+    for (const [name, left] of this.buffs) {
+      if (left - dt <= 0) this.buffs.delete(name);
+      else this.buffs.set(name, left - dt);
+    }
+    if (this.slipTime > 0) {
+      this.slipTime -= dt;
+      this.shadow.setTint(0x7fd8ff); // pozzanghera sotto i piedi mentre scivola
+      if (this.slipTime <= 0) this.shadow.clearTint();
+    }
+    // spinte e correnti (vento, acqua, tornado)
+    const decay = Math.exp(-PUSH.decayPerSecond * dt);
+    const pushX = this.impulse.x + this.flow.x;
+    const pushY = this.impulse.y + this.flow.y;
+    this.impulse.scale(decay);
+    if (this.impulse.lengthSq() < 25) this.impulse.set(0, 0);
+    this.flow.set(0, 0);
+
+    // chiuso nel sarcofago, stordito o mentre resuscita: niente animazioni del corpo
     if (this.stunTime > 0) {
       this.stunTime -= dt;
-      if (this.stunTime <= 0 && this.releaseFromPrison) {
-        this.releaseFromPrison();
-        this.releaseFromPrison = null;
+      this.dizzy?.list.forEach((o, i) => {
+        const a = this.animTime * 6 + (i * Math.PI * 2) / 3;
+        (o as Phaser.GameObjects.Image).setPosition(Math.cos(a) * 30, Math.sin(a) * 10).setRotation(a);
+      });
+      if (this.stunTime <= 0) {
+        this.clearDizzy();
+        if (this.releaseFromPrison) {
+          this.releaseFromPrison();
+          this.releaseFromPrison = null;
+        }
       }
     }
     if (!this.canAct()) {
-      this.bar.setPosition(this.x, this.y - BAR_OFFSET_Y);
+      if (!this.dashing) {
+        if (!this.reviving) this.body.setVelocity(pushX, pushY);
+        this.bar.setPosition(this.x, this.y - BAR_OFFSET_Y);
+      }
       this.bar.draw(this.health, this.maxHealth, this.ammo, w.maxAmmo);
       return;
     }
 
-    // velocità: si avvicina a quella desiderata in un attimo (partenza e frenata morbide)
-    const k = Math.min(1, dt * ACCEL);
-    let vx = Phaser.Math.Linear(this.body.velocity.x, this.targetVel.x, k);
-    let vy = Phaser.Math.Linear(this.body.velocity.y, this.targetVel.y, k);
+    // velocità: si avvicina a quella desiderata in un attimo (partenza e frenata morbide); chi scivola ci mette molto di più
+    const k = Math.min(1, dt * (this.slipTime > 0 ? SLIP.accel : ACCEL));
+    let vx = Phaser.Math.Linear(this.walkVel.x, this.targetVel.x, k);
+    let vy = Phaser.Math.Linear(this.walkVel.y, this.targetVel.y, k);
     if (Math.abs(vx - this.targetVel.x) < 8) vx = this.targetVel.x; // niente scivolate lente alla fine
     if (Math.abs(vy - this.targetVel.y) < 8) vy = this.targetVel.y;
-    this.body.setVelocity(vx, vy);
+    this.walkVel.set(vx, vy);
+    this.body.setVelocity(vx + pushX, vy + pushY);
 
     // rigenerazione lenta se lontano dai combattimenti
     this.sinceCombat += dt;
@@ -481,26 +653,26 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
       if (t < windup) {
         // 1) carica: l'arma si alza all'indietro, il corpo si piega indietro
         const p = Phaser.Math.Easing.Quadratic.Out(t / windup);
-        weaponRot = Phaser.Math.Linear(WEAPON_REST, WEAPON_WINDUP, p);
+        weaponRot = Phaser.Math.Linear(WEAPON_REST, this.weaponWindup, p);
         lean = -0.6 * p;
       } else {
         if (!this.attackFired) {
           // 2) il colpo parte adesso
           this.attackFired = true;
           if (this.canAct()) {
-            if (this.attackIsSuper) this.module.useSuper(this, this.attackAngle, this.combat);
+            if (this.attackIsSuper) this.module.useSuper(this, this.attackAngle, this.combat, this.attackDistance);
             else this.module.attack(this, this.attackAngle, this.combat);
             dustPuff(this.scene, this.x, this.y, this.attackAngle, this.y - 1);
           }
         }
         if (t < windup + STRIKE_TIME) {
           const p = Phaser.Math.Easing.Cubic.Out((t - windup) / STRIKE_TIME);
-          weaponRot = Phaser.Math.Linear(WEAPON_WINDUP, WEAPON_STRIKE, p);
+          weaponRot = Phaser.Math.Linear(this.weaponWindup, this.weaponStrike, p);
           lean = Phaser.Math.Linear(-0.6, 1, p);
         } else if (t < windup + STRIKE_TIME + RECOVER_TIME) {
           // 3) ritorno in posizione
           const p = Phaser.Math.Easing.Sine.InOut((t - windup - STRIKE_TIME) / RECOVER_TIME);
-          weaponRot = Phaser.Math.Linear(WEAPON_STRIKE, WEAPON_REST, p);
+          weaponRot = Phaser.Math.Linear(this.weaponStrike, WEAPON_REST, p);
           lean = 1 - p;
         } else {
           this.attackTime = -1;

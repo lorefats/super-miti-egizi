@@ -11,6 +11,9 @@ export interface CharacterModule {
   swingSeconds: number;
   /** Attacco base nella direzione `angle` (radianti). Munizioni e ricarica le gestisce già Player. */
   attack(user: Player, angle: number, combat: Combat): void;
-  /** Super nella direzione `angle`. La carica la gestisce già Player. */
-  useSuper(user: Player, angle: number, combat: Combat): void;
+  /**
+   * Super nella direzione `angle`. `distance` = fin dove è stata mirata (pixel, per le super "a zona").
+   * La carica la gestisce già Player.
+   */
+  useSuper(user: Player, angle: number, combat: Combat, distance: number): void;
 }

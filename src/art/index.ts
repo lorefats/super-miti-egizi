@@ -2,6 +2,13 @@ import Phaser from 'phaser';
 import { loadSvgTextures, type SvgArt } from './svg';
 import { COLOR_VARIANTS, type ColorVariant } from './palette';
 import { anubiSvg, anubiScepterSvg, anubiLegSvg, ANUBI_HAND, ANUBI_HIPS } from './characters/anubi';
+import { HIPS } from './characters/common';
+import { horusSvg, horusBowSvg, horusLegSvg, HORUS_HAND, HORUS_BOW_SWING } from './characters/horus';
+import { sobekSvg, sobekLegSvg } from './characters/sobek';
+import { bastetSvg, bastetLegSvg } from './characters/bastet';
+import { tefnutSvg, tefnutLegSvg } from './characters/tefnut';
+import { shuSvg, shuLegSvg } from './characters/shu';
+import { arrowSvg, jawSvg, dropSvg, rainCloudSvg, tornadoSvg, horusEyeSvg, smallFeatherSvg } from './godFx';
 import {
   shadowSvg,
   sandTileSvg,
@@ -150,6 +157,14 @@ export const TEX = {
   sagomaDio: 'sagoma-dio',
   stemmaPrestigio: 'stemma-prestigio',
   tappaCammino: 'tappa-cammino',
+  // armi e super degli dèi
+  freccia: 'freccia-horus',
+  fauce: 'fauce-sobek',
+  goccia: 'goccia',
+  nuvola: 'nuvola-pioggia',
+  tornado: 'tornado',
+  occhioHorus: 'occhio-horus',
+  piumetta: 'piumetta',
 } as const;
 
 const suffix = (v: ColorVariant) => (v === 'base' ? '' : `-${v}`);
@@ -176,6 +191,8 @@ export interface HeldWeaponArt {
   draw: (variant?: ColorVariant) => Drawing & { gripX: number; gripY: number };
   /** Posizione della mano rispetto ai piedi del personaggio (girato a destra). */
   hand: { x: number; y: number };
+  /** Rotazioni quando attacca (alzata all'indietro e colpo in avanti). Se manca: un colpo ampio, come un bastone. */
+  swing?: { windup: number; strike: number };
 }
 
 /** Gambe disegnate a parte, per animare i passi. */
@@ -195,6 +212,15 @@ const CHARACTER_ART: Record<
     weapon: { draw: anubiScepterSvg, hand: ANUBI_HAND },
     legs: { draw: anubiLegSvg, hips: ANUBI_HIPS },
   },
+  horus: {
+    body: horusSvg,
+    weapon: { draw: horusBowSvg, hand: HORUS_HAND, swing: HORUS_BOW_SWING },
+    legs: { draw: horusLegSvg, hips: HIPS },
+  },
+  sobek: { body: sobekSvg, legs: { draw: sobekLegSvg, hips: HIPS } },
+  bastet: { body: bastetSvg, legs: { draw: bastetLegSvg, hips: HIPS } },
+  tefnut: { body: tefnutSvg, legs: { draw: tefnutLegSvg, hips: HIPS } },
+  shu: { body: shuSvg, legs: { draw: shuLegSvg, hips: HIPS } },
 };
 
 /** Esiste già il disegno vero di questo personaggio? (Gli altri usano la sagoma colorata.) */
@@ -213,11 +239,13 @@ export function getLegs(
 }
 
 /** Dati dell'arma in mano per l'animazione: dove sta la mano e il punto di presa (0..1). */
-export function getHeldWeapon(characterId: string): { hand: { x: number; y: number }; originX: number; originY: number } | null {
+export function getHeldWeapon(
+  characterId: string,
+): { hand: { x: number; y: number }; originX: number; originY: number; swing?: HeldWeaponArt['swing'] } | null {
   const w = CHARACTER_ART[characterId]?.weapon;
   if (!w) return null;
   const d = w.draw();
-  return { hand: w.hand, originX: d.gripX / d.width, originY: d.gripY / d.height };
+  return { hand: w.hand, originX: d.gripX / d.width, originY: d.gripY / d.height, swing: w.swing };
 }
 
 /** Crea tutte le texture del gioco. Da chiamare una volta nella scena Preload. */
@@ -330,6 +358,13 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.sagomaDio, ...godSilhouetteSvg() },
     { key: TEX.stemmaPrestigio, ...prestigeBadgeSvg() },
     { key: TEX.tappaCammino, ...roadStopSvg() },
+    { key: TEX.freccia, ...arrowSvg() },
+    { key: TEX.fauce, ...jawSvg() },
+    { key: TEX.goccia, ...dropSvg() },
+    { key: TEX.nuvola, ...rainCloudSvg() },
+    { key: TEX.tornado, ...tornadoSvg() },
+    { key: TEX.occhioHorus, ...horusEyeSvg() },
+    { key: TEX.piumetta, ...smallFeatherSvg() },
   ];
   await loadSvgTextures(scene, arts);
 }

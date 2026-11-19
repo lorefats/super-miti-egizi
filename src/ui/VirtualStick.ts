@@ -23,6 +23,8 @@ export interface StickRelease {
   aimed: boolean;
   /** Angolo in radianti (valido solo se aimed). */
   angle: number;
+  /** Quanto è stato tirato il pomello: 0 = appena fuori dalla zona morta, 1 = fino in fondo. */
+  strength?: number;
 }
 
 /**

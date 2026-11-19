@@ -13,8 +13,12 @@ export interface ProjectileOptions {
   /** altezza da terra a cui vola (pixel) */
   height: number;
   texture: string;
-  /** Chiamato quando tocca qualcuno (nemico o compagno). */
-  onHit: (target: Damageable, x: number, y: number) => void;
+  /** Chiamato quando tocca qualcuno (nemico o compagno). `travelled` = pixel percorsi fin lì. */
+  onHit: (target: Damageable, x: number, y: number, travelled: number) => void;
+  /** Attraversa i bersagli invece di fermarsi al primo (ognuno viene colpito una volta sola). */
+  pierce?: boolean;
+  /** Quanto gira su sé stesso (radianti al secondo). 0 = vola dritto con la punta in avanti. */
+  spin?: number;
   /** Chiamato quando finisce (colpito, muro o portata finita). */
   onEnd?: (x: number, y: number) => void;
   /** Disegna la scia ogni fotogramma (da dove è partito fino a dove è ora). */
@@ -35,6 +39,7 @@ export class Projectile extends Phaser.GameObjects.Container {
   private travelled = 0;
   private time = 0;
   private done = false;
+  private readonly alreadyHit = new Set<Damageable>();
 
   constructor(
     scene: Phaser.Scene,
@@ -47,6 +52,7 @@ export class Projectile extends Phaser.GameObjects.Container {
     this.startY = y;
     this.shadow = scene.add.image(0, 0, TEX.ombra).setScale(0.45);
     this.head = scene.add.image(0, -opt.height, opt.texture);
+    if (opt.spin === 0) this.head.setRotation(opt.angle);
     this.add([this.shadow, this.head]);
     this.trail = opt.drawTrail ? scene.add.graphics() : null;
     scene.add.existing(this);
@@ -60,7 +66,7 @@ export class Projectile extends Phaser.GameObjects.Container {
     this.x += Math.cos(this.opt.angle) * step;
     this.y += Math.sin(this.opt.angle) * step;
     this.travelled += step;
-    this.head.rotation += dt * 14;
+    this.head.rotation += dt * (this.opt.spin ?? 14);
     this.setDepth(this.y + 1);
 
     if (this.trail && this.opt.drawTrail) {
@@ -69,11 +75,19 @@ export class Projectile extends Phaser.GameObjects.Container {
       this.opt.drawTrail(this.trail, this.startX, this.startY - this.opt.height, this.x, this.y - this.opt.height, this.time);
     }
 
-    const target = this.opt.combat.touching(this.x, this.y, this.opt.radius, this.opt.owner);
-    if (target) {
-      this.opt.onHit(target, this.x, this.y);
-      this.finish();
-      return;
+    if (this.opt.pierce) {
+      for (const t of this.opt.combat.touchingAll(this.x, this.y, this.opt.radius, this.opt.owner)) {
+        if (this.alreadyHit.has(t)) continue;
+        this.alreadyHit.add(t);
+        this.opt.onHit(t, this.x, this.y, this.travelled);
+      }
+    } else {
+      const target = this.opt.combat.touching(this.x, this.y, this.opt.radius, this.opt.owner);
+      if (target) {
+        this.opt.onHit(target, this.x, this.y, this.travelled);
+        this.finish();
+        return;
+      }
     }
     if (this.travelled >= this.opt.range || this.hitsWall()) this.finish();
   }

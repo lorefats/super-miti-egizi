@@ -11,6 +11,8 @@ import type { StickRelease } from './VirtualStick';
  */
 export class SuperButton {
   readonly direction = new Phaser.Math.Vector2();
+  /** Quanto è tirato il pomello (0..1): per le super "a zona" decide quanto lontano cadono. */
+  strength = 0;
   onRelease?: (r: StickRelease) => void;
 
   private readonly icon: Phaser.GameObjects.Image;
@@ -119,7 +121,12 @@ export class SuperButton {
   private onUp(pointer: Phaser.Input.Pointer): void {
     if (pointer.id !== this.pointerId) return;
     this.follow(pointer);
-    const release: StickRelease = { tap: !this.everEngaged, aimed: this.direction.lengthSq() > 0, angle: this.angle };
+    const release: StickRelease = {
+      tap: !this.everEngaged,
+      aimed: this.direction.lengthSq() > 0,
+      angle: this.angle,
+      strength: this.strength,
+    };
     this.cancel();
     this.onRelease?.(release);
   }
@@ -127,6 +134,7 @@ export class SuperButton {
   private cancel(): void {
     this.pointerId = null;
     this.direction.set(0, 0);
+    this.strength = 0;
     this.knob.setVisible(false).setPosition(this.center.x, this.center.y);
   }
 
@@ -139,8 +147,10 @@ export class SuperButton {
     this.knob.setPosition(this.center.x + dx * k, this.center.y + dy * k);
     if (dist < r * SUPER_BUTTON.deadZone) {
       this.direction.set(0, 0);
+      this.strength = 0;
     } else {
       this.direction.set(dx / dist, dy / dist);
+      this.strength = Phaser.Math.Clamp((Math.min(dist, r) / r - SUPER_BUTTON.deadZone) / (1 - SUPER_BUTTON.deadZone), 0, 1);
       this.everEngaged = true;
     }
   }

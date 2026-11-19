@@ -13,3 +13,14 @@ export const HIDEOUT_REVEAL_DISTANCE = 180;
 
 /** Resurrezione dal sarcofago: quanto dura l'animazione (secondi, in cui non si può essere colpiti). */
 export const REVIVE_SECONDS = 1.4;
+
+/** Spinte (vento, acqua, onde): quanto in fretta si smorzano (più alto = si fermano prima). */
+export const PUSH = {
+  decayPerSecond: 7,
+};
+
+/** Chi scivola (Pioggia Sacra di Tefnut) cambia velocità e direzione molto lentamente. */
+export const SLIP = {
+  /** rapidità con cui raggiunge la velocità voluta (normale: 18) */
+  accel: 2.2,
+};

@@ -118,3 +118,29 @@ export function footstepDust(scene: Phaser.Scene, x: number, y: number): void {
   }
   e.emitParticleAt(x, y, 2);
 }
+
+/** Anello che si allarga sul terreno (onde, urti). Schiacciato in verticale per la prospettiva. */
+export function groundRing(scene: Phaser.Scene, x: number, y: number, radius: number, color: number, duration = 450): void {
+  if (!isOnScreen(scene, x, y, radius)) return;
+  const g = scene.add.graphics({ x, y }).setDepth(-950).setScale(0.2, 0.2 * 0.62);
+  g.lineStyle(14, color, 0.9).strokeCircle(0, 0, radius);
+  g.lineStyle(5, 0xffffff, 0.8).strokeCircle(0, 0, radius - 8);
+  scene.tweens.add({ targets: g, scaleX: 1, scaleY: 0.62, alpha: 0, duration, ease: 'Cubic.out', onComplete: () => g.destroy() });
+}
+
+/** Schizzi d'acqua che saltano in alto e ricadono. */
+export function waterSplash(scene: Phaser.Scene, x: number, y: number, count = 14, depth = y + 2): void {
+  if (!isOnScreen(scene, x, y)) return;
+  const drops = scene.add.particles(x, y - 20, TEX.goccia, {
+    speed: { min: 120, max: 320 },
+    angle: { min: 210, max: 330 },
+    gravityY: 700,
+    lifespan: { min: 400, max: 700 },
+    scale: { start: 0.9, end: 0.4 },
+    alpha: { start: 1, end: 0 },
+    emitting: false,
+  });
+  drops.setDepth(depth);
+  drops.explode(count);
+  scene.time.delayedCall(800, () => drops.destroy());
+}

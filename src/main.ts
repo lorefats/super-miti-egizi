@@ -14,6 +14,8 @@ import { TrophyRoadScene } from './scenes/TrophyRoadScene';
 
 // "?fisica" nell'indirizzo mostra i rettangoli delle collisioni (rallenta: solo per provare).
 // "?debug" rende il gioco raggiungibile dalla console del browser per le prove automatiche.
+// "?prova" fa scegliere tutti i personaggi giocabili (senza sbloccarli davvero), per provarli.
+// "?partita&eroe=horus" parte subito con una partita usando quel personaggio.
 const params = new URLSearchParams(location.search);
 const debug = params.has('debug');
 const showPhysics = params.has('fisica');

@@ -22,6 +22,9 @@ export interface BotWorld {
   nearestGem?(x: number, y: number, maxDist: number): { x: number; y: number } | null;
 }
 
+/** Da questa portata in su (pixel) un'arma "a linea" è da tiratore: il bot tiene i nemici lontani. */
+const SNIPER_RANGE = 600;
+
 /** Margine (pixel) dal bordo della tempesta entro cui il bot comincia già a rientrare. */
 const STORM_MARGIN = 80;
 
@@ -111,8 +114,15 @@ export class BotBrain {
       this.strafeTimer = Phaser.Math.FloatBetween(0.6, 1.4);
       this.strafeSign = Math.random() < 0.5 ? -1 : 1;
     }
+    // chi tira da lontano (es. Horus con l'arco) non si fa venire addosso: indietreggia girando attorno
+    const sniper = bot.stats.weapon.kind === 'linea' && range >= SNIPER_RANGE;
     if (dist - t.hitRadius > range * 0.6) this.headTo(t.x, t.y);
-    else if (strafe) {
+    else if (strafe && sniper && dist < range * 0.35) {
+      this.wanted
+        .set(-toTarget.y * this.strafeSign, toTarget.x * this.strafeSign)
+        .subtract(toTarget.clone().scale(0.8))
+        .normalize();
+    } else if (strafe) {
       this.wanted
         .set(-toTarget.y * this.strafeSign, toTarget.x * this.strafeSign)
         .add(toTarget.clone().scale(0.2))
@@ -124,7 +134,7 @@ export class BotBrain {
     if (this.attackWait > 0) return;
     // 4) super carica e bersaglio a portata (solo contro i personaggi)
     if (strafe && bot.canUseSuper() && dist < bot.stats.super.range * 0.85) {
-      bot.tryUseSuper(angle + error() * 0.5);
+      bot.tryUseSuper(angle + error() * 0.5, dist);
       this.attackWait = this.randomPause();
       return;
     }
@@ -149,7 +159,7 @@ export class BotBrain {
       return;
     }
 
-    const enemy = this.combat.nearestEnemy(bot.x, bot.y, bot.team, sight, bot.hideout, ['personaggio', 'bersaglio']);
+    const enemy = this.combat.nearestEnemy(bot.x, bot.y, bot.team, sight, bot.hideout, ['personaggio', 'bersaglio'], bot.seesAll());
 
     // 2) poca vita: scappa e nasconditi in un cespuglio (e continua finché non si è ripreso)
     const hiding = this.mode === 'scappa' || this.mode === 'nascondi';

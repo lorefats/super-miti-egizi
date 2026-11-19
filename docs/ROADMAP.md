@@ -65,7 +65,7 @@ Scorciatoia: scrivete `/prossimo-passo` e Claude Code fa il primo passo non anco
 
 Per ogni gruppo usate: `/nuovo-personaggio Nome`
 
-- [ ] Horus, Sobek, Bastet, Tefnut, Shu (Bronzo)
+- [x] Horus, Sobek, Bastet, Tefnut, Shu (Bronzo)
 - [ ] Osiride, Hathor, Geb, Khepri, Khnum (Turchese)
 - [ ] Iside, Seth, Sekhmet, Khonsu, Nut, Ptah (Lapislazzuli)
 - [ ] Ammit, Amon, Maat, Kek, Thoth, Nefti (Oro)

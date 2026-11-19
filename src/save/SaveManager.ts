@@ -22,6 +22,11 @@ const STORAGE_KEY = 'super-miti-egizi:salvataggio';
 const CURRENT_VERSION = 2;
 /** Il personaggio che hanno tutti fin dall'inizio. */
 const STARTER = 'anubi';
+/**
+ * "?prova" nell'indirizzo: tutti i personaggi giocabili si possono scegliere, per provarli
+ * (non vengono sbloccati davvero e non si possono potenziare).
+ */
+const TRY_ALL = typeof location !== 'undefined' && new URLSearchParams(location.search).has('prova');
 
 export interface CharacterProgress {
   /** coppe attuali di questo personaggio (mai sotto zero) */
@@ -189,7 +194,7 @@ class SaveManagerImpl {
   // ------------------------------------------------------------ personaggi
 
   isUnlocked(id: string): boolean {
-    return this.data.unlocked.includes(id);
+    return this.data.unlocked.includes(id) || (TRY_ALL && isPlayable(id));
   }
 
   /** Sceglie il personaggio per la Lobby e le partite (solo se sbloccato e giocabile). */
@@ -220,7 +225,8 @@ class SaveManagerImpl {
 
   /** Sale di un livello pagando scarabei e polvere di stelle. */
   upgrade(id: string): UpgradeResult {
-    if (!this.isUnlocked(id)) return 'bloccato';
+    // con "?prova" si possono usare tutti, ma si potenziano solo quelli trovati davvero
+    if (!this.data.unlocked.includes(id)) return 'bloccato';
     const level = this.getLevel(id);
     if (level >= MAX_LEVEL) return 'max';
     const cost = UPGRADE_COST[level + 1];

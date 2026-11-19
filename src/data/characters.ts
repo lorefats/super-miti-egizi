@@ -19,22 +19,42 @@ export const SPEED_NAMES: Record<SpeedClass, string> = {
   moltoVeloce: 'Molto veloce',
 };
 
-/** Arma (attacco base). Per ora esiste solo la forma "arco" (colpo a ventaglio davanti al personaggio). */
+/**
+ * Forma dell'arma (serve per l'indicatore di mira):
+ * - "ventaglio": colpo ravvicinato davanti al personaggio (usa `arcDegrees`)
+ * - "linea": tiro dritto, come una freccia o un getto (usa `aimWidth`)
+ */
+export type WeaponKind = 'ventaglio' | 'linea';
+
+/** Arma (attacco base). */
 export interface WeaponData {
   name: string;
+  kind: WeaponKind;
   /** Danno di un colpo. */
   damage: number;
   /** Portata in pixel. */
   range: number;
-  /** Ampiezza del ventaglio in gradi. */
+  /** Ampiezza del ventaglio in gradi (solo "ventaglio"). */
   arcDegrees: number;
+  /** Larghezza della linea di mira in pixel (solo "linea"). */
+  aimWidth: number;
   /** Colpi pronti al massimo. */
   maxAmmo: number;
   /** Secondi per ricaricare UN colpo. */
   reloadSeconds: number;
   /** Secondi minimi tra un colpo e l'altro. */
   attackDelay: number;
+  /** Numeri propri dell'arma di ogni personaggio (spinta, velocità della freccia...). */
+  params: Record<string, number>;
 }
+
+/**
+ * Come si mira la super:
+ * - "linea": in linea dritta (larga `aimWidth`)
+ * - "zona": un cerchio da mettere dove si vuole, fino a `range` (`aimWidth` = diametro del cerchio)
+ * - "sestesso": non si mira, agisce sul personaggio
+ */
+export type SuperAim = 'linea' | 'zona' | 'sestesso';
 
 /**
  * Super (si carica colpendo i nemici). `params` contiene i numeri propri della super di ogni personaggio
@@ -44,11 +64,11 @@ export interface SuperData {
   name: string;
   /** Danno da fare con l'attacco base per caricare la super al 100%. */
   chargeDamage: number;
-  /** Portata in pixel (per la mira e per i bot). */
+  /** Portata in pixel (per la mira e per i bot: la usano quando un nemico è più vicino di così). */
   range: number;
   /** Forma dell'indicatore di mira. */
-  aim: 'linea';
-  /** Larghezza della linea di mira (pixel). */
+  aim: SuperAim;
+  /** Larghezza della linea di mira, o diametro della zona (pixel). */
   aimWidth: number;
   params: Record<string, number>;
 }
@@ -135,12 +155,15 @@ export const CHARACTERS: Record<string, CharacterData> = {
     ...getRosterEntry('anubi'),
     weapon: {
       name: 'Scettro Uas',
+      kind: 'ventaglio',
       damage: 1000,
       range: 190,
       arcDegrees: 110,
+      aimWidth: 0,
       maxAmmo: 3,
       reloadSeconds: 1.3,
       attackDelay: 0.4,
+      params: {},
     },
     super: {
       name: 'Bende del Sarcofago',
@@ -162,6 +185,186 @@ export const CHARACTERS: Record<string, CharacterData> = {
         /** cura al compagno colpito e ad Anubi (frazione della vita massima) */
         allyHeal: 0.4,
         selfHeal: 0.25,
+      },
+    },
+  },
+  horus: {
+    ...getRosterEntry('horus'),
+    weapon: {
+      name: 'Arco del Falco',
+      kind: 'linea',
+      damage: 560, // da vicino; più vola lontano, più fa danno
+      range: 900,
+      arcDegrees: 0,
+      aimWidth: 26,
+      maxAmmo: 3,
+      reloadSeconds: 1.6,
+      attackDelay: 0.45,
+      params: {
+        /** velocità della freccia (pixel al secondo) */
+        arrowSpeed: 1500,
+        /** raggio della freccia per colpire (pixel) */
+        arrowRadius: 16,
+        /** danno in più a fine portata (0.8 = +80%) */
+        farBonus: 0.8,
+      },
+    },
+    super: {
+      name: 'Occhio di Horus',
+      chargeDamage: 3200,
+      range: 900,
+      aim: 'sestesso',
+      aimWidth: 0,
+      params: {
+        /** secondi in cui vede tutti i nemici (anche nei cespugli) e le frecce li attraversano */
+        seconds: 5,
+      },
+    },
+  },
+  sobek: {
+    ...getRosterEntry('sobek'),
+    weapon: {
+      name: 'Fauci del Fiume',
+      kind: 'ventaglio',
+      damage: 1400,
+      range: 160,
+      arcDegrees: 70,
+      aimWidth: 0,
+      maxAmmo: 3,
+      reloadSeconds: 1.5,
+      attackDelay: 0.55,
+      params: {},
+    },
+    super: {
+      name: 'Ondata del Nilo',
+      chargeDamage: 4200, // 3 morsi a segno
+      range: 650,
+      aim: 'zona',
+      aimWidth: 400,
+      params: {
+        /** distanza minima del tuffo (pixel) */
+        minDistance: 120,
+        /** velocità sotto terra (pixel al secondo) */
+        diveSpeed: 1100,
+        /** raggio dell'onda quando riemerge (pixel) */
+        waveRadius: 200,
+        /** danno dell'onda */
+        damage: 1200,
+        /** quanto forte spinge via i nemici (pixel al secondo) */
+        push: 900,
+      },
+    },
+  },
+  bastet: {
+    ...getRosterEntry('bastet'),
+    weapon: {
+      name: 'Artigli Gemelli',
+      kind: 'ventaglio',
+      damage: 420, // per ogni graffio
+      range: 135,
+      arcDegrees: 90,
+      aimWidth: 0,
+      maxAmmo: 3,
+      reloadSeconds: 0.85,
+      attackDelay: 0.28,
+      params: {
+        /** graffi per ogni attacco */
+        scratches: 2,
+        /** secondi tra un graffio e l'altro */
+        gapSeconds: 0.1,
+      },
+    },
+    super: {
+      name: 'Balzo Felino',
+      chargeDamage: 3400,
+      range: 600,
+      aim: 'linea',
+      aimWidth: 70,
+      params: {
+        /** durata del salto (secondi) */
+        leapSeconds: 0.4,
+        /** quanto sale in aria (pixel) */
+        leapHeight: 70,
+        /** cerca un nemico entro questo angolo dalla mira (gradi) */
+        aimCone: 25,
+        /** chi è vicino quando atterra resta stordito (secondi) */
+        stunSeconds: 1,
+        landRadius: 130,
+        /** graffi veloci dopo l'atterraggio */
+        scratches: 3,
+        scratchDamage: 380,
+        scratchGap: 0.12,
+      },
+    },
+  },
+  tefnut: {
+    ...getRosterEntry('tefnut'),
+    weapon: {
+      name: "Getto d'Acqua",
+      kind: 'linea',
+      damage: 640,
+      range: 360,
+      arcDegrees: 0,
+      aimWidth: 54,
+      maxAmmo: 3,
+      reloadSeconds: 1.1,
+      attackDelay: 0.35,
+      params: {
+        /** quanto spinge indietro i nemici (pixel al secondo) */
+        push: 520,
+      },
+    },
+    super: {
+      name: 'Pioggia Sacra',
+      chargeDamage: 3800,
+      range: 620,
+      aim: 'zona',
+      aimWidth: 460,
+      params: {
+        /** quanto dura la pioggia (secondi) */
+        seconds: 5,
+        radius: 230,
+        /** cura ai compagni dentro (frazione della vita massima al secondo) */
+        healPerSecond: 0.08,
+        /** i nemici dentro scivolano (secondi, si rinnova finché restano sotto la pioggia) */
+        slipSeconds: 0.6,
+      },
+    },
+  },
+  shu: {
+    ...getRosterEntry('shu'),
+    weapon: {
+      name: 'Folata',
+      kind: 'ventaglio',
+      damage: 620,
+      range: 300,
+      arcDegrees: 50,
+      aimWidth: 0,
+      maxAmmo: 3,
+      reloadSeconds: 1.2,
+      attackDelay: 0.4,
+      params: {
+        /** quanto spinge indietro i nemici (pixel al secondo) */
+        push: 700,
+      },
+    },
+    super: {
+      name: 'Tornado',
+      chargeDamage: 3600,
+      range: 700,
+      aim: 'linea',
+      aimWidth: 110,
+      params: {
+        /** velocità del tornado (pixel al secondo) */
+        speed: 170,
+        /** da quanto lontano risucchia i nemici (pixel) */
+        pullRadius: 240,
+        /** forza del risucchio e del giro (pixel al secondo) */
+        pull: 230,
+        spin: 200,
+        /** chi è dentro il tornado prende danno */
+        hitRadius: 90,
+        damagePerSecond: 700,
       },
     },
   },
