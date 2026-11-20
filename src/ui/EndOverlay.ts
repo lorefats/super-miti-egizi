@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { playSfx, vibrate } from '../audio/Sound';
 import { DEPTH, FONT_FAMILY } from '../config';
 import { PALETTE, css } from '../art/palette';
 
@@ -29,6 +30,8 @@ export function showEndOverlay(scene: Phaser.Scene, title: string, victory: bool
     .setScrollFactor(0)
     .setDepth(DEPTH.ui + 101);
 
+  playSfx(victory ? 'victory' : 'lose');
+  if (victory) vibrate('victory');
   scene.tweens.add({ targets: dim, alpha: 1, duration: 250 });
   scene.tweens.add({ targets: titleText, scale: 1, duration: 450, ease: 'Back.out' });
 }

@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { playSfx, vibrate } from '../audio/Sound';
+import { startMenuMusic } from '../audio/Music';
 import { TEX, characterTexture, hasCharacterArt } from '../art';
 import { LOGO_SIZE, LOGO_WINK_EYE } from '../art/logo';
 import { PALETTE, css } from '../art/palette';
@@ -69,6 +71,7 @@ export class SarcophagusScene extends Phaser.Scene {
   }
 
   create(): void {
+    startMenuMusic();
     const { width: W, height: H } = this.scale;
     const test = this.forcedTier !== undefined;
     const before = SaveManager.getCurrencies();
@@ -203,6 +206,7 @@ export class SarcophagusScene extends Phaser.Scene {
       ease: 'Bounce.out',
       onComplete: () => {
         this.cameras.main.shake(140, 0.006);
+        playSfx('kick');
         this.dust(W / 2, this.sarcY + this.sarcH / 2);
         this.tweens.add({ targets: name, scale: 1, duration: 380, ease: 'Back.out' });
         this.tweens.add({ targets: this.glow, scale: 3.2, alpha: 0.6, duration: 500 });
@@ -251,6 +255,8 @@ export class SarcophagusScene extends Phaser.Scene {
   /** Trema sempre più forte, poi il coperchio scivola via ed esce la luce. */
   private open(): void {
     this.state = 'opening';
+    playSfx('sarcophagus');
+    vibrate('sarcophagus');
     this.hint.setAlpha(0);
     [3, 6, 10].forEach((amp, i) => {
       this.time.delayedCall(i * 330, () => {
@@ -290,6 +296,7 @@ export class SarcophagusScene extends Phaser.Scene {
       return;
     }
     this.state = 'busy';
+    playSfx(r.pill < 0 ? 'victory' : 'reward');
     const { width: W, height: H } = this.scale;
     const rx = Math.min(W * 0.76, W / 2 + 360);
     const ry = H * 0.5;

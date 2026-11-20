@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { playSfx } from '../audio/Sound';
 import { FONT_FAMILY } from '../config';
 import { PALETTE, css } from '../art/palette';
 
@@ -41,6 +42,7 @@ export function createGoldButton(
     btn.setScale(1);
     if (!pressed) return;
     pressed = false;
+    playSfx('click');
     onPress();
   });
   return btn;

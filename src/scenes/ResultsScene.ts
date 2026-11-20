@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { startMenuMusic } from '../audio/Music';
 import { TEX } from '../art';
 import { PALETTE, css } from '../art/palette';
 import { FONT_FAMILY } from '../config';
@@ -33,6 +34,7 @@ export class ResultsScene extends Phaser.Scene {
   }
 
   create(): void {
+    startMenuMusic();
     const { width: W, height: H } = this.scale;
     const d = this.result;
     const victory = d.place === 1;

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { stopMenuMusic } from '../audio/Music';
 import { COLOR_VARIANTS } from '../art/palette';
 import { CAMERA_LERP } from '../config';
 import type { MapData, ZoneData } from '../data/maps';
@@ -57,6 +58,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   create(): void {
+    stopMenuMusic();
     const map = this.chooseMap();
     this.map = map;
     this.combat = new Combat();

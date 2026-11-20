@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { playSfx, vibrate } from '../audio/Sound';
+import { stopMenuMusic } from '../audio/Music';
 import { TEX } from '../art';
 import { PALETTE, css } from '../art/palette';
 import { GOAL_ART_TOP } from '../art/soccer';
@@ -52,6 +54,7 @@ export class SoccerScene extends Phaser.Scene {
   }
 
   create(): void {
+    stopMenuMusic();
     this.combat = new Combat();
     this.fighters = [];
     this.score = [0, 0];
@@ -292,6 +295,8 @@ export class SoccerScene extends Phaser.Scene {
     const mine = team === this.player.team;
     this.cameras.main.flash(250, mine ? 120 : 255, mine ? 255 : 120, mine ? 160 : 120);
     this.bigText(mine ? 'GOL!' : 'Gol degli avversari!', mine);
+    playSfx(mine ? 'goal' : 'denied');
+    if (mine) vibrate('goal');
     if (this.score[team] >= SOCCER.goalsToWin) {
       this.time.delayedCall(900, () => this.endMatch());
       return;

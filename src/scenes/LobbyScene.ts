@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { startMenuMusic } from '../audio/Music';
 import { TEX } from '../art';
 import { LOBBY_SKIES, type TimeOfDay } from '../art/lobby';
 import { PALETTE, css } from '../art/palette';
@@ -12,6 +13,7 @@ import { SaveManager } from '../save/SaveManager';
 import { createCharacterPose, type CharacterPose } from '../ui/CharacterPose';
 import { fullscreenOnFirstTap } from '../ui/fullscreen';
 import { showToast } from '../ui/Toast';
+import { showSettingsPanel } from '../ui/SettingsPanel';
 
 const TIMES: TimeOfDay[] = ['alba', 'giorno', 'tramonto', 'notte'];
 /** Metà larghezza dell'apertura del tempio da cui si vedono le piramidi. */
@@ -41,6 +43,7 @@ export class LobbyScene extends Phaser.Scene {
   }
 
   create(): void {
+    startMenuMusic();
     this.leaving = false;
     const { width: W, height: H } = this.scale;
     fullscreenOnFirstTap(this);
@@ -422,7 +425,7 @@ export class LobbyScene extends Phaser.Scene {
       [TEX.iconaSarcofagi, 'Sarcofagi', () => this.openSarcophagus()],
       [TEX.iconaCoppe, 'Coppe', () => this.goTo('TrophyRoad')],
       [TEX.iconaClub, 'Club', () => showToast(this, 'Il Club\narriva presto!')],
-      [TEX.iconaImpostazioni, 'Impostazioni', () => showToast(this, 'Le impostazioni\narrivano presto!')],
+      [TEX.iconaImpostazioni, 'Impostazioni', () => showSettingsPanel(this)],
     ];
     const step = Math.min(160, (W - 480) / items.length);
     items.forEach(([tex, name, action], i) => {

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import '@fontsource/lilita-one';
+import { unlockAudioOnFirstTouch } from './audio/engine';
 import { GAME_WIDTH, GAME_HEIGHT } from './config';
 import { PALETTE } from './art/palette';
 import { BootScene } from './scenes/BootScene';
@@ -20,6 +21,9 @@ import { TrophyRoadScene } from './scenes/TrophyRoadScene';
 const params = new URLSearchParams(location.search);
 const debug = params.has('debug');
 const showPhysics = params.has('fisica');
+
+// i telefoni accendono l'audio solo dopo il primo tocco dello schermo
+unlockAudioOnFirstTouch();
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

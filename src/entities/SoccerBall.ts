@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { playSfxAt } from '../audio/Sound';
 import { TEX } from '../art';
 import { dustPuff } from '../art/effects';
 import { SOCCER } from '../data/soccer';
@@ -69,6 +70,7 @@ export class SoccerBall extends Phaser.GameObjects.Container {
     this.vel.set(Math.cos(angle) * speed, Math.sin(angle) * speed);
     this.body.setVelocity(this.vel.x, this.vel.y);
     dustPuff(this.scene, x, y, angle + Math.PI, y - 1);
+    playSfxAt(this.scene, x, y, 'kick');
   }
 
   /** Chi la porta la perde: rotola via un po' a caso. */

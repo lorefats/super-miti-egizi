@@ -2,17 +2,20 @@ import Phaser from 'phaser';
 import { TEX, characterTexture, weaponTexture, legTexture, getHeldWeapon, getLegs } from '../art';
 import { dustPuff, footstepDust, turnToSand } from '../art/effects';
 import { PALETTE, type ColorVariant } from '../art/palette';
+import { playSfx, playSfxAt, vibrate, type SfxName } from '../audio/Sound';
 import { PUSH, REGEN, REVIVE_SECONDS, SLIP } from '../data/combat';
 import { BUSH, GEM } from '../data/match';
 import { playImprison, playRevive } from '../art/sarcophagusFx';
 import { levelMultiplier } from '../data/progression';
-import { getCharacter, SPEED_VALUES, type CharacterData } from '../data/characters';
+import { getCharacter, SPEED_VALUES, type CharacterData, type WeaponKind } from '../data/characters';
 import { getCharacterModule } from '../characters';
 import type { CharacterModule } from '../characters/types';
 import type { Attacker, Combat, Damageable, StunStyle } from './Combat';
 import { HealthBar } from '../ui/HealthBar';
 import { showDamageNumber } from '../ui/DamageNumber';
 
+/** Suono dell'attacco base per ogni tipo di arma. */
+const WEAPON_SOUND: Record<WeaponKind, SfxName> = { ventaglio: 'swing', linea: 'shoot', lancio: 'throw' };
 /** Dimensioni della "impronta" dei piedi usata per le collisioni. */
 const FEET_W = 40;
 const FEET_H = 22;
@@ -401,7 +404,12 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   /** Chiamato da Combat quando i colpi di questo personaggio vanno a segno: carica la super. */
   onDealtDamage(amount: number): void {
     if (this.attackIsSuper) return;
+    const wasReady = this.superCharge >= 1;
     this.superCharge = Math.min(1, this.superCharge + amount / this.stats.super.chargeDamage);
+    if (this.isHuman && !wasReady && this.superCharge >= 1) {
+      playSfx('superReady');
+      vibrate('superReady');
+    }
   }
 
   /** Muove il personaggio. dir ha lunghezza 0 (fermo) oppure 1. */
@@ -449,6 +457,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.attackCooldown = this.stats.weapon.attackDelay;
     this.attackDistance = Phaser.Math.Clamp(distance ?? this.stats.weapon.range, 0, this.stats.weapon.range);
     this.startSwing(angle, false);
+    if (this.revealed) playSfxAt(this.scene, this.x, this.y, WEAPON_SOUND[this.stats.weapon.kind], this.isHuman ? 1 : 0.7);
     return true;
   }
 
@@ -461,6 +470,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.superCharge = 0;
     this.attackDistance = Phaser.Math.Clamp(distance ?? this.stats.super.range, 0, this.stats.super.range);
     this.startSwing(angle, true);
+    if (this.revealed) playSfxAt(this.scene, this.x, this.y, 'super');
+    if (this.isHuman) vibrate('super');
     // luce dorata sulla testa mentre lancia la super
     const glow = this.scene.add.image(this.facing * 20, -120, TEX.bagliore).setTint(0xffd27a).setBlendMode(Phaser.BlendModes.ADD).setScale(0.4);
     this.add(glow);
@@ -650,6 +661,12 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     if (this.revealed) {
       showDamageNumber(this.scene, this.x, this.y - BAR_OFFSET_Y + 20, amount, this.isHuman ? '#FFB3B8' : '#FFFFFF');
     }
+    if (this.isHuman) {
+      playSfx('hurt');
+      vibrate('hurt');
+    } else if (this.revealed) {
+      playSfxAt(this.scene, this.x, this.y, 'hit');
+    }
     this.sprite.setTintFill(0xffffff);
     this.scene.time.delayedCall(70, () => {
       if (this.isAlive()) this.sprite.clearTint();
@@ -701,6 +718,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     }
     this.shadow.setVisible(false);
     turnToSand(this.scene, images, this.x, this.y, () => this.setVisible(false));
+    playSfxAt(this.scene, this.x, this.y, 'defeated');
+    if (this.isHuman) vibrate('defeated');
     this.emit(DEFEATED_EVENT, this);
   }
 

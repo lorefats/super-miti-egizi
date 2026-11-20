@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { playSfx } from '../audio/Sound';
 import { TEX } from '../art';
 import { PALETTE, css } from '../art/palette';
 import { FONT_FAMILY } from '../config';
@@ -32,7 +33,9 @@ export function makePressable(
     if (!pressed) return;
     pressed = false;
     c.setScale(base);
-    if (canPress()) onPress();
+    if (!canPress()) return;
+    playSfx('click');
+    onPress();
   });
 }
 

@@ -295,3 +295,13 @@ Comportamento base, in ordine di priorità:
 3. Se un nemico è a tiro → attacca (mira con un piccolo errore casuale, minore per i bot più bravi).
 4. Se la super è carica e c'è un buon bersaglio → usala.
 5. Altrimenti → vai verso il baule o i gioielli più vicini, poi esplora.
+
+## 12. Suoni, musica e vibrazione
+- **Effetti** generati dal codice (niente file, funzionano offline): attacchi diversi per tipo di arma
+  (fruscio, tiro, lancio), colpi, super, "super carica", sconfitta in sabbia, gioielli, bauli, conto alla rovescia,
+  vittoria/sconfitta, gol e calci, sarcofagi e premi, pulsanti. I suoni lontani dallo schermo si sentono più piano.
+- **Musica** solo nei menu: un motivetto originale con scala "egizia", corde pizzicate, bordone e tamburo. In partita c'è silenzio
+  di musica, così si sentono bene gli effetti.
+- **Vibrazione** quando vieni colpito, lanci la super, la super è carica, vinci, vieni sconfitto, fai gol, apri un sarcofago
+  (solo Android: il browser di iPhone non permette la vibrazione).
+- **Impostazioni** (Lobby): interruttori Suoni, Musica, Vibrazione, salvati sul telefono.

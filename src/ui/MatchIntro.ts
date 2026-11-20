@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { playSfx } from '../audio/Sound';
 import { DEPTH, FONT_FAMILY } from '../config';
 import { PALETTE, css } from '../art/palette';
 import { TEX, characterTexture } from '../art';
@@ -88,6 +89,7 @@ export function showMatchIntro(
   const total = Math.max(1, Math.round(opt.seconds));
   const show = (n: number) => {
     count.setText(String(n));
+    playSfx('beep');
     scene.tweens.add({ targets: count, scale: { from: 1.6, to: 1 }, alpha: { from: 0.4, to: 1 }, duration: 300, ease: 'Back.out' });
   };
   show(total);
@@ -97,6 +99,7 @@ export function showMatchIntro(
       scene.tweens.add({ targets: p, alpha: 0, duration: 250, onComplete: () => p.destroy() });
     }
     count.setText('VIA!').setColor(css(PALETTE.oro));
+    playSfx('go');
     scene.tweens.add({ targets: count, scale: { from: 0.6, to: 1.3 }, duration: 250, ease: 'Back.out' });
     scene.tweens.add({ targets: count, alpha: 0, delay: 500, duration: 300, onComplete: () => count.destroy() });
     opt.onGo();

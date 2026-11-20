@@ -93,7 +93,7 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
 
 ## Fase 5 — Rifinitura e pubblicazione
 
-- [ ] Suoni ed effetti (generati o file gratuiti), musica in lobby, vibrazione del telefono
+- [x] Suoni ed effetti (generati o file gratuiti), musica in lobby, vibrazione del telefono
 - [ ] Modalità Allenamento
 - [ ] Bilanciamento: far giocare il cugino e annotare chi è troppo forte o troppo debole
 - [ ] PWA: icona, schermata di avvio, funziona offline, "Aggiungi a Home"

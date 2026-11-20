@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { playSfxAt } from '../audio/Sound';
 import { TEX } from '../art';
 import { hitSpark } from '../art/effects';
 import { CHEST } from '../data/match';
@@ -102,6 +103,7 @@ export class Chest extends Phaser.GameObjects.Container implements Damageable {
     planks.setDepth(this.y + 1);
     planks.explode(12);
     scene.time.delayedCall(900, () => planks.destroy());
+    playSfxAt(scene, this.x, this.y, 'chest');
     this.emit(CHEST_BROKEN_EVENT, this.x, this.y, CHEST.gems);
     scene.tweens.add({ targets: this.sprite, scaleY: 0.1, alpha: 0, duration: 200, onComplete: () => this.destroy() });
   }

@@ -21,7 +21,7 @@ import {
 } from '../data/progression';
 
 const STORAGE_KEY = 'super-miti-egizi:salvataggio';
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 /** Il personaggio che hanno tutti fin dall'inizio. */
 const STARTER = 'anubi';
 /**
@@ -58,6 +58,14 @@ export interface SaveData {
   roadClaimed: number[];
   /** sarcofagi di tipo deciso (dal Cammino), da aprire prima di quelli a sorpresa */
   sarcophagusQueue: SarcophagusTier[];
+  /** Impostazioni: suoni, musica e vibrazione accesi o spenti */
+  settings: Settings;
+}
+
+export interface Settings {
+  sound: boolean;
+  music: boolean;
+  vibration: boolean;
 }
 
 /** Risultato di una partita, per la schermata Risultati. */
@@ -91,6 +99,7 @@ function emptySave(): SaveData {
     unlocked: [STARTER],
     roadClaimed: [],
     sarcophagusQueue: [],
+    settings: { sound: true, music: true, vibration: true },
   };
 }
 
@@ -129,6 +138,12 @@ function migrate(raw: unknown): SaveData {
   if (Array.isArray(r.sarcophagusQueue)) {
     const tiers = new Set<string>(SARCOPHAGI.map((s) => s.tier));
     data.sarcophagusQueue = r.sarcophagusQueue.filter((t): t is SarcophagusTier => tiers.has(t));
+  }
+  // Versione 2 → 3: arrivano le impostazioni (se mancano: tutto acceso)
+  if (r.settings && typeof r.settings === 'object') {
+    for (const k of ['sound', 'music', 'vibration'] as const) {
+      if (typeof r.settings[k] === 'boolean') data.settings[k] = r.settings[k];
+    }
   }
   if (r.mode === 'duo' || r.mode === 'calcio') data.mode = r.mode;
   const sel = r.selectedCharacter;
@@ -208,6 +223,15 @@ class SaveManagerImpl {
   getSelectedCharacter(): string {
     const id = this.data.selectedCharacter;
     return this.isUnlocked(id) && isPlayable(id) ? id : STARTER;
+  }
+
+  getSettings(): Readonly<Settings> {
+    return this.data.settings;
+  }
+
+  setSetting(key: keyof Settings, on: boolean): void {
+    this.data.settings[key] = on;
+    this.save();
   }
 
   getStats(): Readonly<SaveData['stats']> {

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { playSfxAt } from '../audio/Sound';
 import { TEX } from '../art';
 import { GEM } from '../data/match';
 
@@ -43,6 +44,7 @@ export class Gem extends Phaser.GameObjects.Container {
   /** Raccolto: vola verso chi l'ha preso e sparisce. */
   pick(byX: number, byY: number): void {
     this.taken = true;
+    playSfxAt(this.scene, this.x, this.y, 'gem');
     this.scene.tweens.killTweensOf([this, this.icon, this.glow]);
     this.scene.tweens.add({
       targets: this,

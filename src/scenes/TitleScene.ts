@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { startMenuMusic } from '../audio/Music';
 import { TEX } from '../art';
 import { LOGO_SIZE, LOGO_WINK_EYE } from '../art/logo';
 import { PALETTE, css } from '../art/palette';
@@ -21,6 +22,7 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create(): void {
+    startMenuMusic();
     this.leaving = false;
     const { width: W, height: H } = this.scale;
     fullscreenOnFirstTap(this);

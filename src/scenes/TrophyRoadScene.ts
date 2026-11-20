@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { playSfx } from '../audio/Sound';
+import { startMenuMusic } from '../audio/Music';
 import { TEX } from '../art';
 import { PALETTE, css } from '../art/palette';
 import { FONT_FAMILY } from '../config';
@@ -42,6 +44,7 @@ export class TrophyRoadScene extends Phaser.Scene {
   }
 
   create(): void {
+    startMenuMusic();
     const { width: W, height: H } = this.scale;
     this.busy = false;
     this.velocity = 0;
@@ -317,6 +320,7 @@ export class TrophyRoadScene extends Phaser.Scene {
     const reward = SaveManager.claimRoadReward(step.trophies);
     if (!reward) return;
     this.busy = true;
+    playSfx('reward');
     const wx = this.road.x + c.x;
     const wy = c.y;
     sparkBurst(this, wx, wy, 18, 180);
@@ -360,6 +364,7 @@ export class TrophyRoadScene extends Phaser.Scene {
   /** Animazione speciale: il cielo si scurisce, il sole sorge e appare il nuovo personaggio. */
   private sunrise(characterId: string, test: boolean): void {
     this.busy = true;
+    this.time.delayedCall(600, () => playSfx('victory'));
     const { width: W, height: H } = this.scale;
     const entry = getRosterEntry(characterId);
     const layer = this.add.container(0, 0).setDepth(2000);

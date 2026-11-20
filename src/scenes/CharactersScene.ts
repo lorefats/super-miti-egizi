@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { playSfx } from '../audio/Sound';
+import { startMenuMusic } from '../audio/Music';
 import { TEX } from '../art';
 import { PALETTE, css } from '../art/palette';
 import { FONT_FAMILY } from '../config';
@@ -39,6 +41,7 @@ export class CharactersScene extends Phaser.Scene {
   }
 
   create(): void {
+    startMenuMusic();
     const { width: W, height: H } = this.scale;
     this.grid = undefined;
     this.panel = undefined;
@@ -421,13 +424,16 @@ export class CharactersScene extends Phaser.Scene {
   private tryUpgrade(id: string): void {
     const result = SaveManager.upgrade(id);
     if (result === 'ok') {
+      playSfx('reward');
       this.refreshPills();
       this.buildGrid();
       this.openPanel(id, true);
       showToast(this, `${ROSTER.find((c) => c.id === id)?.name} è al livello ${SaveManager.getLevel(id)}!`);
     } else if (result === 'scarabei') {
+      playSfx('denied');
       showToast(this, "Ti servono più scarabei d'oro!\nVinci partite per trovarli nei sarcofagi");
     } else if (result === 'polvere') {
+      playSfx('denied');
       showToast(this, 'Ti serve più polvere di stelle!\nVinci partite per trovarla nei sarcofagi');
     } else if (result === 'max') {
       showToast(this, 'È già al livello massimo!');
