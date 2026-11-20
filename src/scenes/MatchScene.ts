@@ -7,7 +7,7 @@ import { MAPPA_VALLE } from '../data/valle';
 import { BOT_LEVELS, BOT_NAMES, DUO_SETUP, SOLO_SETUP } from '../data/bots';
 import { BOT_LEVEL_BY_TROPHIES, trophiesForPlace, type GameMode } from '../data/progression';
 import { SaveManager } from '../save/SaveManager';
-import { isPlayable } from '../data/characters';
+import { CHARACTERS, isPlayable } from '../data/characters';
 import { HIDEOUT_REVEAL_DISTANCE } from '../data/combat';
 import { Combat } from '../entities/Combat';
 import { createObstacle, type PlacedObstacle } from '../entities/Obstacle';
@@ -176,18 +176,20 @@ export class MatchScene extends Phaser.Scene {
 
     const names = Phaser.Utils.Array.Shuffle([...BOT_NAMES]);
     const level = BOT_LEVELS[this.botLevelIndex()];
+    // ogni bot è un dio diverso, scelto a caso (e diverso dal tuo, così non ti confondi)
+    const gods = this.pickBotGods(seats.length, myId);
     seats.forEach((seat, i) => {
       const bot: Bot = new Bot(
         this,
         seat.x,
         seat.y,
         {
-          characterId: 'anubi',
+          characterId: gods[i],
           level: level.characterLevel,
           team: seat.team,
           combat: this.combat,
-          // il compagno ha i colori veri; le squadre nemiche un colore per squadra
-          variant: seat.ally ? 'base' : COLOR_VARIANTS[((duo ? seat.team : i) % (COLOR_VARIANTS.length - 1)) + 1],
+          // Solo: tutti con i colori veri. Duo: il compagno con i colori veri, ogni squadra nemica un colore
+          variant: duo && !seat.ally ? COLOR_VARIANTS[(seat.team % (COLOR_VARIANTS.length - 1)) + 1] : 'base',
           name: seat.ally ? `${names[i % names.length]} (amico)` : names[i % names.length],
           ally: seat.ally,
         },
@@ -324,6 +326,18 @@ export class MatchScene extends Phaser.Scene {
   }
 
   /** Più coppe hai, più i bot sono bravi (principiante → esperto → campione). */
+  /** Sceglie a caso gli dèi dei bot: tutti diversi tra loro e dal tuo (se non bastano, si ripetono). */
+  private pickBotGods(count: number, mine: string): string[] {
+    const all = Object.keys(CHARACTERS);
+    const others = all.filter((id) => id !== mine);
+    const out: string[] = [];
+    while (out.length < count) {
+      const bag = Phaser.Utils.Array.Shuffle([...(others.length ? others : all)]);
+      out.push(...bag.slice(0, count - out.length));
+    }
+    return out;
+  }
+
   private botLevelIndex(): number {
     const total = SaveManager.getTotalTrophies();
     let level = SOLO_SETUP.botLevel;

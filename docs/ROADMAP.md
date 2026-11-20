@@ -71,7 +71,7 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
 - [x] Ammit, Amon, Maat, Kek, Thoth, Nefti (Oro)
 - [x] Rà (Sole)
 - [x] Modalità Duo con compagno bot (necessaria per provare le super sui compagni)
-- [ ] I bot usano personaggi diversi a caso
+- [x] I bot usano personaggi diversi a caso
 
 ## Fase 4½ — Calcio e Nilo (idee del cugino)
 
