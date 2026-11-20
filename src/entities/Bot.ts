@@ -11,6 +11,8 @@ export interface Brain {
 /** Un personaggio guidato dal computer: è un Player con un "cervello" al posto del joystick. */
 export class Bot extends Player {
   private readonly brain: Brain;
+  /** Fermo (es. durante il conto alla rovescia di inizio partita): non pensa, non cammina, non attacca. */
+  frozen = false;
 
   /** `world` = cervello da battaglia; oppure una funzione che crea un cervello diverso (es. per il Calcio). */
   constructor(scene: Phaser.Scene, x: number, y: number, opt: FighterOptions, level: BotLevel, world: BotWorld | ((bot: Bot) => Brain)) {
@@ -19,7 +21,7 @@ export class Bot extends Player {
   }
 
   preUpdate(time: number, delta: number): void {
-    if (this.isAlive()) this.move(this.brain.update(delta / 1000));
+    if (this.isAlive() && !this.frozen) this.move(this.brain.update(delta / 1000));
     super.preUpdate(time, delta);
   }
 }

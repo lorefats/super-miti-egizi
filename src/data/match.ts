@@ -1,5 +1,11 @@
 // Numeri della partita: bauli, gioielli e tempesta (vedi docs/GAME_DESIGN.md, sezioni 3 e 4).
 
+/** Inizio partita: tutti fermi per qualche secondo, si vedono gli avversari e parte il conto alla rovescia. */
+export const MATCH_INTRO = {
+  /** secondi di attesa prima del "VIA!" (vale per tutte le modalità) */
+  seconds: 5,
+};
+
 /** Bauli del tesoro: si rompono colpendoli e dentro ci sono i Gioielli. */
 export const CHEST = {
   maxHealth: 3000,

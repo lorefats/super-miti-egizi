@@ -91,6 +91,7 @@ Se un sarcofago è "Del Faraone", prima di aprirsi **sogghigna** come il logo.
 Una strada di sabbia illuminata da torce, con premi lungo il percorso (scarabei, polvere, sarcofagi).
 Contiene **un solo personaggio**: **Rà, a 6000 coppe**, il premio più grande del gioco,
 con un'animazione speciale del sole che sorge quando si sblocca.
+Dopo Rà la strada continua fino a **15000 coppe** con altri premi (scarabei, polvere, sarcofagi d'Oro e del Faraone).
 
 ## 7. Prestigi
 Ogni personaggio, arrivato a **1000 coppe**, raggiunge il **Prestigio 1** (il massimo per ora):
@@ -246,8 +247,9 @@ Legenda ruoli: 🛡️ Tank · ⚔️ Assalto · 🎯 Tiratore · 🗡️ Assass
 
 **17. Thoth** — dio della scrittura e della sapienza, testa di ibis, rotolo di papiro.
 - **Arma — Raffica di Geroglifici:** scrive in aria 3 geroglifici che partono uno dopo l'altro.
-- **Super — Libro di Thoth:** copia la super dell'ultimo nemico che lo ha colpito e la usa una volta.
-- **Animazione speciale:** apre un libro magico, le pagine sfogliano da sole e i geroglifici volano attorno a lui.
+- **Super — Salto del Geroglifico:** scrive un grande geroglifico d'oro per terra dove mira e ci si teletrasporta
+  dentro. Il geroglifico esplode (danno + stordimento breve a chi è vicino) e altri geroglifici volano via tutto attorno.
+- **Animazione speciale:** si dissolve in una pioggia di piccoli geroglifici dorati e ricompare dentro la lettera.
 
 **18. Tefnut** — dea dell'acqua e della pioggia, testa di leonessa, colori azzurri.
 - **Arma — Getto d'Acqua:** getto continuo che spinge indietro i nemici.

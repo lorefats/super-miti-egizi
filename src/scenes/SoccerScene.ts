@@ -7,6 +7,7 @@ import { BOT_NAMES } from '../data/bots';
 import { isPlayable } from '../data/characters';
 import { HIDEOUT_REVEAL_DISTANCE } from '../data/combat';
 import { trophiesForPlace } from '../data/progression';
+import { MATCH_INTRO } from '../data/match';
 import { CAMPO_CALCIO, GOALS, GOAL_DEPTH, GOAL_MOUTH, KICKOFF, RESPAWN, SOCCER, SOCCER_RIVER, mirror } from '../data/soccer';
 import { SaveManager } from '../save/SaveManager';
 import { currentBotLevel, pickBotGods } from '../ai/botPicks';
@@ -19,6 +20,7 @@ import { MatchHud } from '../ui/MatchHud';
 import { PlayerControls } from '../ui/PlayerControls';
 import { showEndOverlay } from '../ui/EndOverlay';
 import { showToast } from '../ui/Toast';
+import { showMatchIntro } from '../ui/MatchIntro';
 import { addFpsMeter } from '../ui/FpsMeter';
 import { MapView } from './MapView';
 
@@ -42,6 +44,8 @@ export class SoccerScene extends Phaser.Scene {
   private timeLeft = SOCCER.seconds;
   private pause = 0;
   private over = false;
+  /** Conto alla rovescia iniziale in corso. */
+  private intro = false;
 
   constructor() {
     super('Soccer');
@@ -84,7 +88,7 @@ export class SoccerScene extends Phaser.Scene {
       goalMouth: GOAL_MOUTH,
       players: () => this.fighters,
       bridgeVia: (fx, fy, tx, ty) => this.bridgeVia(fx, fy, tx, ty),
-      paused: () => this.pause > 0 || this.over,
+      paused: () => this.pause > 0 || this.over || this.intro,
     };
     gods.forEach((god, i) => {
       const team = i < SOCCER.teamSize - 1 ? 0 : 1;
@@ -127,6 +131,24 @@ export class SoccerScene extends Phaser.Scene {
     // la palla fuori dallo schermo: una pallina sul bordo indica dov'è
     this.ballMarker = this.add.image(0, 0, TEX.palla).setScrollFactor(0).setDepth(DEPTH.ui).setScale(0.8).setVisible(false);
     addFpsMeter(this);
+
+    // qualche secondo per prepararsi e vedere le due squadre, poi "VIA!"
+    this.intro = true;
+    this.ball.frozen = true;
+    this.controls.setEnabled(false);
+    const bots = this.fighters.filter((f): f is Bot => f instanceof Bot);
+    for (const b of bots) b.frozen = true;
+    showMatchIntro(this, {
+      seconds: MATCH_INTRO.seconds,
+      me: this.player,
+      fighters: this.fighters,
+      onGo: () => {
+        this.intro = false;
+        this.ball.frozen = false;
+        for (const b of bots) b.frozen = false;
+        if (!this.over) this.controls.setEnabled(this.player.isAlive());
+      },
+    });
   }
 
   // ------------------------------------------------------------------ campo
@@ -400,7 +422,7 @@ export class SoccerScene extends Phaser.Scene {
     this.view.update(dt, this.cameras.main);
     this.updateHideouts(dt);
     this.updateBallMarker();
-    if (this.over) return;
+    if (this.over || this.intro) return;
     if (this.pause > 0) {
       this.pause -= dt;
       return;

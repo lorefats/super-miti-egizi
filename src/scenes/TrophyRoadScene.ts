@@ -22,7 +22,7 @@ const SARC_TINT: Record<SarcophagusTier, number> = { legno: 0xc08a5a, bronzo: 0x
 /**
  * Cammino delle Coppe (sezione 6): una strada di sabbia illuminata da torce, da trascinare col dito.
  * Le tappe raggiunte con le coppe totali hanno un premio da ritirare toccandolo.
- * In fondo c'è Rà, a 6000 coppe, con il sole che sorge quando si sblocca. Per provarlo: "?ra".
+ * A 6000 coppe c'è Rà, con il sole che sorge quando si sblocca; poi la strada continua fino a 15000. Per provarlo: "?ra".
  */
 export class TrophyRoadScene extends Phaser.Scene {
   private road!: Phaser.GameObjects.Container;

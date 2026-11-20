@@ -160,7 +160,7 @@ export interface RoadStep {
 /** Personaggi che si trovano solo nel Cammino delle Coppe (mai nei sarcofagi). */
 export const ROAD_CHARACTERS = ['ra'];
 
-/** Le tappe del Cammino, in ordine. L'ultima è Rà, il premio più grande del gioco. */
+/** Le tappe del Cammino, in ordine. A 6000 c'è Rà, il premio più grande del gioco; poi la strada continua fino a 15000. */
 export const TROPHY_ROAD: RoadStep[] = [
   { trophies: 10, reward: { kind: 'scarabei', amount: 30 } },
   { trophies: 25, reward: { kind: 'polvere', amount: 20 } },
@@ -187,4 +187,18 @@ export const TROPHY_ROAD: RoadStep[] = [
   { trophies: 5000, reward: { kind: 'polvere', amount: 260 } },
   { trophies: 5500, reward: { kind: 'sarcofago', tier: 'faraone' } },
   { trophies: 6000, reward: { kind: 'personaggio', characterId: 'ra' } },
+  // dopo Rà la strada continua, per chi vuole arrivare ancora più lontano
+  { trophies: 6500, reward: { kind: 'scarabei', amount: 450 } },
+  { trophies: 7000, reward: { kind: 'polvere', amount: 300 } },
+  { trophies: 7500, reward: { kind: 'sarcofago', tier: 'oro' } },
+  { trophies: 8000, reward: { kind: 'scarabei', amount: 520 } },
+  { trophies: 8500, reward: { kind: 'polvere', amount: 340 } },
+  { trophies: 9000, reward: { kind: 'sarcofago', tier: 'faraone' } },
+  { trophies: 9500, reward: { kind: 'scarabei', amount: 600 } },
+  { trophies: 10000, reward: { kind: 'polvere', amount: 400 } },
+  { trophies: 11000, reward: { kind: 'sarcofago', tier: 'oro' } },
+  { trophies: 12000, reward: { kind: 'scarabei', amount: 700 } },
+  { trophies: 13000, reward: { kind: 'polvere', amount: 450 } },
+  { trophies: 14000, reward: { kind: 'sarcofago', tier: 'faraone' } },
+  { trophies: 15000, reward: { kind: 'sarcofago', tier: 'faraone' } },
 ];

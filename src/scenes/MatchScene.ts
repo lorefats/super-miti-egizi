@@ -17,7 +17,7 @@ import { BigPyramid } from '../entities/BigPyramid';
 import { Chest, CHEST_BROKEN_EVENT } from '../entities/Chest';
 import { Gem } from '../entities/Gem';
 import { Storm } from '../entities/Storm';
-import { GEM, STORM } from '../data/match';
+import { GEM, MATCH_INTRO, STORM } from '../data/match';
 import { BushPatch } from '../entities/BushPatch';
 import { Camel } from '../entities/Camel';
 import { Minimap } from '../ui/Minimap';
@@ -26,6 +26,7 @@ import { Target } from '../entities/Target';
 import { MatchHud } from '../ui/MatchHud';
 import { showEndOverlay } from '../ui/EndOverlay';
 import { showToast } from '../ui/Toast';
+import { showMatchIntro } from '../ui/MatchIntro';
 import { PlayerControls } from '../ui/PlayerControls';
 import { MapView } from './MapView';
 
@@ -47,6 +48,8 @@ export class MatchScene extends Phaser.Scene {
   private hud!: MatchHud;
   private combat!: Combat;
   private over = false;
+  /** Conto alla rovescia iniziale in corso: nessuno si muove e la tempesta aspetta. */
+  private intro = false;
   private mode: GameMode = 'solo';
 
   constructor() {
@@ -196,6 +199,25 @@ export class MatchScene extends Phaser.Scene {
       this.zoneCheck = 2.6;
     }
     addFpsMeter(this);
+    this.startIntro();
+  }
+
+  /** I secondi di preparazione: tutti fermi, si vedono gli avversari, poi "VIA!". */
+  private startIntro(): void {
+    this.intro = true;
+    this.controls.setEnabled(false);
+    const bots = this.fighters.filter((f): f is Bot => f instanceof Bot);
+    for (const b of bots) b.frozen = true;
+    showMatchIntro(this, {
+      seconds: MATCH_INTRO.seconds,
+      me: this.player,
+      fighters: this.fighters,
+      onGo: () => {
+        this.intro = false;
+        for (const b of bots) b.frozen = false;
+        if (!this.over) this.controls.setEnabled(true);
+      },
+    });
   }
 
   private aliveCount(): number {
@@ -375,7 +397,8 @@ export class MatchScene extends Phaser.Scene {
     const mate = this.mode === 'duo' ? this.aliveTeammate() : null;
     this.minimap.update({ x: this.player.x, y: this.player.y, alive: this.player.isAlive() }, this.storm, mate);
     this.updateHideouts(dt);
-    this.updateStorm(dt);
+    // durante il conto alla rovescia la tempesta non avanza
+    this.updateStorm(this.intro ? 0 : dt);
     this.pickUpGems();
     if (this.over) return;
     this.controls.update(dt);

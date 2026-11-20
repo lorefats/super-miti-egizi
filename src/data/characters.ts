@@ -934,15 +934,23 @@ export const CHARACTERS: Record<string, CharacterData> = {
       },
     },
     super: {
-      name: 'Libro di Thoth',
+      name: 'Salto del Geroglifico',
       chargeDamage: 3400,
-      range: 600,
-      aim: 'linea',
-      aimWidth: 60,
+      range: 650,
+      aim: 'zona',
+      aimWidth: 340, // diametro dell'esplosione all'arrivo (cerchio della mira)
       params: {
-        /** se nessun nemico l'ha ancora colpito: cerchio di geroglifici tutto attorno */
-        ringGlyphs: 12,
-        ringDamage: 420,
+        /** secondi tra quando scrive il geroglifico per terra e quando ci compare sopra */
+        writeSeconds: 0.35,
+        /** all'arrivo il geroglifico esplode: raggio e danno */
+        burstRadius: 170,
+        burstDamage: 900,
+        /** chi è nell'esplosione resta stordito (secondi) */
+        stunSeconds: 0.6,
+        /** poi partono geroglifici tutto attorno */
+        ringGlyphs: 8,
+        ringDamage: 380,
+        ringRange: 420,
       },
     },
   },

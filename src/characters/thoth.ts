@@ -1,11 +1,9 @@
 import Phaser from 'phaser';
 import { TEX } from '../art';
-import { hitSpark } from '../art/effects';
-import { DEPTH, FONT_FAMILY } from '../config';
-import { getCharacter, isPlayable } from '../data/characters';
+import { groundRing, hitSpark, isOnScreen } from '../art/effects';
+import { DEPTH } from '../config';
 import { Projectile } from '../entities/Projectile';
 import type { Player } from '../entities/Player';
-import { getCharacterModule } from './index';
 import type { CharacterModule } from './types';
 
 /** Altezza da terra a cui volano i geroglifici. */
@@ -35,13 +33,43 @@ function shootGlyph(user: Player, angle: number, index: number, damage: number, 
   });
 }
 
-/** Scritta che sale sopra la testa (es. "Copia: Seth!"). */
-function floatText(scene: Phaser.Scene, x: number, y: number, text: string): void {
-  const t = scene.add
-    .text(x, y, text, { fontFamily: FONT_FAMILY, fontSize: '26px', color: '#FFE08A', stroke: '#14213D', strokeThickness: 6 })
-    .setOrigin(0.5)
-    .setDepth(DEPTH.overhead + 5);
-  scene.tweens.add({ targets: t, y: y - 50, alpha: { from: 1, to: 0 }, delay: 500, duration: 900, onComplete: () => t.destroy() });
+/**
+ * Un geroglifico gigante d'oro disegnato per terra in (x, y): compare, brilla e poi si spegne.
+ * Resta `seconds` secondi (il tempo che Thoth ci "salti dentro").
+ */
+function groundGlyph(scene: Phaser.Scene, x: number, y: number, seconds: number): void {
+  if (!isOnScreen(scene, x, y)) return;
+  const glow = scene.add.image(x, y, TEX.bagliore).setDepth(DEPTH.groundMarks + 1).setTint(0xffd27a).setBlendMode(Phaser.BlendModes.ADD);
+  glow.setScale(0.2, 0.12).setAlpha(0.9);
+  const glyph = scene.add.image(x, y, TEX.geroglifico0).setDepth(DEPTH.groundMarks + 2).setScale(0.5, 0.3);
+  scene.tweens.add({ targets: glow, scaleX: 2, scaleY: 1.2, duration: seconds * 1000, ease: 'Quad.out' });
+  scene.tweens.add({ targets: glyph, scaleX: 3.4, scaleY: 2.1, duration: seconds * 1000 * 0.6, ease: 'Back.out' });
+  scene.tweens.add({
+    targets: [glow, glyph],
+    alpha: 0,
+    delay: seconds * 1000 + 150,
+    duration: 350,
+    onComplete: () => {
+      glow.destroy();
+      glyph.destroy();
+    },
+  });
+}
+
+/** Thoth si dissolve (o ricompare) in una pioggia di piccoli geroglifici dorati. */
+function glyphPuff(scene: Phaser.Scene, x: number, y: number): void {
+  if (!isOnScreen(scene, x, y)) return;
+  const puff = scene.add.particles(x, y - 60, TEX.geroglifico1, {
+    speed: { min: 80, max: 220 },
+    lifespan: { min: 300, max: 520 },
+    scale: { start: 0.7, end: 0 },
+    rotate: { min: -40, max: 40 },
+    alpha: { start: 1, end: 0 },
+    emitting: false,
+  });
+  puff.setDepth(y + 5);
+  puff.explode(10);
+  scene.time.delayedCall(650, () => puff.destroy());
 }
 
 /** Thoth — Raffica di Geroglifici: scrive in aria 3 geroglifici che partono uno dopo l'altro. */
@@ -61,24 +89,35 @@ export const thoth: CharacterModule = {
   },
 
   /**
-   * Super — Libro di Thoth: copia la super dell'ultimo nemico che lo ha colpito e la usa una volta.
-   * Se nessuno l'ha ancora colpito, scrive un cerchio di geroglifici tutto attorno.
+   * Super — Salto del Geroglifico: scrive un grande geroglifico d'oro per terra dove mira,
+   * sparisce e ricompare dentro. Il geroglifico esplode: danno e stordimento a chi è vicino,
+   * poi altri geroglifici volano via tutto attorno.
    */
   useSuper(user, angle, combat, distance) {
+    const sup = user.stats.super;
+    const p = sup.params;
     const scene = user.scene;
-    const copied = user.lastEnemySuper;
-    if (copied && copied !== 'thoth' && isPlayable(copied)) {
-      const data = getCharacter(copied);
-      floatText(scene, user.x, user.y - 210, `Copia: ${data.name}!`);
-      user.withBorrowedStats(data, () =>
-        getCharacterModule(copied).useSuper(user, angle, combat, Math.min(distance, data.super.range)),
-      );
-      return;
-    }
-    const p = user.stats.super.params;
-    const damage = user.scaledDamage(p.ringDamage);
-    for (let i = 0; i < p.ringGlyphs; i++) {
-      shootGlyph(user, (i / p.ringGlyphs) * Math.PI * 2, i, damage, user.stats.weapon.range * 0.7);
-    }
+    const d = Math.min(distance, sup.range);
+    const spot = combat.freeSpot(user.x, user.y, user.x + Math.cos(angle) * d, user.y + Math.sin(angle) * d);
+    groundGlyph(scene, spot.x, spot.y, p.writeSeconds);
+    scene.time.delayedCall(p.writeSeconds * 1000, () => {
+      if (!user.canAct()) return;
+      glyphPuff(scene, user.x, user.y);
+      user.teleportTo(spot.x, spot.y);
+      glyphPuff(scene, spot.x, spot.y);
+      groundRing(scene, spot.x, spot.y, p.burstRadius, 0xffd27a);
+      const near = combat.inCircle(spot.x, spot.y, p.burstRadius, (t) => t.team !== user.team);
+      const burst = user.scaledDamage(p.burstDamage);
+      for (const t of near) {
+        combat.damage(user, t, burst);
+        if (t.kind !== 'baule') t.stun?.(p.stunSeconds, 'stelle');
+        hitSpark(scene, t.x, t.y - 60, t.y + 2);
+      }
+      const ring = user.scaledDamage(p.ringDamage);
+      for (let i = 0; i < p.ringGlyphs; i++) {
+        shootGlyph(user, (i / p.ringGlyphs) * Math.PI * 2, i, ring, p.ringRange);
+      }
+      if (user.isHuman || near.some((h) => h.isHuman)) scene.cameras.main.shake(120, 0.005);
+    });
   },
 };

@@ -73,8 +73,6 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   static readonly INVISIBLE = {};
   declare body: Phaser.Physics.Arcade.Body;
   private readonly ownStats: CharacterData;
-  /** Dati presi in prestito per un attimo (il Libro di Thoth usa la super di un altro). */
-  private borrowedStats: CharacterData | null = null;
   readonly team: number;
   readonly kind = 'personaggio' as const;
   readonly hitRadius = 26;
@@ -82,6 +80,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   gems = 0;
   readonly isHuman: boolean;
   readonly displayName: string;
+  /** Colori del personaggio (es. "rosso" per una squadra nemica in Duo). */
+  readonly variant: ColorVariant;
   /** Nascondiglio in cui si trova adesso (lo aggiorna la partita). */
   hideout: object | null = null;
   /** Velocità in più o in meno per il terreno (acqua = più lento). La aggiorna la partita. */
@@ -127,8 +127,6 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   private readonly rateMods = new Map<string, { left: number; factor: number }>();
   /** Moltiplicatore del prossimo colpo (Amon, Nefti). */
   private nextHitFactor = 1;
-  /** Ultima super nemica da cui è stato colpito (Libro di Thoth). */
-  lastEnemySuper: string | null = null;
   /** Da dove scappa quando è spaventato. */
   private readonly scaredFrom = new Phaser.Math.Vector2();
   /** Secondi rimasti sotto terra (si muove ma non si vede, non si colpisce e non attacca). */
@@ -178,6 +176,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     super(scene, x, y);
     const { characterId, team, combat } = opt;
     const variant = opt.variant ?? 'base';
+    this.variant = variant;
     this.combat = combat;
     this.isHuman = opt.isHuman ?? false;
     this.displayName = opt.name ?? '';
@@ -229,17 +228,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Numeri del personaggio (arma, super, vita...). */
   get stats(): CharacterData {
-    return this.borrowedStats ?? this.ownStats;
-  }
-
-  /** Esegue `fn` facendo finta di essere un altro personaggio (solo per i numeri). Serve al Libro di Thoth. */
-  withBorrowedStats(data: CharacterData, fn: () => void): void {
-    this.borrowedStats = data;
-    try {
-      fn();
-    } finally {
-      this.borrowedStats = null;
-    }
+    return this.ownStats;
   }
 
   /** Sparisce e riappare subito in (x, y) (Passo nell'Ombra di Nefti). */
@@ -357,15 +346,6 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     if (!this.isTargetable()) return;
     this.scaredFrom.set(x, y);
     this.addBuff('paura', seconds);
-  }
-
-  /** Di quale personaggio è la super (la può copiare Thoth). */
-  get superSource(): string {
-    return this.ownStats.id;
-  }
-
-  noteAttacker(from: Attacker): void {
-    if (from.team !== this.team && from.superSource) this.lastEnemySuper = from.superSource;
   }
 
   healthFraction(): number {

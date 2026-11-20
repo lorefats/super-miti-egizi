@@ -86,6 +86,11 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
   > Nella Lobby un pulsante per sceglierla, con il lucchetto finché non si hanno 220 coppe totali.
   > I bot devono saper passare, tirare in porta e difendere.
 
+- [x] **Ritocchi chiesti dopo le prove**
+  > Thoth: nuova super "Salto del Geroglifico" (si teletrasporta in un geroglifico d'oro che esplode),
+  > al posto della copia della super nemica. 5 secondi di preparazione a inizio partita con gli avversari
+  > in vista. Cammino delle Coppe più lungo: dopo Rà continua fino a 15000 coppe.
+
 ## Fase 5 — Rifinitura e pubblicazione
 
 - [ ] Suoni ed effetti (generati o file gratuiti), musica in lobby, vibrazione del telefono
