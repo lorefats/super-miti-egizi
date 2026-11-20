@@ -211,6 +211,7 @@ function buildValley(): MapData {
   scatterChests({ x: 0, y: 4840, w: M, h: 700 }, 5);
 
   return {
+    name: 'Valle dei Due Egitti',
     width: M,
     height: M,
     spawn: { x: 2800, y: 5300 },

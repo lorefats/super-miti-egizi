@@ -23,7 +23,14 @@ export interface Rect {
   h: number;
 }
 
+/** Acqua: rallenta chi ci cammina; se ha una corrente, trascina (pixel al secondo). */
+export interface WaterRect extends Rect {
+  flow?: { x: number; y: number };
+}
+
 export interface MapData {
+  /** Nome della mappa (si vede all'inizio della partita). */
+  name?: string;
   width: number;
   height: number;
   /** Punto di partenza del giocatore. */
@@ -42,8 +49,12 @@ export interface MapData {
   targets: { x: number; y: number }[];
   /** Zone con nome e terreno proprio. */
   zones?: ZoneData[];
-  /** Acqua (rallenta chi ci cammina). */
-  water?: Rect[];
+  /** Acqua (rallenta chi ci cammina; il fiume trascina). */
+  water?: WaterRect[];
+  /** Ponti di legno sopra l'acqua: lì si cammina all'asciutto. */
+  bridges?: Rect[];
+  /** Isolotti d'erba in mezzo all'acqua: lì si cammina all'asciutto. */
+  islands?: Rect[];
   /** Cespugli dove nascondersi: ogni gruppo è fatto di più ciuffi vicini. */
   bushes?: { kind: 'papiro' | 'tenda'; spots: { x: number; y: number }[] }[];
   /** Cammelli che camminano piano avanti e indietro tra due punti. */

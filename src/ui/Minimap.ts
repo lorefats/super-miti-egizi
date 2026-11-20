@@ -22,6 +22,8 @@ export class Minimap {
     bg.fillStyle(PALETTE.sabbia, 1).fillRect(ox, oy, map.width * k, map.height * k);
     for (const z of map.zones ?? []) bg.fillStyle(z.color, 1).fillRect(ox + z.x * k, oy + z.y * k, z.w * k, z.h * k);
     for (const w of map.water ?? []) bg.fillStyle(PALETTE.acquaNilo, 1).fillRect(ox + w.x * k, oy + w.y * k, w.w * k, w.h * k);
+    for (const i of map.islands ?? []) bg.fillStyle(0x6fa84a, 1).fillRoundedRect(ox + i.x * k, oy + i.y * k, i.w * k, i.h * k, 2);
+    for (const b of map.bridges ?? []) bg.fillStyle(0x9c6b3a, 1).fillRect(ox + b.x * k, oy + b.y * k, Math.max(2, b.w * k), b.h * k);
     for (const p of map.bigPyramids ?? []) {
       bg.fillStyle(0xb88a4e, 1).fillTriangle(ox + (p.x - 450) * k, oy + p.y * k, ox + (p.x + 450) * k, oy + p.y * k, ox + p.x * k, oy + (p.y - 500) * k);
     }

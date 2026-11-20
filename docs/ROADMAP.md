@@ -75,7 +75,7 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
 
 ## Fase 4½ — Calcio e Nilo (idee del cugino)
 
-- [ ] **Mappa "Il Grande Nilo"**
+- [x] **Mappa "Il Grande Nilo"**
   > Costruisci la seconda mappa per Solo descritta in GAME_DESIGN.md (sezione 3, "Il Grande Nilo"): il Nilo
   > scorre in mezzo e la corrente trascina chi ci entra, ponti, feluche, isolotti di papiro. Ogni partita
   > sceglie a caso tra le due mappe. Minimappa e bot devono funzionare anche qui.

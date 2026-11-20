@@ -63,6 +63,7 @@ import {
   torchGlowSvg,
 } from './bigPyramid';
 import * as V from './valley';
+import * as N from './nile';
 import * as L from './lobby';
 import { logoCaseSvg, logoLidSvg, logoWinkSvg, logoRaysSvg } from './logo';
 import { prizeCaseSvg, prizeLidSvg, lightBeamSvg } from './sarcophagi';
@@ -144,6 +145,11 @@ export const TEX = {
   terrenoErba: 'terreno-erba',
   terrenoOasi: 'terreno-oasi',
   acqua: 'acqua',
+  // oggetti del Grande Nilo
+  casa0: 'casa-0',
+  casa1: 'casa-1',
+  casa2: 'casa-2',
+  ponte: 'ponte',
   // oggetti della Valle dei Due Egitti
   sfinge: 'sfinge',
   colonna: 'colonna',
@@ -222,6 +228,9 @@ export const TEX = {
 const suffix = (v: ColorVariant) => (v === 'base' ? '' : `-${v}`);
 
 /** Chiave della texture di un personaggio (es. "personaggio-anubi" o "personaggio-anubi-rosso"). */
+/** Larghezza del disegno del ponte: i ponti più larghi o stretti lo allargano. */
+export const BRIDGE_TILE_WIDTH = 200;
+
 export function characterTexture(characterId: string, variant: ColorVariant = 'base'): string {
   return `personaggio-${characterId}${suffix(variant)}`;
 }
@@ -396,6 +405,10 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.terrenoErba, ...V.grassGroundSvg() },
     { key: TEX.terrenoOasi, ...V.oasisGroundSvg() },
     { key: TEX.acqua, ...V.waterSvg() },
+    { key: TEX.casa0, ...N.houseSvg(0) },
+    { key: TEX.casa1, ...N.houseSvg(1) },
+    { key: TEX.casa2, ...N.houseSvg(2) },
+    { key: TEX.ponte, ...N.bridgeSvg(BRIDGE_TILE_WIDTH) },
     { key: TEX.sfinge, ...V.sphinxSvg() },
     { key: TEX.colonna, ...V.columnSvg() },
     { key: TEX.obelisco, ...V.obeliskSvg() },

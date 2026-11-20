@@ -1,9 +1,10 @@
 import Phaser from 'phaser';
-import { TEX } from '../art';
+import { BRIDGE_TILE_WIDTH, TEX } from '../art';
 import { COLOR_VARIANTS } from '../art/palette';
 import { AIM_STICK, AUTO_AIM_RANGE_FACTOR, CAMERA_LERP, DEPTH, JOYSTICK } from '../config';
-import type { GroundKind, MapData, ZoneData } from '../data/maps';
+import type { GroundKind, MapData, Rect, WaterRect, ZoneData } from '../data/maps';
 import { MAPPA_VALLE } from '../data/valle';
+import { MAPPA_NILO } from '../data/nilo';
 import { BOT_LEVELS, BOT_NAMES, DUO_SETUP, SOLO_SETUP } from '../data/bots';
 import { BOT_LEVEL_BY_TROPHIES, trophiesForPlace, type GameMode } from '../data/progression';
 import { SaveManager } from '../save/SaveManager';
@@ -53,7 +54,7 @@ export class MatchScene extends Phaser.Scene {
   private pyramids: BigPyramid[] = [];
   private bushes: BushPatch[] = [];
   private tallThings: (PlacedObstacle & { bounds: Phaser.Geom.Rectangle })[] = [];
-  private waterTiles: Phaser.GameObjects.TileSprite[] = [];
+  private waterTiles: { tile: Phaser.GameObjects.TileSprite; flow: { x: number; y: number } }[] = [];
   private map!: MapData;
   private minimap!: Minimap;
   private currentZone: ZoneData | null = null;
@@ -80,7 +81,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   create(): void {
-    const map: MapData = MAPPA_VALLE;
+    const map = this.chooseMap();
     this.map = map;
     this.combat = new Combat();
     this.currentZone = null;
@@ -101,8 +102,27 @@ export class MatchScene extends Phaser.Scene {
       const edge = this.add.graphics().setDepth(DEPTH.ground + 3);
       edge.lineStyle(10, 0xe9d3a0, 0.9).strokeRoundedRect(w.x, w.y, w.w, w.h, 30);
       edge.lineStyle(3, 0x14213d, 0.5).strokeRoundedRect(w.x, w.y, w.w, w.h, 30);
-      return this.add.tileSprite(w.x, w.y, w.w, w.h, TEX.acqua).setOrigin(0).setDepth(DEPTH.ground + 2);
+      const tile = this.add.tileSprite(w.x, w.y, w.w, w.h, TEX.acqua).setOrigin(0).setDepth(DEPTH.ground + 2);
+      // l'acqua ferma ondeggia piano; quella del fiume scorre con la corrente
+      return { tile, flow: w.flow ? { x: w.flow.x * 0.8, y: w.flow.y * 0.8 } : { x: 22, y: 6 } };
     });
+    // isolotti d'erba con la riva di sabbia
+    for (const i of map.islands ?? []) {
+      const edge = this.add.graphics().setDepth(DEPTH.ground + 4);
+      edge.fillStyle(0xe9d3a0, 1).fillRoundedRect(i.x - 10, i.y - 10, i.w + 20, i.h + 20, 50);
+      edge.lineStyle(3, 0x14213d, 0.4).strokeRoundedRect(i.x - 10, i.y - 10, i.w + 20, i.h + 20, 50);
+      const grass = this.add.tileSprite(i.x, i.y, i.w, i.h, TEX.terrenoErba).setOrigin(0).setDepth(DEPTH.ground + 5);
+      const shape = this.make.graphics({}, false).fillRoundedRect(i.x, i.y, i.w, i.h, 42);
+      grass.setMask(shape.createGeometryMask());
+    }
+    // ponti di legno sopra l'acqua
+    for (const b of map.bridges ?? []) {
+      this.add
+        .tileSprite(b.x, b.y, BRIDGE_TILE_WIDTH, b.h, TEX.ponte)
+        .setOrigin(0)
+        .setScale(b.w / BRIDGE_TILE_WIDTH, 1)
+        .setDepth(DEPTH.ground + 6);
+    }
 
     const walls = this.physics.add.staticGroup();
     this.combat.walls = walls;
@@ -284,6 +304,12 @@ export class MatchScene extends Phaser.Scene {
     this.hud = new MatchHud(this);
     this.updateRemaining();
     this.minimap = new Minimap(this, map);
+    // all'inizio il nome della mappa, poi quello delle zone
+    this.zoneCheck = 0;
+    if (map.name) {
+      this.hud.showZone(map.name);
+      this.zoneCheck = 2.6;
+    }
     addFpsMeter(this);
 
     this.input.mouse?.disableContextMenu();
@@ -326,6 +352,23 @@ export class MatchScene extends Phaser.Scene {
   }
 
   /** Più coppe hai, più i bot sono bravi (principiante → esperto → campione). */
+  /** Una mappa a caso tra le due ("?mappa=nilo" o "?mappa=valle" nell'indirizzo la sceglie, per le prove). */
+  private chooseMap(): MapData {
+    const maps: Record<string, MapData> = { valle: MAPPA_VALLE, nilo: MAPPA_NILO };
+    const forced = new URLSearchParams(location.search).get('mappa');
+    if (forced && maps[forced]) return maps[forced];
+    return Phaser.Utils.Array.GetRandom(Object.values(maps));
+  }
+
+  /** L'acqua in questo punto (null se è asciutto: terra, ponte o isolotto). */
+  private waterAt(x: number, y: number): WaterRect | null {
+    const inside = (r: Rect) => x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h;
+    const water = (this.map.water ?? []).find(inside);
+    if (!water) return null;
+    if ((this.map.bridges ?? []).some(inside) || (this.map.islands ?? []).some(inside)) return null;
+    return water;
+  }
+
   /** Sceglie a caso gli dèi dei bot: tutti diversi tra loro e dal tuo (se non bastano, si ripetono). */
   private pickBotGods(count: number, mine: string): string[] {
     const all = Object.keys(CHARACTERS);
@@ -468,10 +511,11 @@ export class MatchScene extends Phaser.Scene {
       const place = this.pyramids.find((p) => p.contains(f.x, f.y)) ?? this.bushes.find((b) => b.contains(f.x, f.y)) ?? null;
       // chi ha appena attaccato da un cespuglio si vede per un attimo
       f.hideout = f.isInvisible() ? Player.INVISIBLE : place instanceof BushPatch && f.revealedUntil > now ? null : place;
-      // terreno: nell'acqua si va più piano
-      f.terrainSpeed = (this.map.water ?? []).some((w) => f.x > w.x && f.x < w.x + w.w && f.y > w.y && f.y < w.y + w.h)
-        ? WATER.speedFactor
-        : 1;
+      // terreno: nell'acqua si va più piano e il fiume trascina (sui ponti e sugli isolotti si è all'asciutto)
+      const water = this.waterAt(f.x, f.y);
+      f.terrainSpeed = water ? WATER.speedFactor : 1;
+      if (water?.flow && !f.isUnderground()) f.terrainFlow.set(water.flow.x, water.flow.y);
+      else f.terrainFlow.set(0, 0);
     }
     const me = this.player;
     const myPlace = this.bushes.find((b) => b.contains(me.x, me.y)) ?? null;
@@ -515,8 +559,8 @@ export class MatchScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     const dt = delta / 1000;
     for (const w of this.waterTiles) {
-      w.tilePositionX += dt * 22;
-      w.tilePositionY += dt * 6;
+      w.tile.tilePositionX -= dt * w.flow.x;
+      w.tile.tilePositionY -= dt * w.flow.y;
     }
     this.updateZone(dt);
     this.culler.update(this.cameras.main);

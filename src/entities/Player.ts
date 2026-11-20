@@ -86,6 +86,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   hideout: object | null = null;
   /** Velocità in più o in meno per il terreno (acqua = più lento). La aggiorna la partita. */
   terrainSpeed = 1;
+  /** Corrente del fiume che trascina chi nuota (pixel al secondo). */
+  readonly terrainFlow = new Phaser.Math.Vector2();
   /** Fino a quando (tempo di gioco, ms) resta visibile anche dentro un cespuglio, perché ha attaccato. */
   revealedUntil = 0;
   /** Visibile al giocatore? (false = nascosto dentro una piramide) */
@@ -813,7 +815,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     if (Math.abs(vx - this.targetVel.x) < 8) vx = this.targetVel.x; // niente scivolate lente alla fine
     if (Math.abs(vy - this.targetVel.y) < 8) vy = this.targetVel.y;
     this.walkVel.set(vx, vy);
-    this.body.setVelocity(vx + pushX, vy + pushY);
+    this.body.setVelocity(vx + pushX + this.terrainFlow.x, vy + pushY + this.terrainFlow.y);
 
     // rigenerazione lenta se lontano dai combattimenti
     this.sinceCombat += dt;

@@ -52,6 +52,9 @@ const OBSTACLE_TYPES = {
   torre: { texture: TEX.torre, footW: 120, footH: 60, bottomPad: 10, tall: true },
   palma: { texture: TEX.palma, footW: 30, footH: 22, bottomPad: 8, tall: true },
   pozzo: { texture: TEX.pozzo, footW: 100, footH: 46, bottomPad: 8 },
+  casa0: { texture: TEX.casa0, footW: 200, footH: 70, bottomPad: 10, tall: true },
+  casa1: { texture: TEX.casa1, footW: 200, footH: 70, bottomPad: 10, tall: true },
+  casa2: { texture: TEX.casa2, footW: 200, footH: 70, bottomPad: 10, tall: true },
   duna: { texture: TEX.duna, footW: 0, footH: 0, bottomPad: 0, flat: true },
 } satisfies Record<string, ObstacleType>;
 
