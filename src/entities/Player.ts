@@ -724,6 +724,44 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.emit(DEFEATED_EVENT, this);
   }
 
+  /**
+   * Riappare in (x, y) con tutta la vita, dopo essere stato sconfitto (Calcio del Nilo).
+   * Poteri, rallentamenti e gioielli si perdono; la super carica resta.
+   */
+  respawn(x: number, y: number): void {
+    if (this.isAlive()) return;
+    this.health = this.maxHealth;
+    this.ammo = this.stats.weapon.maxAmmo;
+    this.attackTime = -1;
+    this.attackCooldown = 0;
+    this.stunTime = 0;
+    this.slipTime = 0;
+    this.undergroundTime = 0;
+    this.dashing = false;
+    this.reviving = false;
+    this.gems = 0;
+    this.buffs.clear();
+    this.speedMods.clear();
+    this.rateMods.clear();
+    this.nextHitFactor = 1;
+    this.walkVel.set(0, 0);
+    this.targetVel.set(0, 0);
+    this.impulse.set(0, 0);
+    this.flow.set(0, 0);
+    for (const img of this.bodyParts() as Phaser.GameObjects.Image[]) img.clearTint().setAlpha(1).setScale(1);
+    this.shadow.setVisible(true).setScale(1);
+    this.setVisible(true).setAlpha(1);
+    this.revealed = true;
+    this.body.enable = true;
+    this.body.reset(x, y);
+    this.setPosition(x, y);
+    this.bar.setVisible(true);
+    this.bar.setPosition(x, y - BAR_OFFSET_Y);
+    this.combat.add(this);
+    dustPuff(this.scene, x, y, 0, y - 1);
+    dustPuff(this.scene, x, y, Math.PI, y - 1);
+  }
+
   /** Mostra o nasconde il personaggio e la sua barra (chi è dentro una piramide non si vede da fuori). */
   setRevealed(on: boolean): void {
     if (!this.isAlive() || on === this.revealed) return;

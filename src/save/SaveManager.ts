@@ -5,6 +5,7 @@
  */
 
 import { ROSTER, isPlayable } from '../data/characters';
+import { SOCCER } from '../data/soccer';
 import {
   MAX_LEVEL,
   PRESTIGE_TROPHIES,
@@ -129,7 +130,7 @@ function migrate(raw: unknown): SaveData {
     const tiers = new Set<string>(SARCOPHAGI.map((s) => s.tier));
     data.sarcophagusQueue = r.sarcophagusQueue.filter((t): t is SarcophagusTier => tiers.has(t));
   }
-  if (r.mode === 'duo') data.mode = 'duo';
+  if (r.mode === 'duo' || r.mode === 'calcio') data.mode = r.mode;
   const sel = r.selectedCharacter;
   if (typeof sel === 'string' && data.unlocked.includes(sel) && isPlayable(sel)) data.selectedCharacter = sel;
   return data;
@@ -189,7 +190,14 @@ class SaveManagerImpl {
 
   /** Modalità scelta nella Lobby. */
   getMode(): GameMode {
+    // il Calcio si gioca solo con abbastanza coppe
+    if (this.data.mode === 'calcio' && !this.isSoccerUnlocked()) return 'solo';
     return this.data.mode;
+  }
+
+  /** Il Calcio del Nilo è sbloccato (abbastanza coppe totali)? */
+  isSoccerUnlocked(): boolean {
+    return this.getTotalTrophies() >= SOCCER.unlockTrophies;
   }
 
   setMode(mode: GameMode): void {

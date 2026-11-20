@@ -18,6 +18,10 @@ Sotto, la scritta **SUPER MITI EGIZI** in lettere spesse color oro con contorno 
   Il campo è diviso dal **Nilo che scorre** in mezzo: l'acqua trascina piano chi ci entra (e la palla),
   si attraversa sui ponti. Chi viene sconfitto riappare dopo qualche secondo nella sua metà campo.
   Prima di 220 coppe il pulsante della modalità ha il lucchetto.
+  Chi tocca la palla la porta davanti ai piedi (e va un po' più piano); con il colpo la calcia (tocco veloce:
+  tiro in porta da vicino, passaggio al compagno da lontano). Chi viene colpito perde la palla.
+  Partita di 2 minuti e mezzo. Coppe: vinta +8, pareggio +2, persa −2 (numeri in `src/data/soccer.ts`
+  e `src/data/progression.ts`).
 
 Durata partita: 2-4 minuti. Bot con 3 livelli di bravura che crescono con le coppe del giocatore.
 

@@ -7,6 +7,7 @@ import { getCharacter } from '../data/characters';
 import { makePressable } from '../ui/MenuKit';
 import { LOBBY_POSE_EVERY, timeOfDayAt } from '../data/lobby';
 import { SARCOPHAGI, type GameMode, type SarcophagusTier } from '../data/progression';
+import { SOCCER } from '../data/soccer';
 import { SaveManager } from '../save/SaveManager';
 import { createCharacterPose, type CharacterPose } from '../ui/CharacterPose';
 import { fullscreenOnFirstTap } from '../ui/fullscreen';
@@ -339,7 +340,7 @@ export class LobbyScene extends Phaser.Scene {
     this.makeButton(road, 130, 150, () => this.goTo('TrophyRoad'));
   }
 
-  /** A destra: scelta Solo/Duo e il grande pulsante GIOCA a forma di cartiglio. */
+  /** A destra: scelta Solo/Duo/Calcio e il grande pulsante GIOCA a forma di cartiglio. */
   private drawRightSide(W: number, H: number): void {
     const x = W - 206;
     const playY = H - BAR_H - 90;
@@ -354,23 +355,42 @@ export class LobbyScene extends Phaser.Scene {
       return { mode, c, bg, text };
     };
     const buttons = [makeMode('solo', 'Solo', -76), makeMode('duo', 'Duo', 76)];
+    // Calcio del Nilo: pulsante largo sopra, con il lucchetto finché non si hanno abbastanza coppe
+    const unlocked = SaveManager.isSoccerUnlocked();
+    const soccer = makeMode('calcio', unlocked ? 'Calcio del Nilo' : `Calcio · ${SOCCER.unlockTrophies}`, 0);
+    soccer.c.y = modeY - 66;
+    soccer.text.setFontSize(26).setX(18);
+    soccer.c.add(this.add.image(-112, -2, unlocked ? TEX.palla : TEX.lucchetto).setScale(unlocked ? 0.75 : 0.5));
+    buttons.push(soccer);
     const paint = () => {
       const current = SaveManager.getMode();
       for (const b of buttons) {
         const on = b.mode === current;
+        const w = b.mode === 'calcio' ? 292 : 140;
+        const off = b.mode === 'calcio' && !unlocked ? 0x3a4060 : 0x4a5578;
         b.bg.clear();
-        b.bg.fillStyle(on ? PALETTE.turchese : 0x4a5578, 1).fillRoundedRect(-70, -26, 140, 52, 16);
-        b.bg.lineStyle(4, on ? 0xffffff : PALETTE.bluNotte, 1).strokeRoundedRect(-70, -26, 140, 52, 16);
+        b.bg.fillStyle(on ? PALETTE.turchese : off, 1).fillRoundedRect(-w / 2, -26, w, 52, 16);
+        b.bg.lineStyle(4, on ? 0xffffff : PALETTE.bluNotte, 1).strokeRoundedRect(-w / 2, -26, w, 52, 16);
         b.text.setColor(on ? css(PALETTE.bluNotte) : '#AEB6CF');
       }
     };
     paint();
+    const toasts: Record<GameMode, string> = {
+      solo: 'Solo: tu contro 9 bot!',
+      duo: 'Duo: tu e un compagno\ncontro 4 squadre!',
+      calcio: 'Calcio del Nilo: 3 contro 3!\nVince chi segna 2 gol.',
+    };
     for (const b of buttons) {
-      this.makeButton(b.c, 140, 52, () => {
+      this.makeButton(b.c, b.mode === 'calcio' ? 292 : 140, 52, () => {
+        if (b.mode === 'calcio' && !unlocked) {
+          const missing = SOCCER.unlockTrophies - SaveManager.getTotalTrophies();
+          showToast(this, `Il Calcio del Nilo si sblocca\na ${SOCCER.unlockTrophies} coppe (ne mancano ${missing})!`);
+          return;
+        }
         SaveManager.setMode(b.mode);
         paint();
         this.tweens.add({ targets: b.c, scale: { from: 1.15, to: 1 }, duration: 200, ease: 'Back.out' });
-        showToast(this, b.mode === 'solo' ? 'Solo: tu contro 9 bot!' : 'Duo: tu e un compagno\ncontro 4 squadre!');
+        showToast(this, toasts[b.mode]);
       });
     }
 
@@ -493,6 +513,7 @@ export class LobbyScene extends Phaser.Scene {
     if (this.leaving) return;
     this.leaving = true;
     this.cameras.main.fadeOut(300, 20, 33, 61);
-    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start('Match'));
+    const scene = SaveManager.getMode() === 'calcio' ? 'Soccer' : 'Match';
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(scene));
   }
 }

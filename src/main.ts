@@ -5,6 +5,7 @@ import { PALETTE } from './art/palette';
 import { BootScene } from './scenes/BootScene';
 import { PreloadScene } from './scenes/PreloadScene';
 import { MatchScene } from './scenes/MatchScene';
+import { SoccerScene } from './scenes/SoccerScene';
 import { ResultsScene } from './scenes/ResultsScene';
 import { SarcophagusScene } from './scenes/SarcophagusScene';
 import { TitleScene } from './scenes/TitleScene';
@@ -33,7 +34,7 @@ const game = new Phaser.Game({
   },
   input: { activePointers: 3 }, // più dita insieme (joystick + mira)
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: showPhysics } },
-  scene: [BootScene, PreloadScene, TitleScene, LobbyScene, MatchScene, ResultsScene, SarcophagusScene, CharactersScene, TrophyRoadScene],
+  scene: [BootScene, PreloadScene, TitleScene, LobbyScene, MatchScene, SoccerScene, ResultsScene, SarcophagusScene, CharactersScene, TrophyRoadScene],
 });
 
 // Solo in modalità debug: rende il gioco raggiungibile dalla console del browser per le prove.

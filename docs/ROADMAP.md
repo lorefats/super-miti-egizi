@@ -80,7 +80,7 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
   > scorre in mezzo e la corrente trascina chi ci entra, ponti, feluche, isolotti di papiro. Ogni partita
   > sceglie a caso tra le due mappe. Minimappa e bot devono funzionare anche qui.
 
-- [ ] **Modalità Calcio del Nilo (si sblocca a 220 coppe)**
+- [x] **Modalità Calcio del Nilo (si sblocca a 220 coppe)**
   > Aggiungi la modalità Calcio come in GAME_DESIGN.md (sezione 2): 3 contro 3 con compagni bot, palla,
   > porte, campo diviso dal Nilo che scorre, ricomparsa dopo la sconfitta, punteggio e coppe.
   > Nella Lobby un pulsante per sceglierla, con il lucchetto finché non si hanno 220 coppe totali.

@@ -91,7 +91,7 @@ export class Combat {
   }
 
   add(d: Damageable): void {
-    this.list.push(d);
+    if (!this.list.includes(d)) this.list.push(d);
   }
 
   remove(d: Damageable): void {

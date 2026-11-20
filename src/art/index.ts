@@ -64,6 +64,8 @@ import {
 } from './bigPyramid';
 import * as V from './valley';
 import * as N from './nile';
+import * as SC from './soccer';
+import { GOAL_DEPTH, GOAL_MOUTH } from '../data/soccer';
 import * as L from './lobby';
 import { logoCaseSvg, logoLidSvg, logoWinkSvg, logoRaysSvg } from './logo';
 import { prizeCaseSvg, prizeLidSvg, lightBeamSvg } from './sarcophagi';
@@ -150,6 +152,9 @@ export const TEX = {
   casa1: 'casa-1',
   casa2: 'casa-2',
   ponte: 'ponte',
+  // Calcio del Nilo
+  palla: 'palla',
+  porta: 'porta',
   // oggetti della Valle dei Due Egitti
   sfinge: 'sfinge',
   colonna: 'colonna',
@@ -409,6 +414,8 @@ export async function createAllTextures(scene: Phaser.Scene): Promise<void> {
     { key: TEX.casa1, ...N.houseSvg(1) },
     { key: TEX.casa2, ...N.houseSvg(2) },
     { key: TEX.ponte, ...N.bridgeSvg(BRIDGE_TILE_WIDTH) },
+    { key: TEX.palla, ...SC.ballSvg() },
+    { key: TEX.porta, ...SC.goalSvg(GOAL_DEPTH, GOAL_MOUTH) },
     { key: TEX.sfinge, ...V.sphinxSvg() },
     { key: TEX.colonna, ...V.columnSvg() },
     { key: TEX.obelisco, ...V.obeliskSvg() },

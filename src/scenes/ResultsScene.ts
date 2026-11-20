@@ -8,8 +8,11 @@ import type { MatchReward } from '../save/SaveManager';
 import { createGoldButton } from '../ui/GoldButton';
 import { createCharacterPose } from '../ui/CharacterPose';
 
-/** `playerCount` = giocatori (Solo) o squadre (Duo). */
-export type ResultsData = MatchReward & { playerCount: number; mode?: GameMode };
+/** `playerCount` = giocatori (Solo) o squadre (Duo). `score` = gol (tuoi, loro) nel Calcio. */
+export type ResultsData = MatchReward & { playerCount: number; mode?: GameMode; score?: [number, number] };
+
+/** Nel Calcio il "posto" è il risultato: 1 = vinta, 2 = pareggio, 3 = persa. */
+const CALCIO_RESULTS = ['Vinta', 'Pari', 'Persa'];
 
 /** Al massimo quante coppette volano verso il contatore (con +10 ne volano 10). */
 const MAX_FLYING = 10;
@@ -39,7 +42,7 @@ export class ResultsScene extends Phaser.Scene {
 
     // ---- titolo: posizione ----
     const title = this.add
-      .text(W / 2, 78, victory ? 'VITTORIA!' : `${d.place}° posto`, {
+      .text(W / 2, 78, victory ? 'VITTORIA!' : d.mode === 'calcio' ? (d.place === 2 ? 'PAREGGIO' : 'SCONFITTA') : `${d.place}° posto`, {
         fontFamily: FONT_FAMILY,
         fontSize: victory ? '96px' : '84px',
         color: victory ? css(PALETTE.oro) : '#FFFFFF',
@@ -144,7 +147,7 @@ export class ResultsScene extends Phaser.Scene {
     };
     // i sarcofagi vinti restano salvati: si aprono la prossima volta che si passa dalla Lobby
     const lobbyBtn = createGoldButton(this, px - 128, btnY, 'Lobby', () => leave('Lobby', { newSarcophagi: d.sarcophagiWon }), 236, 84, 36);
-    const againBtn = createGoldButton(this, px + 128, btnY, 'Gioca ancora', () => leave('Match', {}), 236, 84, 32);
+    const againBtn = createGoldButton(this, px + 128, btnY, 'Gioca ancora', () => leave(d.mode === 'calcio' ? 'Soccer' : 'Match', {}), 236, 84, 32);
     const buttons = [lobbyBtn, againBtn];
     for (const b of buttons) b.setAlpha(0).disableInteractive();
     let prestigeShown = false;
@@ -278,6 +281,7 @@ export class ResultsScene extends Phaser.Scene {
   /** Riga sotto il titolo: com'è andata, in Solo o in Duo. */
   private subtitle(victory: boolean): string {
     const d = this.result;
+    if (d.mode === 'calcio') return `Calcio del Nilo — Noi ${d.score?.[0] ?? 0} – ${d.score?.[1] ?? 0} Loro`;
     if (d.mode === 'duo') return victory ? 'La tua squadra è l’ultima rimasta!' : `su ${d.playerCount} squadre`;
     return victory ? 'Sei l’ultimo rimasto!' : `su ${d.playerCount} giocatori`;
   }
@@ -285,7 +289,8 @@ export class ResultsScene extends Phaser.Scene {
   private drawPlaceTable(cx: number, y: number, place: number): void {
     const table = trophyTable(this.result.mode ?? 'solo');
     const n = table.length;
-    const cellW = n <= 5 ? 74 : 44;
+    const calcio = this.result.mode === 'calcio';
+    const cellW = calcio ? 110 : n <= 5 ? 74 : 44;
     const gap = 3;
     const startX = cx - ((cellW + gap) * n - gap) / 2 + cellW / 2;
     const g = this.add.graphics();
@@ -295,7 +300,7 @@ export class ResultsScene extends Phaser.Scene {
       g.fillStyle(mine ? PALETTE.oro : 0x24345e, 1).fillRoundedRect(x - cellW / 2, y - 30, cellW, 60, 8);
       if (mine) g.lineStyle(3, 0xffffff, 1).strokeRoundedRect(x - cellW / 2, y - 30, cellW, 60, 8);
       const color = mine ? css(PALETTE.bluNotte) : '#B9C4E8';
-      this.add.text(x, y - 13, `${i + 1}°`, { fontFamily: FONT_FAMILY, fontSize: '18px', color }).setOrigin(0.5);
+      this.add.text(x, y - 13, calcio ? CALCIO_RESULTS[i] : `${i + 1}°`, { fontFamily: FONT_FAMILY, fontSize: '18px', color }).setOrigin(0.5);
       this.add
         .text(x, y + 12, t > 0 ? `+${t}` : t < 0 ? `−${-t}` : '0', { fontFamily: FONT_FAMILY, fontSize: '20px', color })
         .setOrigin(0.5);

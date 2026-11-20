@@ -52,7 +52,12 @@ export class MatchHud {
 
   /** `label` = cosa si conta ("Rimasti" in Solo, "Squadre" in Duo). */
   setRemaining(n: number, label = 'Rimasti'): void {
-    this.text.setText(`${label}: ${n}`);
+    this.setTitle(`${label}: ${n}`);
+  }
+
+  /** Scritta grande in alto (es. il punteggio nel Calcio). */
+  setTitle(text: string): void {
+    this.text.setText(text);
     this.layout();
     this.scene.tweens.add({ targets: this.text, scale: { from: 1.3, to: 1 }, duration: 250, ease: 'Back.out' });
   }

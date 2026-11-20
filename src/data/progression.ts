@@ -3,18 +3,21 @@
 /** Coppe guadagnate in una partita Solo, dal 1° al 10° posto. */
 export const TROPHIES_SOLO = [10, 8, 6, 4, 2, 0, -1, -2, -3, -4];
 
-/** Coppe per un posto in classifica (1 = vittoria). Oltre il 10° vale come il 10°. */
 /** Coppe per la posizione della squadra in Duo (5 squadre da 2). */
 export const TROPHIES_DUO = [10, 6, 2, -2, -4];
 
-/** Modalità di gioco: Solo (tutti contro tutti) o Duo (squadre da 2, con un compagno bot). */
-export type GameMode = 'solo' | 'duo';
+/** Coppe nel Calcio del Nilo: partita vinta, pareggiata, persa ("posto" 1, 2, 3). */
+export const TROPHIES_CALCIO = [8, 2, -2];
+
+/** Modalità di gioco: Solo (tutti contro tutti), Duo (squadre da 2, con un compagno bot), Calcio del Nilo (3 contro 3). */
+export type GameMode = 'solo' | 'duo' | 'calcio';
 
 /** Tabella delle coppe della modalità. */
 export function trophyTable(mode: GameMode): number[] {
-  return mode === 'duo' ? TROPHIES_DUO : TROPHIES_SOLO;
+  return mode === 'duo' ? TROPHIES_DUO : mode === 'calcio' ? TROPHIES_CALCIO : TROPHIES_SOLO;
 }
 
+/** Coppe per un posto in classifica (1 = vittoria). Oltre l'ultimo posto vale come l'ultimo. */
 export function trophiesForPlace(place: number, mode: GameMode = 'solo'): number {
   const table = trophyTable(mode);
   const i = clamp(place - 1, 0, table.length - 1);
