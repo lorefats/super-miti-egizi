@@ -343,7 +343,7 @@ export class LobbyScene extends Phaser.Scene {
     this.makeButton(road, 130, 150, () => this.goTo('TrophyRoad'));
   }
 
-  /** A destra: scelta Solo/Duo/Calcio e il grande pulsante GIOCA a forma di cartiglio. */
+  /** A destra: scelta Solo/Duo/Calcio/Allenamento e il grande pulsante GIOCA a forma di cartiglio. */
   private drawRightSide(W: number, H: number): void {
     const x = W - 206;
     const playY = H - BAR_H - 90;
@@ -365,11 +365,18 @@ export class LobbyScene extends Phaser.Scene {
     soccer.text.setFontSize(26).setX(18);
     soccer.c.add(this.add.image(-112, -2, unlocked ? TEX.palla : TEX.lucchetto).setScale(unlocked ? 0.75 : 0.5));
     buttons.push(soccer);
+    // Allenamento: pulsante largo ancora sopra, sempre disponibile
+    const training = makeMode('allenamento', 'Allenamento', 0);
+    training.c.y = modeY - 132;
+    training.text.setFontSize(26).setX(18);
+    training.c.add(this.add.image(-112, 0, TEX.bersaglio).setScale(0.34));
+    buttons.push(training);
+    const wide = (m: GameMode) => m === 'calcio' || m === 'allenamento';
     const paint = () => {
       const current = SaveManager.getMode();
       for (const b of buttons) {
         const on = b.mode === current;
-        const w = b.mode === 'calcio' ? 292 : 140;
+        const w = wide(b.mode) ? 292 : 140;
         const off = b.mode === 'calcio' && !unlocked ? 0x3a4060 : 0x4a5578;
         b.bg.clear();
         b.bg.fillStyle(on ? PALETTE.turchese : off, 1).fillRoundedRect(-w / 2, -26, w, 52, 16);
@@ -382,9 +389,10 @@ export class LobbyScene extends Phaser.Scene {
       solo: 'Solo: tu contro 9 bot!',
       duo: 'Duo: tu e un compagno\ncontro 4 squadre!',
       calcio: 'Calcio del Nilo: 3 contro 3!\nVince chi segna 2 gol.',
+      allenamento: 'Allenamento: prova i tuoi dèi\nsui bersagli (niente coppe)',
     };
     for (const b of buttons) {
-      this.makeButton(b.c, b.mode === 'calcio' ? 292 : 140, 52, () => {
+      this.makeButton(b.c, wide(b.mode) ? 292 : 140, 52, () => {
         if (b.mode === 'calcio' && !unlocked) {
           const missing = SOCCER.unlockTrophies - SaveManager.getTotalTrophies();
           showToast(this, `Il Calcio del Nilo si sblocca\na ${SOCCER.unlockTrophies} coppe (ne mancano ${missing})!`);
@@ -516,7 +524,8 @@ export class LobbyScene extends Phaser.Scene {
     if (this.leaving) return;
     this.leaving = true;
     this.cameras.main.fadeOut(300, 20, 33, 61);
-    const scene = SaveManager.getMode() === 'calcio' ? 'Soccer' : 'Match';
+    const scenes: Record<GameMode, string> = { solo: 'Match', duo: 'Match', calcio: 'Soccer', allenamento: 'Training' };
+    const scene = scenes[SaveManager.getMode()];
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(scene));
   }
 }

@@ -9,8 +9,11 @@ export const TROPHIES_DUO = [10, 6, 2, -2, -4];
 /** Coppe nel Calcio del Nilo: partita vinta, pareggiata, persa ("posto" 1, 2, 3). */
 export const TROPHIES_CALCIO = [8, 2, -2];
 
-/** Modalità di gioco: Solo (tutti contro tutti), Duo (squadre da 2, con un compagno bot), Calcio del Nilo (3 contro 3). */
-export type GameMode = 'solo' | 'duo' | 'calcio';
+/**
+ * Modalità di gioco: Solo (tutti contro tutti), Duo (squadre da 2, con un compagno bot), Calcio del Nilo (3 contro 3),
+ * Allenamento (bersagli fermi, niente coppe).
+ */
+export type GameMode = 'solo' | 'duo' | 'calcio' | 'allenamento';
 
 /** Tabella delle coppe della modalità. */
 export function trophyTable(mode: GameMode): number[] {

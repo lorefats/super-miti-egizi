@@ -30,8 +30,8 @@ export class PreloadScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     await createAllTextures(this);
-    // "?partita" (o "?calcio") nell'indirizzo salta logo e Lobby (comodo per provare)
+    // "?partita" (o "?calcio", "?allenamento") nell'indirizzo salta logo e Lobby (comodo per provare)
     const q = new URLSearchParams(location.search);
-    this.scene.start(q.has('calcio') ? 'Soccer' : q.has('partita') ? 'Match' : 'Title');
+    this.scene.start(q.has('calcio') ? 'Soccer' : q.has('allenamento') ? 'Training' : q.has('partita') ? 'Match' : 'Title');
   }
 }

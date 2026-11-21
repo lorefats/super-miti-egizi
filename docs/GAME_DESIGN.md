@@ -12,7 +12,10 @@ Sotto, la scritta **SUPER MITI EGIZI** in lettere spesse color oro con contorno 
 - **Solo:** 10 giocatori (tu + 9 bot). Vince l'ultimo rimasto.
 - **Duo:** 5 squadre da 2. Il tuo compagno è un bot. Vince l'ultima squadra rimasta.
   (Serve per la super di Anubi sui compagni, di Iside, Hathor, ecc.)
-- **Allenamento:** mappa piccola con bersagli fermi, per provare i personaggi.
+- **Allenamento:** mappa piccola con bersagli fermi, per provare i personaggi ("Cortile del Tempio": colonne,
+  un muretto con un bersaglio dietro, papiro per nascondersi, un laghetto). Niente bot, niente tempesta, niente coppe.
+  I bersagli distrutti tornano su dopo 3 secondi. Pulsanti "Cambia dio" (passa al prossimo dio sbloccato) e
+  "Super carica" (riempie subito la super per provarla). Si sceglie nella Lobby, sopra il Calcio.
 - **Calcio del Nilo** (si sblocca a **220 coppe totali**): 3 contro 3 (tu + 2 compagni bot contro 3 bot).
   Una palla da portare o calciare nella porta avversaria; vince chi segna 2 gol (o di più allo scadere).
   Il campo è diviso dal **Nilo che scorre** in mezzo: l'acqua trascina piano chi ci entra (e la palla),

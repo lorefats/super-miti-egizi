@@ -50,7 +50,7 @@ export interface SaveData {
   pendingSarcophagi: number;
   /** personaggio scelto nella Lobby */
   selectedCharacter: string;
-  /** modalità scelta nella Lobby (Solo o Duo) */
+  /** modalità scelta nella Lobby (Solo, Duo, Calcio o Allenamento) */
   mode: GameMode;
   /** personaggi sbloccati (Anubi c'è sempre) */
   unlocked: string[];
@@ -145,7 +145,7 @@ function migrate(raw: unknown): SaveData {
       if (typeof r.settings[k] === 'boolean') data.settings[k] = r.settings[k];
     }
   }
-  if (r.mode === 'duo' || r.mode === 'calcio') data.mode = r.mode;
+  if (r.mode === 'duo' || r.mode === 'calcio' || r.mode === 'allenamento') data.mode = r.mode;
   const sel = r.selectedCharacter;
   if (typeof sel === 'string' && data.unlocked.includes(sel) && isPlayable(sel)) data.selectedCharacter = sel;
   return data;
