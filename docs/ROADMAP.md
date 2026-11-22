@@ -102,7 +102,7 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
 - [x] Modalità Allenamento
 - [ ] Bilanciamento: far giocare il cugino e annotare chi è troppo forte o troppo debole
 - [x] PWA: icona, schermata di avvio, funziona offline, "Aggiungi a Home"
-- [ ] Pubblicazione gratuita (GitHub Pages o Netlify)
+- [x] Pubblicazione gratuita (GitHub Pages o Netlify) — online su https://lorefats.github.io/super-miti-egizi/
 
 ## Fase 6 — Un giorno, forse
 - [ ] Multiplayer con gli amici
