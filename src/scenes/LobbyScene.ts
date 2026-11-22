@@ -423,7 +423,7 @@ export class LobbyScene extends Phaser.Scene {
     this.makeButton(play, 360, 140, () => this.startMatch());
   }
 
-  /** In basso: Personaggi, Sarcofagi, Coppe, Club, Impostazioni. */
+  /** In basso: Personaggi, Sarcofagi, Coppe, Amici, Impostazioni. */
   private drawBottomBar(W: number, H: number): void {
     const g = this.add.graphics();
     g.fillStyle(PALETTE.bluNotte, 0.9).fillRect(0, H - BAR_H, W, BAR_H);
@@ -432,7 +432,7 @@ export class LobbyScene extends Phaser.Scene {
       [TEX.iconaPersonaggi, 'Personaggi', () => this.goTo('Characters')],
       [TEX.iconaSarcofagi, 'Sarcofagi', () => this.openSarcophagus()],
       [TEX.iconaCoppe, 'Coppe', () => this.goTo('TrophyRoad')],
-      [TEX.iconaClub, 'Club', () => showToast(this, 'Il Club\narriva presto!')],
+      [TEX.iconaClub, 'Amici', () => this.goTo('Friends')],
       [TEX.iconaImpostazioni, 'Impostazioni', () => showSettingsPanel(this)],
     ];
     const step = Math.min(160, (W - 480) / items.length);

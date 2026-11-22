@@ -104,7 +104,32 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
 - [x] PWA: icona, schermata di avvio, funziona offline, "Aggiungi a Home"
 - [x] Pubblicazione gratuita (GitHub Pages o Netlify) — online su https://lorefats.github.io/super-miti-egizi/
 
-## Fase 6 — Un giorno, forse
-- [ ] Multiplayer con gli amici
+## Fase 6 — Multiplayer con gli amici (ognuno a casa sua)
+
+Come funziona (dettagli in GAME_DESIGN.md, sezione 13): chi crea la stanza è il **capo stanza** e riceve un
+codice di 4 cifre; gli amici lo scrivono per entrare (fino a 4 giocatori). I telefoni si parlano direttamente
+(WebRTC, libreria PeerJS, con il suo servizio gratuito per trovarsi). Ogni telefono muove il proprio dio; il
+capo stanza decide colpi, vita, bot, tempesta e palla e lo racconta agli altri. Solo amici con il codice:
+niente sconosciuti, niente chat.
+
+- [x] **M1 — Stanza e collegamento: ci si vede muovere**
+  > Pulsante "Amici" nella Lobby (al posto di "Club"). Crea stanza (codice di 4 cifre) / Entra con il codice
+  > (tastierino grande). Lista dei giocatori collegati, il capo stanza preme "Andiamo!" e tutti finiscono
+  > nel campo di Allenamento: ognuno vede gli altri dèi camminare con il loro nome. Avvisi semplici se la
+  > stanza non esiste, è piena, manca internet o qualcuno ha una versione vecchia del gioco; se qualcuno
+  > esce, gli altri lo vedono sparire.
+- [ ] **M2 — Combattere insieme**
+  > Attacchi e super si vedono su tutti i telefoni; il capo stanza decide chi viene colpito, vita,
+  > sconfitte e ricomparse. Allenamento "uno contro uno" tra amici per provarlo.
+- [ ] **M3 — Battaglia con gli amici (Solo e Duo)**
+  > Partita vera sulla mappa con amici + bot che riempiono i posti: tempesta, bauli, gioielli, bot gestiti
+  > dal capo stanza. In Duo si sceglie con chi fare squadra. Risultati e coppe sul telefono di ognuno.
+- [ ] **M4 — Calcio del Nilo con gli amici**
+  > Palla, gol, tregua e punteggio uguali per tutti; amici nella stessa squadra o contro.
+- [ ] **M5 — Rifinitura del multiplayer**
+  > Riprovare il collegamento se cade per un attimo, nomi scelti dal giocatore, prove con reti diverse
+  > (Wi-Fi e dati del telefono) ed eventuale "server di riserva" se qualche amico non riesce a collegarsi.
+
+## Fase 7 — Un giorno, forse
 - [ ] Nuove mappe e modalità
 - [ ] Prestigi oltre il primo

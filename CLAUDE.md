@@ -8,7 +8,7 @@ la tabella di marcia in `docs/ROADMAP.md`. **Leggili prima di lavorare su una pa
 Battle royale mobile con visuale dall'alto in stile 2.5D (2D con profondità finta: ordinamento per Y,
 ombre, oggetti alti che coprono chi passa dietro). Il giocatore sceglie una divinità egizia e combatte
 contro **bot controllati dal computer** su una mappa che mescola Egitto antico e moderno.
-Il gioco è **offline**: niente server, niente account, niente pagamenti. I progressi si salvano sul telefono.
+Il gioco è **offline**: niente server, niente account, niente pagamenti (solo il multiplayer con gli amici usa internet). I progressi si salvano sul telefono.
 
 Lingua dell'interfaccia: **italiano**. Il gioco è pensato per un bambino: testi semplici, niente violenza
 realistica (niente sangue: i personaggi sconfitti diventano sabbia / una nuvoletta e spariscono).
@@ -17,7 +17,9 @@ realistica (niente sangue: i personaggi sconfitti diventano sabbia / una nuvolet
 - **Phaser 3** + **TypeScript** + **Vite**
 - **vite-plugin-pwa** per renderlo installabile e giocabile offline
 - Salvataggio: `localStorage` tramite un unico modulo `src/save/SaveManager.ts` (con versione dei dati e migrazione)
-- Nessun backend, nessuna libreria di rete, nessun tracciamento, nessuna pubblicità
+- Nessun backend nostro, nessun tracciamento, nessuna pubblicità
+- **Unica eccezione di rete:** il multiplayer con gli amici usa **PeerJS** (WebRTC, tutto dentro `src/net/`).
+  Il resto del gioco deve continuare a funzionare offline, e PeerJS si carica solo quando si apre "Amici".
 - Grafica: generata dal codice (SVG → texture Phaser) finché non arrivano immagini vere in `public/assets/`.
   Ogni sprite deve passare da un unico punto (`src/art/`) così poi si sostituisce facilmente con immagini.
 

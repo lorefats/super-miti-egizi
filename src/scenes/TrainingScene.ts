@@ -3,6 +3,10 @@ import { stopMenuMusic } from '../audio/Music';
 import { CAMERA_LERP, DEPTH } from '../config';
 import { ROSTER, getCharacter, isPlayable } from '../data/characters';
 import { MAPPA_ALLENAMENTO, TRAINING } from '../data/training';
+import { NET, SEAT_VARIANTS } from '../data/net';
+import { PROBLEM_TEXT, getSession, type NetSession } from '../net/Session';
+import { RemoteMotion } from '../net/RemoteMotion';
+import type { Member, MotionTuple } from '../net/protocol';
 import { SaveManager } from '../save/SaveManager';
 import { Combat } from '../entities/Combat';
 import { Player } from '../entities/Player';
@@ -24,9 +28,27 @@ interface TargetSlot {
   wait: number;
 }
 
+/** Un amico nel multiplayer: il suo dio sulla mappa e le sue ultime posizioni arrivate. */
+interface Friend {
+  member: Member;
+  player: Player;
+  motion: RemoteMotion;
+  /** l'ultima posizione arrivata (il capo stanza la gira agli altri) */
+  last: MotionTuple | null;
+}
+
+/** Dove parte ogni posto della stanza, attorno al punto di partenza della mappa. */
+const SEAT_OFFSETS = [
+  { x: 0, y: 0 },
+  { x: 140, y: 0 },
+  { x: 0, y: 140 },
+  { x: 140, y: 140 },
+];
+
 /**
  * Allenamento (sezione 2): mappa piccola con bersagli fermi, per provare i personaggi.
  * Niente bot, niente tempesta, niente coppe. In alto a destra si cambia dio e si carica la super al volo.
+ * Con gli amici (multiplayer, passo M1): ognuno vede gli altri dèi camminare sulla stessa mappa.
  */
 export class TrainingScene extends Phaser.Scene {
   private player!: Player;
@@ -35,15 +57,25 @@ export class TrainingScene extends Phaser.Scene {
   private controls!: PlayerControls;
   private slots: TargetSlot[] = [];
   private characterId = '';
+  /** la stanza degli amici (null = Allenamento da soli) */
+  private net: NetSession | null = null;
+  private friends = new Map<number, Friend>();
+  private sendTimer = 0;
+  private unsubscribe: (() => void)[] = [];
 
   constructor() {
     super('Training');
   }
 
-  init(data: { characterId?: string }): void {
+  init(data: { characterId?: string; net?: boolean }): void {
+    const s = data?.net ? getSession() : null;
+    this.net = s && !s.closed ? s : null;
     const forced = new URLSearchParams(location.search).get('eroe');
     const wanted = data?.characterId ?? (forced && isPlayable(forced) ? forced : SaveManager.getSelectedCharacter());
     this.characterId = isPlayable(wanted) ? wanted : SaveManager.getSelectedCharacter();
+    // con gli amici si usa il dio con cui si è entrati nella stanza
+    const mine = this.net?.me();
+    if (mine && isPlayable(mine.characterId)) this.characterId = mine.characterId;
   }
 
   create(): void {
@@ -53,7 +85,8 @@ export class TrainingScene extends Phaser.Scene {
     this.view = new MapView(this, map, this.combat);
     this.cameras.main.fadeIn(250, 20, 33, 61);
 
-    this.player = new Player(this, map.spawn.x, map.spawn.y, {
+    const off = SEAT_OFFSETS[(this.net?.mySeat ?? 0) % SEAT_OFFSETS.length];
+    this.player = new Player(this, map.spawn.x + off.x, map.spawn.y + off.y, {
       characterId: this.characterId,
       level: SaveManager.getLevel(this.characterId),
       team: 0,
@@ -72,11 +105,98 @@ export class TrainingScene extends Phaser.Scene {
 
     this.controls = new PlayerControls(this, this.player);
     const hud = new MatchHud(this);
-    hud.setTitle(`Allenamento — ${getCharacter(this.characterId).name}`);
-    hud.setStorm('Colpisci i bersagli!', false);
+    if (this.net) {
+      hud.setTitle(`Allenamento con gli amici — stanza ${this.net.code}`);
+      hud.setStorm('Andate a trovarvi!', false);
+    } else {
+      hud.setTitle(`Allenamento — ${getCharacter(this.characterId).name}`);
+      hud.setStorm('Colpisci i bersagli!', false);
+    }
     if (map.name) hud.showZone(map.name);
     this.drawButtons();
     addFpsMeter(this);
+    this.friends = new Map();
+    this.unsubscribe = [];
+    this.sendTimer = 0;
+    if (this.net) this.startNet(this.net);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      for (const u of this.unsubscribe) u();
+      this.unsubscribe = [];
+    });
+  }
+
+  // ------------------------------------------------------------------ amici (multiplayer)
+
+  private startNet(s: NetSession): void {
+    for (const m of s.members) if (m.seat !== s.mySeat) this.addFriend(m);
+    this.unsubscribe.push(
+      s.events.on('msg', (msg) => {
+        if (msg.t === 'mossa') this.onMotion(msg.m);
+        else if (msg.t === 'mosse') for (const m of msg.all) this.onMotion(m);
+      }),
+      s.events.on('left', (m) => {
+        const f = this.friends.get(m.seat);
+        if (!f) return;
+        this.friends.delete(m.seat);
+        f.player.destroy();
+        showToast(this, `${m.name} è uscito`);
+      }),
+      s.events.on('closed', (why) => {
+        if (!why) return;
+        showToast(this, `${PROBLEM_TEXT[why]}\nSi torna alla Lobby.`, 2.5);
+        this.time.delayedCall(2500, () => goTo(this, 'Lobby'));
+      }),
+    );
+  }
+
+  /** Mette sulla mappa il dio di un amico. Lo muovono i messaggi che arrivano dal suo telefono. */
+  private addFriend(m: Member): void {
+    const map = MAPPA_ALLENAMENTO;
+    const off = SEAT_OFFSETS[m.seat % SEAT_OFFSETS.length];
+    const player = new Player(this, map.spawn.x + off.x, map.spawn.y + off.y, {
+      characterId: isPlayable(m.characterId) ? m.characterId : 'horus',
+      level: m.level,
+      team: 0,
+      combat: this.combat,
+      variant: SEAT_VARIANTS[m.seat % SEAT_VARIANTS.length],
+      name: m.name,
+      ally: true,
+    });
+    // per ora (passo M1) gli amici non si colpiscono: i colpi arriveranno con il passo M2
+    this.combat.remove(player);
+    this.friends.set(m.seat, { member: m, player, motion: new RemoteMotion(), last: null });
+  }
+
+  private onMotion(m: MotionTuple): void {
+    const f = this.friends.get(m[0]);
+    if (!f) return;
+    f.last = m;
+    f.motion.push(m[1], m[2], m[3], m[4]);
+  }
+
+  /** Ogni fotogramma: gli amici dove dice la rete; ogni tanto si manda la propria posizione. */
+  private updateNet(dt: number): void {
+    const s = this.net;
+    if (!s || s.closed) return;
+    const now = performance.now();
+    for (const f of this.friends.values()) {
+      const p = f.motion.sample(now);
+      if (p) f.player.driveFromNetwork(p.x, p.y, p.vx, p.vy);
+    }
+    this.sendTimer -= dt;
+    if (this.sendTimer > 0) return;
+    this.sendTimer = 1 / NET.sendRate;
+    const me = this.player;
+    const v = me.body.velocity;
+    const mine: MotionTuple = [s.mySeat, Math.round(me.x), Math.round(me.y), Math.round(v.x), Math.round(v.y)];
+    if (s.isHost) {
+      // il capo stanza manda a tutti dove sono tutti (lui compreso)
+      const all: MotionTuple[] = [mine];
+      for (const f of this.friends.values()) if (f.last) all.push(f.last);
+      s.send({ t: 'mosse', all });
+    } else {
+      s.send({ t: 'mossa', m: mine });
+    }
   }
 
   /** Mette un bersaglio nuovo nel suo posto (con il "pop" quando torna su). */
@@ -91,11 +211,17 @@ export class TrainingScene extends Phaser.Scene {
 
   /** Indietro (in alto a sinistra), Cambia dio e Super carica (in alto a destra). */
   private drawButtons(): void {
-    const back = backButton(this, () => goTo(this, 'Lobby'));
+    const back = backButton(this, () => {
+      // con gli amici: si esce dalla stanza
+      this.net?.close();
+      goTo(this, 'Lobby');
+    });
     back.setScrollFactor(0, 0, true).setDepth(DEPTH.ui + 10);
 
     const change = createGoldButton(this, 0, 50, 'Cambia dio', () => this.nextCharacter(), 220, 60, 28);
     change.setDepth(DEPTH.ui + 10);
+    // con gli amici il dio è quello scelto entrando nella stanza
+    change.setVisible(!this.net);
     const charge = createGoldButton(this, 0, 126, 'Super carica', () => this.fillSuper(), 220, 60, 28);
     charge.setDepth(DEPTH.ui + 10);
     // se lo schermo cambia misura (telefono girato, schermo intero) restano attaccati al bordo destro
@@ -148,5 +274,6 @@ export class TrainingScene extends Phaser.Scene {
       if (s.wait <= 0) this.placeTarget(s);
     }
     this.controls.update(dt);
+    this.updateNet(dt);
   }
 }

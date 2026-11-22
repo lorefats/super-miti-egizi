@@ -136,6 +136,9 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   private undergroundTime = 0;
   /** Sta saltando o si sta tuffando (lo muove la super, non il giocatore). */
   private dashing = false;
+  /** Mosso da un altro telefono (multiplayer): niente fisica, la posizione arriva dalla rete. */
+  private netDriven = false;
+  private readonly netDir = new Phaser.Math.Vector2();
   /** Stelline che girano sulla testa quando è stordito. */
   private dizzy: Phaser.GameObjects.Container | null = null;
   private weaponWindup = WEAPON_WINDUP;
@@ -445,6 +448,22 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
       if (dir.x < -0.1) this.facing = -1;
       else if (dir.x > 0.1) this.facing = 1;
     }
+  }
+
+  /**
+   * Multiplayer: mette il personaggio dove dice la rete (x, y) e lo fa camminare con la velocità (vx, vy),
+   * così le gambe si muovono e si gira dalla parte giusta. Da quel momento la fisica non lo sposta più.
+   */
+  driveFromNetwork(x: number, y: number, vx: number, vy: number): void {
+    if (!this.netDriven) {
+      this.netDriven = true;
+      this.body.moves = false;
+    }
+    this.setPosition(x, y);
+    const speed = Math.hypot(vx, vy);
+    if (speed > 30) this.netDir.set(vx / speed, vy / speed);
+    else this.netDir.set(0, 0);
+    this.move(this.netDir);
   }
 
   /** Attacca nella direzione `angle` (radianti). Restituisce false se non ci sono colpi pronti. */

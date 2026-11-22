@@ -112,8 +112,8 @@ cornice dorata attorno all'icona, effetto luminoso sul personaggio in lobby e un
 - **In alto:** coppe totali, scarabei d'oro, polvere di stelle.
 - **A destra:** grande pulsante **GIOCA** a forma di cartiglio dorato; sopra, la scelta Solo / Duo.
 - **A sinistra:** pila dei sarcofagi da aprire (con numerino), Cammino delle Coppe.
-- **In basso:** barra con Personaggi, Sarcofagi, Coppe, Club, Impostazioni (icone a geroglifico).
-  Il Club per ora è solo il pulsante ("arriva presto").
+- **In basso:** barra con Personaggi, Sarcofagi, Coppe, Amici, Impostazioni (icone a geroglifico).
+  "Amici" apre il multiplayer con gli amici (sezione 13).
 
 ## 9. Rarità dei personaggi
 Sabbia (comune) → Bronzo → Turchese → Lapislazzuli → Oro → **Sole** (leggendario).
@@ -311,3 +311,21 @@ Comportamento base, in ordine di priorità:
 - **Vibrazione** quando vieni colpito, lanci la super, la super è carica, vinci, vieni sconfitto, fai gol, apri un sarcofago
   (solo Android: il browser di iPhone non permette la vibrazione).
 - **Impostazioni** (Lobby): interruttori Suoni, Musica, Vibrazione, salvati sul telefono.
+
+## 13. Multiplayer con gli amici
+Si gioca con amici **lontani** (ognuno a casa sua), fino a **4 giocatori**, solo tramite codice: niente partite
+con sconosciuti, niente chat, niente account.
+- **Stanza:** chi la crea (il *capo stanza*) riceve un codice di **4 cifre** da dire agli amici; loro lo scrivono
+  su un tastierino grande. Si vede la lista di chi è entrato; il capo stanza preme "Andiamo!".
+- **Collegamento:** i telefoni si parlano direttamente (WebRTC) con la libreria **PeerJS**; il servizio gratuito
+  di PeerJS serve solo a farli trovare all'inizio (e, se serve, a far passare i dati quando il collegamento
+  diretto non riesce). Non si manda nessun dato personale: solo il codice stanza, il dio scelto e le posizioni.
+  Senza internet il multiplayer non c'è (il resto del gioco funziona offline come prima).
+- **Chi decide cosa:** ogni telefono muove il proprio dio e lo dice agli altri (così il movimento è sempre
+  scattante); il **capo stanza** decide colpi, vita, sconfitte, bot, tempesta, bauli e palla, e manda a tutti
+  com'è la partita circa 15 volte al secondo. Gli altri telefoni mostrano i movimenti in modo morbido
+  (interpolazione), con un piccolo ritardo che non si nota.
+- **Versione:** se un amico ha una versione vecchia del gioco, gli si dice di chiuderlo e riaprirlo per aggiornarlo.
+- **Se qualcuno esce:** sparisce per gli altri; se esce il capo stanza, la stanza si chiude e si torna alla Lobby.
+- **Progressi:** coppe e premi restano sul telefono di ognuno, come nelle partite contro i bot.
+- Numeri (giocatori, codice, invii al secondo, ritardo) in `src/data/net.ts`.

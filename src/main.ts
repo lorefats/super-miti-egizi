@@ -15,6 +15,7 @@ import { LobbyScene } from './scenes/LobbyScene';
 import { CharactersScene } from './scenes/CharactersScene';
 import { TrophyRoadScene } from './scenes/TrophyRoadScene';
 import { TrainingScene } from './scenes/TrainingScene';
+import { FriendsScene } from './scenes/FriendsScene';
 
 // "?fisica" nell'indirizzo mostra i rettangoli delle collisioni (rallenta: solo per provare).
 // "?debug" rende il gioco raggiungibile dalla console del browser per le prove automatiche.
@@ -43,7 +44,7 @@ const game = new Phaser.Game({
   },
   input: { activePointers: 3 }, // più dita insieme (joystick + mira)
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, debug: showPhysics } },
-  scene: [BootScene, PreloadScene, TitleScene, LobbyScene, MatchScene, SoccerScene, ResultsScene, SarcophagusScene, CharactersScene, TrophyRoadScene, TrainingScene],
+  scene: [BootScene, PreloadScene, TitleScene, LobbyScene, MatchScene, SoccerScene, ResultsScene, SarcophagusScene, CharactersScene, TrophyRoadScene, TrainingScene, FriendsScene],
 });
 
 // Solo in modalità debug: rende il gioco raggiungibile dalla console del browser per le prove.
