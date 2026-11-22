@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-    <meta name="theme-color" content="#E9C46A" />
+    <meta name="theme-color" content="#14213D" />
+    <link rel="icon" type="image/png" href="/icone/favicon-64.png" />
+    <link rel="apple-touch-icon" href="/icone/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Miti Egizi" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -18,10 +21,24 @@
         align-items: center; justify-content: center; flex-direction: column; gap: 16px; padding: 24px; box-sizing: border-box; }
       #ruota .icona { font-size: 64px; }
       @media (orientation: portrait) and (pointer: coarse) { #ruota { display: flex; } }
+      /* schermata di avvio: si vede subito, mentre il gioco si carica */
+      #avvio { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center;
+        justify-content: center; gap: 14px; background: radial-gradient(circle at 50% 42%, #1F3A93, #14213D);
+        color: #F2B632; font-family: 'Lilita One', sans-serif; transition: opacity 0.35s; }
+      #avvio.via { opacity: 0; pointer-events: none; }
+      #avvio img { width: min(30vh, 40vw); height: auto; animation: dondola 1.6s ease-in-out infinite; }
+      #avvio .nome { font-size: min(9vh, 9vw); text-shadow: 0 4px 0 #14213D; letter-spacing: 1px; }
+      #avvio .carica { font-size: min(4.5vh, 5vw); color: #FFFFFF; opacity: 0.85; }
+      @keyframes dondola { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(-2deg) translateY(-6px); } }
     </style>
   </head>
   <body>
     <div id="gioco"></div>
+    <div id="avvio">
+      <img src="/icone/logo-avvio.png" alt="" />
+      <div class="nome">Super Miti Egizi</div>
+      <div class="carica">Caricamento...</div>
+    </div>
     <div id="ruota"><div class="icona">⟳</div><div>Gira il telefono<br />in orizzontale!</div></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

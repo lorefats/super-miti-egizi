@@ -3,7 +3,7 @@ import { DEPTH, FONT_FAMILY } from '../config';
 import { PALETTE } from '../art/palette';
 
 /** Messaggio breve in alto che sparisce da solo (es. "Arriva presto!"). Uno alla volta. */
-export function showToast(scene: Phaser.Scene, message: string): void {
+export function showToast(scene: Phaser.Scene, message: string, seconds = 1.5): void {
   const old = scene.children.getByName('toast');
   old?.destroy();
   const { width } = scene.scale;
@@ -18,5 +18,5 @@ export function showToast(scene: Phaser.Scene, message: string): void {
   const box = scene.add.container(width / 2, 150, [bg, text]).setName('toast').setDepth(DEPTH.ui + 200).setScrollFactor(0);
   box.setScale(0.6).setAlpha(0);
   scene.tweens.add({ targets: box, scale: 1, alpha: 1, duration: 180, ease: 'Back.out' });
-  scene.tweens.add({ targets: box, alpha: 0, delay: 1500, duration: 300, onComplete: () => box.destroy() });
+  scene.tweens.add({ targets: box, alpha: 0, delay: seconds * 1000, duration: 300, onComplete: () => box.destroy() });
 }

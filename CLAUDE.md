@@ -61,3 +61,4 @@ docs/                     documentazione di design
 - `npm run dev -- --host` — avvia il gioco; dal telefono sulla stessa Wi-Fi apri l'indirizzo "Network" mostrato
 - `npm run build` — controlla gli errori e prepara la versione da pubblicare
 - `npm run preview -- --host` — prova la versione finale
+- `npm run icone` — ridisegna le icone del gioco (in `public/icone/`) partendo dal logo in `src/art/logo.ts`

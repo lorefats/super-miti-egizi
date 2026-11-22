@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { FONT_FAMILY } from '../config';
 import { PALETTE, css } from '../art/palette';
 import { createAllTextures } from '../art';
+import { hideSplash } from '../ui/splash';
 
 /** Mostra il titolo mentre disegna tutte le immagini del gioco, poi mostra il logo. */
 export class PreloadScene extends Phaser.Scene {
@@ -31,6 +32,7 @@ export class PreloadScene extends Phaser.Scene {
 
     await createAllTextures(this);
     // "?partita" (o "?calcio", "?allenamento") nell'indirizzo salta logo e Lobby (comodo per provare)
+    hideSplash();
     const q = new URLSearchParams(location.search);
     this.scene.start(q.has('calcio') ? 'Soccer' : q.has('allenamento') ? 'Training' : q.has('partita') ? 'Match' : 'Title');
   }

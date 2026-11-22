@@ -5,6 +5,9 @@ import { LOGO_SIZE, LOGO_WINK_EYE } from '../art/logo';
 import { PALETTE, css } from '../art/palette';
 import { FONT_FAMILY } from '../config';
 import { fullscreenOnFirstTap } from '../ui/fullscreen';
+import { createGoldButton } from '../ui/GoldButton';
+import { showToast } from '../ui/Toast';
+import { askInstall, canOfferInstall } from '../pwa/install';
 
 /**
  * Schermata iniziale con il logo (sezione 1): il sarcofago cade giù, socchiude il coperchio
@@ -16,6 +19,7 @@ export class TitleScene extends Phaser.Scene {
   private rays!: Phaser.GameObjects.Image;
   private sarc!: Phaser.GameObjects.Container;
   private leaving = false;
+  private installBtn: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super('Title');
@@ -95,7 +99,41 @@ export class TitleScene extends Phaser.Scene {
     // ogni tanto rifà l'occhiolino
     this.time.addEvent({ delay: 6000, startAt: 0, loop: true, callback: () => this.openAndWink() });
 
-    this.time.delayedCall(500, () => this.input.once(Phaser.Input.Events.POINTER_UP, () => this.goToLobby()));
+    // "Metti sul telefono": solo se il gioco non è già installato (su Android la richiesta può arrivare dopo un attimo)
+    this.installBtn = null;
+    this.addInstallButton();
+    this.time.delayedCall(2000, () => this.addInstallButton());
+
+    this.time.delayedCall(500, () =>
+      this.input.on(Phaser.Input.Events.POINTER_UP, (_p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+        // il tocco sul pulsante "Metti sul telefono" non fa partire il gioco
+        if (this.installBtn && over.includes(this.installBtn)) return;
+        this.goToLobby();
+      }),
+    );
+  }
+
+  /** Pulsante in alto a destra per installare il gioco sulla Home del telefono. */
+  private addInstallButton(): void {
+    if (this.installBtn || this.leaving || !canOfferInstall()) return;
+    const W = this.scale.width;
+    this.installBtn = createGoldButton(this, W - 190, 56, 'Metti sul telefono', () => void this.install(), 330, 64, 28);
+    this.installBtn.setAlpha(0);
+    this.tweens.add({ targets: this.installBtn, alpha: 1, duration: 300 });
+  }
+
+  private async install(): Promise<void> {
+    const r = await askInstall();
+    if (r === 'ios') {
+      showToast(this, 'Tocca il pulsante Condividi di Safari\n(il quadrato con la freccia)\npoi "Aggiungi alla schermata Home"', 6);
+      return;
+    }
+    if (r === 'fatto') showToast(this, 'Fatto! Trovi il gioco sulla Home', 3);
+    // su Android la richiesta si usa una volta: se il giocatore annulla, il pulsante sparisce
+    if (r !== 'no' || !canOfferInstall()) {
+      this.installBtn?.destroy();
+      this.installBtn = null;
+    }
   }
 
   /** Il coperchio si socchiude (esce la luce), occhiolino, poi si richiude con un colpo. */
