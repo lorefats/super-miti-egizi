@@ -7,10 +7,14 @@ import type { NetSession } from './Session';
 
 export interface NetFightersOptions {
   session: NetSession;
-  /** il personaggio comandato da questo telefono */
+  /** il personaggio comandato da questo telefono (il suo numero è il mio posto nella stanza) */
   me: Player;
-  /** crea sulla mappa il personaggio di un amico */
-  makeFriend(m: Member): Player;
+  /** tutti gli altri personaggi da tenere uguali: numero → personaggio (0-3 amici, da 10 in su bot) */
+  others: Map<number, Player>;
+  /** numeri degli altri personaggi comandati da questo telefono (i bot, sul telefono del capo stanza) */
+  local?: number[];
+  /** quando un amico esce: true (di solito) = il suo personaggio sparisce; false = resta, ci pensa la partita */
+  removeOnLeave?: boolean;
   /** capo stanza: dove riappare chi viene sconfitto (se manca, non si riappare) */
   respawnSpot?(seat: number): { x: number; y: number };
   respawnSeconds?: number;
@@ -28,8 +32,10 @@ export interface NetFightersOptions {
  * Non conosce i singoli personaggi: usa solo i metodi di Player.
  */
 export class NetFighters {
-  /** posto → personaggio (compreso il mio) */
+  /** numero → personaggio (compreso il mio) */
   readonly players = new Map<number, Player>();
+  /** personaggi comandati da questo telefono (io, e i bot se sono il capo stanza) */
+  private readonly localIds: Set<number>;
   private readonly motions = new Map<number, RemoteMotion>();
   /** ultima posizione arrivata da ogni amico (il capo stanza la gira agli altri) */
   private readonly last = new Map<number, MotionTuple>();
@@ -44,13 +50,13 @@ export class NetFighters {
     private readonly opt: NetFightersOptions,
   ) {
     const s = (this.s = opt.session);
+    this.localIds = new Set([s.mySeat, ...(opt.local ?? [])]);
     this.players.set(s.mySeat, opt.me);
-    for (const m of s.members) {
-      if (m.seat === s.mySeat) continue;
-      this.players.set(m.seat, opt.makeFriend(m));
-      this.motions.set(m.seat, new RemoteMotion());
+    for (const [id, p] of opt.others) {
+      this.players.set(id, p);
+      if (!this.localIds.has(id)) this.motions.set(id, new RemoteMotion());
     }
-    for (const [seat, p] of this.players) this.wire(seat, p);
+    for (const [id, p] of this.players) this.wire(id, p);
     this.off.push(
       s.events.on('msg', (msg, from) => this.onMessage(msg, from)),
       s.events.on('left', (m) => this.removeSeat(m)),
@@ -68,7 +74,7 @@ export class NetFighters {
     p.net = {
       authority: host,
       onEffect: host ? (e) => this.queueEffect(seat, e) : undefined,
-      onSwing: seat === this.mySeat ? (a, d, sup) => this.sendSwing(a, d, sup) : undefined,
+      onSwing: this.localIds.has(seat) ? (a, d, sup) => this.sendSwing(seat, a, d, sup) : undefined,
     };
     if (host && this.opt.respawnSpot) {
       p.on(DEFEATED_EVENT, () => {
@@ -89,7 +95,7 @@ export class NetFighters {
         if (!host) for (const m of msg.all) this.onMotion(m);
         break;
       case 'colpo':
-        if (msg.seat !== this.mySeat) this.players.get(msg.seat)?.netSwing(msg.a, msg.d, msg.s);
+        if (!this.localIds.has(msg.seat)) this.players.get(msg.seat)?.netSwing(msg.a, msg.d, msg.s);
         if (host) this.s.relay(msg, from);
         break;
       case 'effetti':
@@ -107,7 +113,7 @@ export class NetFighters {
     if (!p) return;
     // vita e super le manda solo il capo stanza
     if (!this.s.isHost && m[5] !== undefined) p.netSync(m[5], (m[6] ?? 0) / 100);
-    if (seat === this.mySeat) return;
+    if (this.localIds.has(seat)) return;
     this.last.set(seat, m);
     this.motions.get(seat)?.push(m[1], m[2], m[3], m[4]);
   }
@@ -115,6 +121,11 @@ export class NetFighters {
   private removeSeat(m: Member): void {
     const p = this.players.get(m.seat);
     if (!p || m.seat === this.mySeat) return;
+    this.motions.get(m.seat)?.clear();
+    if (this.opt.removeOnLeave === false) {
+      this.opt.onLeft?.(m);
+      return;
+    }
     this.players.delete(m.seat);
     this.motions.delete(m.seat);
     this.last.delete(m.seat);
@@ -124,8 +135,8 @@ export class NetFighters {
 
   // ------------------------------------------------------------------ colpi, effetti, ricomparse
 
-  private sendSwing(a: number, d: number, sup: boolean): void {
-    this.s.send({ t: 'colpo', seat: this.mySeat, a: Math.round(a * 1000) / 1000, d: Math.round(d), s: sup });
+  private sendSwing(id: number, a: number, d: number, sup: boolean): void {
+    this.s.send({ t: 'colpo', seat: id, a: Math.round(a * 1000) / 1000, d: Math.round(d), s: sup });
   }
 
   /** Capo stanza: un effetto da mandare agli altri al prossimo invio (la corrente: solo l'ultima). */
@@ -181,9 +192,15 @@ export class NetFighters {
       this.s.send({ t: 'effetti', list });
     }
     const all: MotionTuple[] = [];
-    for (const [seat, p] of this.players) {
-      const pos = seat === this.mySeat ? mine : (this.last.get(seat) ?? [seat, Math.round(p.x), Math.round(p.y), 0, 0]);
-      all.push([seat, pos[1], pos[2], pos[3], pos[4], Math.round(p.health), Math.round(p.superCharge * 100)]);
+    for (const [id, p] of this.players) {
+      let pos: MotionTuple;
+      if (this.localIds.has(id)) {
+        const pv = p.body?.velocity;
+        pos = [id, Math.round(p.x), Math.round(p.y), Math.round(pv?.x ?? 0), Math.round(pv?.y ?? 0)];
+      } else {
+        pos = this.last.get(id) ?? [id, Math.round(p.x), Math.round(p.y), 0, 0];
+      }
+      all.push([id, pos[1], pos[2], pos[3], pos[4], Math.round(p.health), Math.round(p.superCharge * 100)]);
     }
     this.s.send({ t: 'mosse', all });
   }

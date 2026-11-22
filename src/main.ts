@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import '@fontsource/lilita-one';
 import { unlockAudioOnFirstTouch } from './audio/engine';
 import { listenForInstall } from './pwa/install';
+import { getSession } from './net/Session';
 import { GAME_WIDTH, GAME_HEIGHT } from './config';
 import { PALETTE } from './art/palette';
 import { BootScene } from './scenes/BootScene';
@@ -48,4 +49,8 @@ const game = new Phaser.Game({
 });
 
 // Solo in modalità debug: rende il gioco raggiungibile dalla console del browser per le prove.
-if (debug) (window as unknown as { game: Phaser.Game }).game = game;
+if (debug) {
+  const w = window as unknown as { game: Phaser.Game; getSession: typeof getSession };
+  w.game = game;
+  w.getSession = getSession;
+}

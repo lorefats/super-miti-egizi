@@ -121,7 +121,7 @@ niente sconosciuti, niente chat.
 - [x] **M2 — Combattere insieme**
   > Attacchi e super si vedono su tutti i telefoni; il capo stanza decide chi viene colpito, vita,
   > sconfitte e ricomparse. Allenamento "uno contro uno" tra amici per provarlo.
-- [ ] **M3 — Battaglia con gli amici (Solo e Duo)**
+- [x] **M3 — Battaglia con gli amici (Solo e Duo)**
   > Partita vera sulla mappa con amici + bot che riempiono i posti: tempesta, bauli, gioielli, bot gestiti
   > dal capo stanza. In Duo si sceglie con chi fare squadra. Risultati e coppe sul telefono di ognuno.
 - [ ] **M4 — Calcio del Nilo con gli amici**

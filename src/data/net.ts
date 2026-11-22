@@ -5,7 +5,7 @@ export const NET = {
    * Versione dei messaggi tra telefoni: si aumenta quando cambia il modo di parlarsi.
    * Se due telefoni hanno versioni diverse, chi entra viene avvisato di aggiornare il gioco.
    */
-  protocol: 2,
+  protocol: 3,
   /** giocatori al massimo in una stanza (capo stanza compreso) */
   maxPlayers: 4,
   /** cifre del codice stanza */

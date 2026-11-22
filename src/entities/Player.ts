@@ -837,6 +837,13 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     });
   }
 
+  /** Multiplayer, capo stanza: un amico è uscito dalla partita, il suo dio è sconfitto subito. */
+  forceDefeat(): void {
+    if (!this.isAlive()) return;
+    this.health = 0;
+    this.defeat();
+  }
+
   /** Invece di essere sconfitto, resuscita dal suo sarcofago con parte della vita. */
   private revive(): void {
     this.netTell(['risorge']);

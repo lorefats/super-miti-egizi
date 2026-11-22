@@ -7,7 +7,7 @@ import { getCharacter, isPlayable } from '../data/characters';
 import { NET, SEAT_VARIANTS } from '../data/net';
 import { SaveManager } from '../save/SaveManager';
 import { NetSession, PROBLEM_TEXT, getSession, type Me, type NetProblem } from '../net/Session';
-import type { Member } from '../net/protocol';
+import type { FriendsMode, Member } from '../net/protocol';
 import { createGoldButton } from '../ui/GoldButton';
 import { backButton, goTo, makePressable, outlinedText } from '../ui/MenuKit';
 import { showToast } from '../ui/Toast';
@@ -174,55 +174,128 @@ export class FriendsScene extends Phaser.Scene {
   private enterRoom(s: NetSession): void {
     for (const u of this.unsubscribe) u();
     this.unsubscribe = [
-      s.events.on('members', () => this.drawRoom(s)),
+      s.events.on('members', () => {
+        if (s.isHost) this.fixTeams(s);
+        this.drawRoom(s);
+      }),
       s.events.on('left', (m) => showToast(this, `${m.name} è uscito`)),
       s.events.on('msg', (msg) => {
-        if (msg.t === 'via') this.startTraining();
+        if (msg.t === 'via') this.startPlaying(msg.mode);
+        else if (msg.t === 'scelta') this.drawRoom(s);
       }),
       s.events.on('closed', (why) => {
         if (why) showToast(this, PROBLEM_TEXT[why], 3);
         this.show('scelta');
       }),
     ];
+    // di nuovo nella stanza: il capo stanza fa entrare altri amici, gli altri dicono "sono pronto"
+    if (s.isHost) {
+      s.reopen();
+      this.fixTeams(s);
+    } else {
+      s.setReady(true);
+    }
     this.drawRoom(s);
   }
 
-  /** Codice grande, i posti della stanza e (per il capo stanza) il pulsante "Andiamo!". */
+  /** Capo stanza: le squadre del Duo vanno rifatte se qualcuno entra o esce. */
+  private fixTeams(s: NetSession): void {
+    const options = duoPairings(s.members.map((m) => m.seat));
+    const same = (a: number[][], b: number[][]) => JSON.stringify(a) === JSON.stringify(b);
+    const still = options.find((o) => same(o, s.choice.teams));
+    s.setChoice(s.choice.mode, still ?? options[0]);
+  }
+
+  /** Codice grande, i posti della stanza, cosa si gioca e (per il capo stanza) il pulsante "Andiamo!". */
   private drawRoom(s: NetSession): void {
     this.view = 'stanza';
     this.ui.removeAll(true);
     const { width: W, height: H } = this.scale;
-    this.ui.add(outlinedText(this, W / 2, 128, s.isHost ? 'Codice della stanza: dillo ai tuoi amici!' : 'Sei nella stanza', 28));
-    this.ui.add(outlinedText(this, W / 2, 200, s.code.split('').join(' '), 92, css(PALETTE.oro)));
+    const mode = s.choice.mode;
+    this.ui.add(outlinedText(this, W / 2, 112, s.isHost ? 'Codice della stanza: dillo ai tuoi amici!' : 'Sei nella stanza', 26));
+    this.ui.add(outlinedText(this, W / 2, 168, s.code.split('').join(' '), 72, css(PALETTE.oro)));
+
+    // le squadre del Duo: numero di squadra per ogni posto
+    const teamOf = new Map<number, number>();
+    if (mode === 'duo') s.choice.teams.forEach((t, i) => t.forEach((seat) => teamOf.set(seat, i)));
 
     const cardW = 190;
     const gap = 22;
     const total = NET.maxPlayers * cardW + (NET.maxPlayers - 1) * gap;
     const scale = Math.min(1, (W - 40) / total);
-    const row = this.add.container(W / 2, H * 0.58).setScale(scale);
+    const row = this.add.container(W / 2, 340).setScale(scale);
     for (let seat = 0; seat < NET.maxPlayers; seat++) {
       const m = s.members.find((x) => x.seat === seat);
-      row.add(this.seatCard(-total / 2 + cardW / 2 + seat * (cardW + gap), cardW, m, m?.seat === s.mySeat));
+      const waiting = !!m && s.isHost && m.seat !== 0 && !s.ready.has(m.seat);
+      row.add(this.seatCard(-total / 2 + cardW / 2 + seat * (cardW + gap), cardW, m, m?.seat === s.mySeat, teamOf.get(seat), waiting));
     }
     this.ui.add(row);
 
+    const modes: [FriendsMode, string][] = [
+      ['allenamento', 'Allenamento'],
+      ['solo', 'Battaglia Solo'],
+      ['duo', 'Battaglia Duo'],
+    ];
+    const rowY = H - 168;
     if (s.isHost) {
-      const ready = s.members.length >= 2;
-      if (ready) {
-        const go = createGoldButton(this, W / 2, H - 80, 'Andiamo!', () => this.hostStart(), 340, 90, 44);
-        this.tweens.add({ targets: go, scale: 1.05, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-        this.ui.add(go);
-      } else {
-        this.ui.add(outlinedText(this, W / 2, H - 80, 'Aspetta che entri almeno un amico...', 28));
+      modes.forEach(([m, label], i) => {
+        const b = this.modeButton(W / 2 + (i - 1) * 250, rowY, label, m === mode, () => {
+          if (m === s.choice.mode) return;
+          s.setChoice(m, s.choice.teams);
+          this.drawRoom(s);
+        });
+        this.ui.add(b);
+      });
+      if (mode === 'duo' && duoPairings(s.members.map((x) => x.seat)).length > 1) {
+        this.ui.add(
+          createGoldButton(this, W - 150, 470, 'Cambia squadre', () => {
+            const options = duoPairings(s.members.map((x) => x.seat));
+            const i = options.findIndex((o) => JSON.stringify(o) === JSON.stringify(s.choice.teams));
+            s.setChoice('duo', options[(i + 1) % options.length]);
+            this.drawRoom(s);
+          }, 240, 56, 24),
+        );
       }
     } else {
-      this.ui.add(outlinedText(this, W / 2, H - 80, 'Aspetta che il capo stanza prema "Andiamo!"', 28));
+      const label = modes.find(([m]) => m === mode)?.[1] ?? '';
+      this.ui.add(outlinedText(this, W / 2, rowY, `Si gioca: ${label}`, 34, css(PALETTE.oro)));
+    }
+
+    if (s.isHost) {
+      const notReady = s.members.filter((m) => m.seat !== 0 && !s.ready.has(m.seat));
+      if (s.members.length < 2) {
+        this.ui.add(outlinedText(this, W / 2, H - 70, 'Aspetta che entri almeno un amico...', 28));
+      } else if (notReady.length) {
+        this.ui.add(outlinedText(this, W / 2, H - 70, `Aspetta: ${notReady.map((m) => m.name).join(', ')} sta guardando i risultati...`, 26));
+      } else {
+        const go = createGoldButton(this, W / 2, H - 70, 'Andiamo!', () => this.hostStart(), 320, 84, 42);
+        this.tweens.add({ targets: go, scale: 1.05, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+        this.ui.add(go);
+      }
+    } else {
+      this.ui.add(outlinedText(this, W / 2, H - 70, 'Aspetta che il capo stanza prema "Andiamo!"', 28));
     }
   }
 
-  /** Un posto della stanza: il dio e il nome, oppure "libero". Bordo d'oro = sei tu. */
-  private seatCard(x: number, w: number, m: Member | undefined, mine: boolean): Phaser.GameObjects.Container {
-    const h = 230;
+  /** Pulsante per scegliere cosa giocare: quello scelto è d'oro, gli altri blu. */
+  private modeButton(x: number, y: number, label: string, on: boolean, onPress: () => void): Phaser.GameObjects.Container {
+    const w = 230;
+    const h = 60;
+    const c = this.add.container(x, y);
+    const g = this.add.graphics();
+    g.fillStyle(on ? PALETTE.oro : PALETTE.bluNotte, on ? 1 : 0.85).fillRoundedRect(-w / 2, -h / 2, w, h, 16);
+    g.lineStyle(4, on ? PALETTE.bluNotte : PALETTE.oro, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 16);
+    const t = this.add
+      .text(0, -1, label, { fontFamily: FONT_FAMILY, fontSize: '26px', color: on ? css(PALETTE.bluNotte) : '#FFFFFF' })
+      .setOrigin(0.5);
+    c.add([g, t]);
+    makePressable(c, w, h, onPress);
+    return c;
+  }
+
+  /** Un posto della stanza: il dio e il nome, oppure "libero". Bordo d'oro = sei tu. Nel Duo, la squadra. */
+  private seatCard(x: number, w: number, m: Member | undefined, mine: boolean, team: number | undefined, waiting: boolean): Phaser.GameObjects.Container {
+    const h = 210;
     const c = this.add.container(x, 0);
     const g = this.add.graphics();
     g.fillStyle(PALETTE.bluNotte, m ? 0.9 : 0.5).fillRoundedRect(-w / 2, -h / 2, w, h, 18);
@@ -233,30 +306,39 @@ export class FriendsScene extends Phaser.Scene {
       return c;
     }
     const key = characterTexture(m.characterId, mine ? 'base' : SEAT_VARIANTS[m.seat]);
-    const pic = this.add.image(0, 40, this.textures.exists(key) ? key : TEX.sagomaDio).setOrigin(0.5, 1);
-    pic.setScale(Math.min(140 / pic.height, (w - 24) / pic.width));
-    const name = this.add.text(0, 66, m.name, { fontFamily: FONT_FAMILY, fontSize: '26px', color: '#FFFFFF' }).setOrigin(0.5);
+    const pic = this.add.image(0, 30, this.textures.exists(key) ? key : TEX.sagomaDio).setOrigin(0.5, 1);
+    pic.setScale(Math.min(125 / pic.height, (w - 24) / pic.width));
+    if (waiting) pic.setAlpha(0.45);
+    const name = this.add.text(0, 54, m.name, { fontFamily: FONT_FAMILY, fontSize: '26px', color: '#FFFFFF' }).setOrigin(0.5);
     if (name.width > w - 16) name.setScale((w - 16) / name.width);
     const role = this.add
-      .text(0, 96, m.seat === 0 ? 'capo stanza' : mine ? 'tu' : 'amico', { fontFamily: FONT_FAMILY, fontSize: '20px', color: css(PALETTE.oro) })
+      .text(0, 82, waiting ? 'sta arrivando...' : m.seat === 0 ? 'capo stanza' : mine ? 'tu' : 'amico', { fontFamily: FONT_FAMILY, fontSize: '20px', color: css(PALETTE.oro) })
       .setOrigin(0.5);
     c.add([pic, name, role]);
+    if (team !== undefined) {
+      // etichetta della squadra in alto
+      const color = TEAM_COLORS[team % TEAM_COLORS.length];
+      const badge = this.add.graphics();
+      badge.fillStyle(color, 1).fillRoundedRect(-62, -h / 2 - 16, 124, 34, 17);
+      badge.lineStyle(3, PALETTE.bluNotte, 1).strokeRoundedRect(-62, -h / 2 - 16, 124, 34, 17);
+      c.add([badge, this.add.text(0, -h / 2 + 1, `Squadra ${team + 1}`, { fontFamily: FONT_FAMILY, fontSize: '20px', color: '#FFFFFF' }).setOrigin(0.5)]);
+    }
     return c;
   }
 
   /** Capo stanza: si parte per tutti. */
   hostStart(): void {
     const s = getSession();
-    if (!s?.isHost || s.members.length < 2) return;
-    s.start('allenamento');
-    this.startTraining();
+    if (!s?.isHost || s.members.length < 2 || !s.allReady()) return;
+    s.start();
+    this.startPlaying(s.choice.mode);
   }
 
-  private startTraining(): void {
+  private startPlaying(mode: FriendsMode): void {
     if (this.goingToMatch) return;
     this.goingToMatch = true;
     playSfx('go');
-    goTo(this, 'Training', { net: true });
+    goTo(this, mode === 'allenamento' ? 'Training' : 'Match', { net: true });
   }
 
   private leave(): void {
@@ -268,4 +350,23 @@ export class FriendsScene extends Phaser.Scene {
     getSession()?.close();
     goTo(this, 'Lobby');
   }
+}
+
+/** Colori delle etichette "Squadra 1", "Squadra 2"... */
+const TEAM_COLORS = [PALETTE.turchese, PALETTE.violaNotte, PALETTE.verdeNilo, PALETTE.oroOmbra];
+
+/**
+ * Tutti i modi di mettere gli amici in squadre da 2 nel Duo (chi resta da solo avrà un bot come compagno).
+ * Esempio con 2 amici: insieme, oppure uno contro l'altro.
+ */
+export function duoPairings(seats: number[]): number[][][] {
+  const s = [...seats].sort((a, b) => a - b);
+  if (s.length <= 1) return [s.length ? [s] : []];
+  if (s.length === 2) return [[s], [[s[0]], [s[1]]]];
+  if (s.length === 3) return [[[s[0], s[1]], [s[2]]], [[s[0], s[2]], [s[1]]], [[s[1], s[2]], [s[0]]]];
+  return [
+    [[s[0], s[1]], [s[2], s[3]]],
+    [[s[0], s[2]], [s[1], s[3]]],
+    [[s[0], s[3]], [s[1], s[2]]],
+  ];
 }

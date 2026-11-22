@@ -331,6 +331,14 @@ con sconosciuti, niente chat, niente account.
   senza toccare i moduli dei personaggi.
 - **Allenamento con gli amici:** tutti contro tutti sul campo d'allenamento (più i bersagli); chi è sconfitto
   riappare dopo 3 secondi al suo posto. La super si carica solo colpendo (niente pulsante "Super carica").
+- **Cosa si gioca:** nella stanza il capo stanza sceglie *Allenamento*, *Battaglia Solo* o *Battaglia Duo*.
+  Nel Duo sceglie anche le squadre con "Cambia squadre" (es. con 2 amici: insieme, oppure uno contro l'altro);
+  chi resta senza compagno ha un bot. I posti liberi della battaglia (fino a 10 personaggi) sono bot.
+- **Battaglia con gli amici:** il capo stanza prepara la partita (mappa, posti di partenza, bot) e la manda a tutti.
+  I bot "pensano" solo sul suo telefono; tempesta, bauli, gioielli e classifica li decide lui. Ognuno vede i
+  Risultati e prende le coppe sul suo telefono come in una partita normale; se il capo stanza viene sconfitto
+  prima degli amici, resta a guardarli finché finiscono. Dai Risultati si torna nella stanza; il capo stanza può
+  ripartire quando tutti sono tornati.
 - **Versione:** se un amico ha una versione vecchia del gioco, gli si dice di chiuderlo e riaprirlo per aggiornarlo.
 - **Se qualcuno esce:** sparisce per gli altri; se esce il capo stanza, la stanza si chiude e si torna alla Lobby.
 - **Progressi:** coppe e premi restano sul telefono di ognuno, come nelle partite contro i bot.

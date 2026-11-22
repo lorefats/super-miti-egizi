@@ -133,7 +133,7 @@ export class TrainingScene extends Phaser.Scene {
     this.fighters = new NetFighters(this, {
       session: s,
       me: this.player,
-      makeFriend: (m) => this.addFriend(m),
+      others: new Map(s.members.filter((m) => m.seat !== s.mySeat).map((m) => [m.seat, this.addFriend(m)])),
       respawnSpot: (seat) => this.spotOf(seat),
       respawnSeconds: NET.trainingRespawnSeconds,
       onRespawn: (p) => {
@@ -146,6 +146,9 @@ export class TrainingScene extends Phaser.Scene {
       showToast(this, `Riappari tra ${NET.trainingRespawnSeconds} secondi!`);
     });
     this.unsubscribe.push(
+      s.events.on('msg', (msg) => {
+        if (msg.t === 'stanza') goTo(this, 'Friends');
+      }),
       s.events.on('closed', (why) => {
         if (!why) return;
         showToast(this, `${PROBLEM_TEXT[why]}\nSi torna alla Lobby.`, 2.5);
@@ -182,9 +185,14 @@ export class TrainingScene extends Phaser.Scene {
   /** Indietro (in alto a sinistra), Cambia dio e Super carica (in alto a destra). */
   private drawButtons(): void {
     const back = backButton(this, () => {
-      // con gli amici: si esce dalla stanza
-      this.net?.close();
-      goTo(this, 'Lobby');
+      const s = this.net;
+      if (!s || s.closed) {
+        goTo(this, 'Lobby');
+        return;
+      }
+      // con gli amici si torna nella stanza; se lo fa il capo stanza, ci tornano tutti
+      if (s.isHost) s.send({ t: 'stanza' });
+      goTo(this, 'Friends');
     });
     back.setScrollFactor(0, 0, true).setDepth(DEPTH.ui + 10);
 

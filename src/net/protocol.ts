@@ -55,11 +55,68 @@ export interface MembersMsg {
   members: Member[];
 }
 
+/** Cosa si gioca con gli amici. */
+export type FriendsMode = 'allenamento' | 'solo' | 'duo';
+
+/** Capo stanza → tutti: cosa ha scelto di giocare (e, nel Duo, chi sta in squadra con chi: liste di posti). */
+export interface ChoiceMsg {
+  t: 'scelta';
+  mode: FriendsMode;
+  teams: number[][];
+}
+
+/** Chi entra → capo stanza: sono nella stanza e pronto a partire (non sto più guardando i risultati). */
+export interface ReadyMsg {
+  t: 'pronto';
+  ready: boolean;
+}
+
 /** Capo stanza → tutti: si parte! */
 export interface StartMsg {
   t: 'via';
-  mode: 'allenamento';
+  mode: FriendsMode;
+  teams: number[][];
   members: Member[];
+}
+
+/** Un personaggio della battaglia, uguale per tutti. `id`: 0-3 = posto di un amico, da 10 in su = bot. */
+export interface FighterSetup {
+  id: number;
+  characterId: string;
+  level: number;
+  team: number;
+  x: number;
+  y: number;
+  name: string;
+}
+
+/** Capo stanza → tutti: com'è fatta la battaglia (mappa e personaggi). */
+export interface SetupMsg {
+  t: 'partita';
+  mode: 'solo' | 'duo';
+  map: string;
+  fighters: FighterSetup[];
+}
+
+/** Capo stanza → tutti: tempesta (secondi passati) e bauli colpiti ([numero del baule, vita]). */
+export interface WorldMsg {
+  t: 'mondo';
+  storm: number;
+  chests?: [index: number, health: number][];
+}
+
+/** Capo stanza → tutti: gioielli nuovi ([id, da x, da y, a x, a y]) e gioielli presi ([id, chi]). */
+export interface GemsMsg {
+  t: 'gioielli';
+  add?: [id: number, fromX: number, fromY: number, x: number, y: number][];
+  taken?: [id: number, fighter: number][];
+}
+
+/** Capo stanza → tutti: un amico ha finito la sua battaglia con questo posto in classifica. */
+export interface PlaceMsg {
+  t: 'piazzamento';
+  seat: number;
+  place: number;
 }
 
 /** Un giocatore → capo stanza: dove sono io adesso. */
@@ -97,6 +154,11 @@ export interface RespawnMsg {
   y: number;
 }
 
+/** Capo stanza → tutti: si torna nella stanza (per esempio quando esce dall'Allenamento). */
+export interface RoomMsg {
+  t: 'stanza';
+}
+
 /** Chiunque, ogni tanto: "ci sono ancora" (quando non si mandano altri messaggi, per esempio nella stanza d'attesa). */
 export interface PingMsg {
   t: 'eco';
@@ -107,7 +169,26 @@ export interface ByeMsg {
   t: 'esco';
 }
 
-export type NetMessage = HelloMsg | WelcomeMsg | RefuseMsg | MembersMsg | StartMsg | MotionMsg | MotionsMsg | SwingMsg | EffectsMsg | RespawnMsg | PingMsg | ByeMsg;
+export type NetMessage =
+  | HelloMsg
+  | WelcomeMsg
+  | RefuseMsg
+  | MembersMsg
+  | ChoiceMsg
+  | ReadyMsg
+  | StartMsg
+  | SetupMsg
+  | MotionMsg
+  | MotionsMsg
+  | SwingMsg
+  | EffectsMsg
+  | RespawnMsg
+  | WorldMsg
+  | GemsMsg
+  | PlaceMsg
+  | RoomMsg
+  | PingMsg
+  | ByeMsg;
 
 /** Controlla (alla buona) che un dato arrivato dalla rete sia un nostro messaggio. */
 export function isNetMessage(data: unknown): data is NetMessage {

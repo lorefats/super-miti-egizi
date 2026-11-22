@@ -25,6 +25,11 @@ export class Chest extends Phaser.GameObjects.Container implements Damageable {
   private readonly bar: HealthBar;
   /** Chi lo vede da fuori (piramide): aggiornato dalla partita. */
   hideout: object | null = null;
+  /**
+   * Multiplayer: sul telefono del capo stanza (authority) il baule si rompe davvero e `onHit` avvisa la partita;
+   * sugli altri telefoni i colpi non contano: la vita arriva dal capo stanza con `netSetHealth`.
+   */
+  net: { authority: boolean; onHit?: (health: number) => void } | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -75,7 +80,19 @@ export class Chest extends Phaser.GameObjects.Container implements Damageable {
 
   takeDamage(amount: number): void {
     if (!this.isAlive()) return;
-    this.health = Math.max(0, this.health - amount);
+    if (this.net && !this.net.authority) return;
+    this.applyHealth(Math.max(0, this.health - amount));
+    this.net?.onHit?.(this.health);
+  }
+
+  /** Multiplayer: la vita decisa dal capo stanza (si vede il colpo; a zero si rompe). */
+  netSetHealth(health: number): void {
+    if (this.isAlive() && health < this.health) this.applyHealth(Math.max(0, health));
+  }
+
+  private applyHealth(health: number): void {
+    const amount = this.health - health;
+    this.health = health;
     this.bar.draw(this.health, CHEST.maxHealth);
     showDamageNumber(this.scene, this.x, this.y - BAR_OFFSET_Y + 10, amount, '#FFE2B0');
     this.sprite.setTintFill(0xffffff);

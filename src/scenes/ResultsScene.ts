@@ -10,7 +10,7 @@ import { createGoldButton } from '../ui/GoldButton';
 import { createCharacterPose } from '../ui/CharacterPose';
 
 /** `playerCount` = giocatori (Solo) o squadre (Duo). `score` = gol (tuoi, loro) nel Calcio. */
-export type ResultsData = MatchReward & { playerCount: number; mode?: GameMode; score?: [number, number] };
+export type ResultsData = MatchReward & { playerCount: number; mode?: GameMode; score?: [number, number]; net?: boolean };
 
 /** Nel Calcio il "posto" è il risultato: 1 = vinta, 2 = pareggio, 3 = persa. */
 const CALCIO_RESULTS = ['Vinta', 'Pari', 'Persa'];
@@ -148,9 +148,13 @@ export class ResultsScene extends Phaser.Scene {
       this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(scene, data));
     };
     // i sarcofagi vinti restano salvati: si aprono la prossima volta che si passa dalla Lobby
-    const lobbyBtn = createGoldButton(this, px - 128, btnY, 'Lobby', () => leave('Lobby', { newSarcophagi: d.sarcophagiWon }), 236, 84, 36);
-    const againBtn = createGoldButton(this, px + 128, btnY, 'Gioca ancora', () => leave(d.mode === 'calcio' ? 'Soccer' : 'Match', {}), 236, 84, 32);
-    const buttons = [lobbyBtn, againBtn];
+    // con gli amici si torna nella stanza (i sarcofagi vinti restano salvati)
+    const buttons = d.net
+      ? [createGoldButton(this, px, btnY, 'Torna nella stanza', () => leave('Friends', {}), 340, 84, 34)]
+      : [
+          createGoldButton(this, px - 128, btnY, 'Lobby', () => leave('Lobby', { newSarcophagi: d.sarcophagiWon }), 236, 84, 36),
+          createGoldButton(this, px + 128, btnY, 'Gioca ancora', () => leave(d.mode === 'calcio' ? 'Soccer' : 'Match', {}), 236, 84, 32),
+        ];
     for (const b of buttons) b.setAlpha(0).disableInteractive();
     let prestigeShown = false;
     const showButton = () => {
@@ -159,7 +163,7 @@ export class ResultsScene extends Phaser.Scene {
         prestigeShown = true;
         this.showPrestige(cx, hero);
       }
-      if (lobbyBtn.input?.enabled) return;
+      if (buttons[0].input?.enabled) return;
       for (const b of buttons) b.setInteractive();
       this.tweens.add({ targets: buttons, alpha: 1, duration: 250 });
     };

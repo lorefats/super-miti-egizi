@@ -1,6 +1,6 @@
 import type { DataConnection, Peer } from 'peerjs';
 import { NET } from '../data/net';
-import { isNetMessage, type Member, type NetMessage, type StartMsg } from './protocol';
+import { isNetMessage, type FriendsMode, type Member, type NetMessage, type SetupMsg } from './protocol';
 
 /**
  * Una stanza del multiplayer con gli amici.
@@ -106,6 +106,12 @@ export class NetSession {
   members: Member[] = [];
   /** la partita è partita (il capo stanza non fa più entrare nessuno) */
   started = false;
+  /** cosa si gioca (lo sceglie il capo stanza) e, nel Duo, chi sta in squadra con chi */
+  choice: { mode: FriendsMode; teams: number[][] } = { mode: 'allenamento', teams: [] };
+  /** capo stanza: chi è nella stanza pronto a partire (non sta guardando i risultati) */
+  readonly ready = new Set<number>();
+  /** l'ultima battaglia preparata dal capo stanza (chi entra può arrivarci dopo che è stata mandata) */
+  lastSetup: SetupMsg | null = null;
   private closedFlag = false;
   /** capo stanza: collegamento con ogni amico (posto → collegamento) */
   private readonly guests = new Map<number, DataConnection>();
@@ -216,6 +222,12 @@ export class NetSession {
           this.dropGuest(seat);
           return;
         }
+        if (data.t === 'pronto') {
+          if (data.ready) this.ready.add(seat);
+          else this.ready.delete(seat);
+          this.events.emit('members', this.members);
+          return;
+        }
         // nessuno può parlare a nome di un altro
         if (data.t === 'mossa') data.m[0] = seat;
         if (data.t === 'colpo') data.seat = seat;
@@ -252,8 +264,10 @@ export class NetSession {
     this.members.push(member);
     this.members.sort((a, b) => a.seat - b.seat);
     this.guests.set(seat, conn);
+    this.ready.add(seat);
     this.lastHeard.set(seat, performance.now());
     conn.send({ t: 'benvenuto', seat, members: this.members } satisfies NetMessage);
+    conn.send({ t: 'scelta', ...this.choice } satisfies NetMessage);
     this.broadcast({ t: 'giocatori', members: this.members }, seat);
     this.events.emit('members', this.members);
     return seat;
@@ -263,6 +277,7 @@ export class NetSession {
     const conn = this.guests.get(seat);
     if (!conn) return;
     this.guests.delete(seat);
+    this.ready.delete(seat);
     this.lastHeard.delete(seat);
     conn.close();
     const member = this.members.find((m) => m.seat === seat);
@@ -272,11 +287,35 @@ export class NetSession {
     if (member) this.events.emit('left', member);
   }
 
-  /** Capo stanza: si parte, nessun altro può entrare. */
-  start(mode: StartMsg['mode']): void {
+  /** Capo stanza: sceglie cosa giocare (e le squadre del Duo) e lo dice a tutti. */
+  setChoice(mode: FriendsMode, teams: number[][]): void {
+    if (!this.isHost) return;
+    this.choice = { mode, teams };
+    this.broadcast({ t: 'scelta', mode, teams });
+  }
+
+  /** Capo stanza: tutti gli amici sono nella stanza, pronti a partire? */
+  allReady(): boolean {
+    return this.members.every((m) => m.seat === 0 || this.ready.has(m.seat));
+  }
+
+  /** Capo stanza: si parte con la scelta attuale, nessun altro può entrare. */
+  start(): void {
     if (!this.isHost) return;
     this.started = true;
-    this.broadcast({ t: 'via', mode, members: this.members });
+    this.lastSetup = null;
+    this.ready.clear();
+    this.broadcast({ t: 'via', ...this.choice, members: this.members });
+  }
+
+  /** Capo stanza: si è tornati nella stanza, possono entrare altri amici. */
+  reopen(): void {
+    this.started = false;
+  }
+
+  /** Chi entra: dice al capo stanza se è nella stanza pronto a partire. */
+  setReady(ready: boolean): void {
+    if (!this.isHost) this.send({ t: 'pronto', ready });
   }
 
   // ------------------------------------------------------------------ chi entra
@@ -295,8 +334,12 @@ export class NetSession {
       }
       if (data.t === 'via') {
         this.started = true;
+        this.lastSetup = null;
         this.members = data.members;
+        this.choice = { mode: data.mode, teams: data.teams };
       }
+      if (data.t === 'scelta') this.choice = { mode: data.mode, teams: data.teams };
+      if (data.t === 'partita') this.lastSetup = data;
       if (data.t === 'esco') {
         this.shutdown('capo-uscito');
         return;

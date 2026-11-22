@@ -48,6 +48,16 @@ export class Storm {
     this.redraw();
   }
 
+  /** Secondi passati dall'inizio (quanto si è già stretta). */
+  get secondsElapsed(): number {
+    return this.elapsed;
+  }
+
+  /** Multiplayer: si mette al passo con la tempesta del capo stanza (se è indietro o avanti di un attimo). */
+  syncElapsed(seconds: number): void {
+    if (Math.abs(seconds - this.elapsed) > 0.25) this.elapsed = seconds;
+  }
+
   /** Secondi che mancano prima che la tempesta inizi a stringersi (0 se si sta già stringendo). */
   get secondsToStart(): number {
     return Math.max(0, STORM.startDelaySeconds - this.elapsed);
