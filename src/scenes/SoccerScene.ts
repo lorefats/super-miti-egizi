@@ -24,7 +24,16 @@ import { showEndOverlay } from '../ui/EndOverlay';
 import { showToast } from '../ui/Toast';
 import { showMatchIntro } from '../ui/MatchIntro';
 import { addFpsMeter } from '../ui/FpsMeter';
+import { NET, SEAT_VARIANTS } from '../data/net';
+import { PROBLEM_TEXT, getSession, type NetSession } from '../net/Session';
+import { NetFighters } from '../net/NetFighters';
+import type { FighterSetup, SetupMsg } from '../net/protocol';
+import { goTo, outlinedText } from '../ui/MenuKit';
 import { MapView } from './MapView';
+import type { ResultsData } from './ResultsScene';
+
+/** Numero del primo bot (0-3 sono i posti degli amici). */
+const FIRST_BOT_ID = 10;
 
 const FIELD = CAMPO_CALCIO;
 
@@ -32,6 +41,8 @@ const FIELD = CAMPO_CALCIO;
  * Calcio del Nilo: 3 contro 3 (tu + 2 compagni bot, a sinistra, contro 3 bot a destra).
  * Si porta la palla e la si calcia con il colpo; chi viene colpito la perde. Vince chi arriva a 2 gol,
  * oppure chi ne ha di più allo scadere. Chi viene sconfitto riappare dopo qualche secondo nella sua metà.
+ * Con gli amici (GAME_DESIGN.md, sezione 13) il capo stanza decide palla, gol, tempo e bot; chi porta la palla
+ * la vede ai suoi piedi e quando la calcia parte subito sul suo telefono.
  */
 export class SoccerScene extends Phaser.Scene {
   private view!: MapView;
@@ -48,9 +59,28 @@ export class SoccerScene extends Phaser.Scene {
   private over = false;
   /** Conto alla rovescia iniziale in corso. */
   private intro = false;
+  /** la stanza degli amici (null = partita contro i bot) */
+  private net: NetSession | null = null;
+  private netFighters: NetFighters | null = null;
+  private readonly ids = new Map<Player, number>();
+  private readonly byId = new Map<number, Player>();
+  private unsubscribe: (() => void)[] = [];
+  private waitText: Phaser.GameObjects.Text | null = null;
+  private sendTimer = 0;
+  private leaving = false;
 
   constructor() {
     super('Soccer');
+  }
+
+  init(data: { net?: boolean }): void {
+    const s = data?.net ? getSession() : null;
+    this.net = s && !s.closed ? s : null;
+  }
+
+  /** Decide il capo stanza (o si gioca da soli)? */
+  private get authority(): boolean {
+    return !this.net || this.net.isHost;
   }
 
   create(): void {
@@ -61,29 +91,88 @@ export class SoccerScene extends Phaser.Scene {
     this.timeLeft = SOCCER.seconds;
     this.pause = 0;
     this.over = false;
+    this.intro = false;
+    this.leaving = false;
+    this.sendTimer = 0;
+    this.ids.clear();
+    this.byId.clear();
+    this.netFighters = null;
+    this.unsubscribe = [];
+    this.waitText = null;
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      for (const u of this.unsubscribe) u();
+      this.unsubscribe = [];
+    });
 
+    const s = this.net;
+    if (s) this.listenNet(s);
+    if (s && !s.isHost) {
+      // un amico: aspetta la partita preparata dal capo stanza (può essere già arrivata)
+      if (s.lastSetup?.mode === 'calcio') this.startFromSetup(s.lastSetup);
+      else this.waitText = outlinedText(this, this.scale.width / 2, this.scale.height / 2, 'Il capo stanza prepara la partita...', 40);
+      return;
+    }
+    this.buildField();
+    const setup: SetupMsg = { t: 'partita', mode: 'calcio', map: 'calcio', fighters: this.makeFighters() };
+    s?.send(setup);
+    this.buildFighters(setup);
+  }
+
+  private startFromSetup(setup: SetupMsg): void {
+    if (this.fighters.length || setup.mode !== 'calcio') return;
+    this.waitText?.destroy();
+    this.waitText = null;
+    this.buildField();
+    this.buildFighters(setup);
+  }
+
+  /** Il campo con righe, porte e palla. */
+  private buildField(): void {
     this.view = new MapView(this, FIELD, this.combat);
     this.drawLines();
     this.addGoals();
+    this.ball = new SoccerBall(this, this.centerSpot().x, this.centerSpot().y, (x, y) => this.view.waterAt(x, y)?.flow ?? null);
+    if (this.net) this.ball.net = { authority: this.authority };
+    this.physics.add.collider(this.ball, this.view.walls);
+  }
 
-    // squadre: 0 = la tua (a sinistra), 1 = gli avversari (a destra)
+  /**
+   * Le due squadre da 3: 0 = sinistra, 1 = destra. Da soli: tu a sinistra con 2 bot, contro 3 bot.
+   * Con gli amici le squadre le ha scelte il capo stanza; i posti liberi sono bot.
+   */
+  private makeFighters(): FighterSetup[] {
+    const s = this.net;
     const forced = new URLSearchParams(location.search).get('eroe');
     const myId = forced && isPlayable(forced) ? forced : SaveManager.getSelectedCharacter();
-    this.player = new Player(this, KICKOFF[0].x, KICKOFF[0].y, {
-      characterId: myId,
-      level: SaveManager.getLevel(myId),
-      team: 0,
-      combat: this.combat,
-      isHuman: true,
-    });
-    this.fighters.push(this.player);
-
-    this.ball = new SoccerBall(this, this.centerSpot().x, this.centerSpot().y, (x, y) => this.view.waterAt(x, y)?.flow ?? null);
-    this.physics.add.collider(this.ball, this.view.walls);
-
+    const humans = s
+      ? s.members.map((m) => ({ id: m.seat, characterId: isPlayable(m.characterId) ? m.characterId : 'horus', level: m.level, name: m.name }))
+      : [{ id: 0, characterId: myId, level: SaveManager.getLevel(myId), name: '' }];
+    const sides: number[][] = s ? [s.choice.teams[0] ?? [], s.choice.teams[1] ?? []] : [[0], []];
     const level = currentBotLevel();
     const names = Phaser.Utils.Array.Shuffle([...BOT_NAMES]);
-    const gods = pickBotGods(SOCCER.teamSize * 2 - 1, myId);
+    const gods = pickBotGods(SOCCER.teamSize * 2 - humans.length, myId);
+    let bot = 0;
+    const out: FighterSetup[] = [];
+    for (const team of [0, 1]) {
+      for (let i = 0; i < SOCCER.teamSize; i++) {
+        const spot = this.kickoffSpot(team, i);
+        const hid = sides[team][i];
+        const h = hid !== undefined ? humans.find((x) => x.id === hid) : undefined;
+        if (h) out.push({ id: h.id, characterId: h.characterId, level: h.level, team, x: spot.x, y: spot.y, name: h.name });
+        else if (bot < gods.length) {
+          out.push({ id: FIRST_BOT_ID + bot, characterId: gods[bot], level: level.characterLevel, team, x: spot.x, y: spot.y, name: names[bot % names.length] });
+          bot++;
+        }
+      }
+    }
+    return out;
+  }
+
+  private buildFighters(setup: SetupMsg): void {
+    const s = this.net;
+    const myId = s ? s.mySeat : 0;
+    const mine = setup.fighters.find((f) => f.id === myId) ?? setup.fighters[0];
+    const level = currentBotLevel();
     const world: SoccerWorld = {
       ball: this.ball,
       attackGoal: (team) => this.goalCenter(1 - team),
@@ -93,30 +182,31 @@ export class SoccerScene extends Phaser.Scene {
       bridgeVia: (fx, fy, tx, ty) => this.bridgeVia(fx, fy, tx, ty),
       paused: () => this.pause > 0 || this.over || this.intro,
     };
-    gods.forEach((god, i) => {
-      const team = i < SOCCER.teamSize - 1 ? 0 : 1;
-      const spot = this.kickoffSpot(team, team === 0 ? i + 1 : i - (SOCCER.teamSize - 1));
-      const bot = new Bot(
-        this,
-        spot.x,
-        spot.y,
-        {
-          characterId: god,
-          level: level.characterLevel,
-          team,
-          combat: this.combat,
-          // gli avversari tutti dello stesso colore, così si riconosce la squadra
-          variant: team === 0 ? 'base' : 'rosso',
-          name: team === 0 ? `${names[i]} (amico)` : names[i],
-          ally: team === 0,
-        },
-        level,
-        (b) => new SoccerBrain(b, this.combat, level, world),
-      );
-      this.fighters.push(bot);
-    });
+    for (const f of setup.fighters) {
+      const isMe = f.id === mine.id;
+      const isBot = f.id >= FIRST_BOT_ID;
+      const ally = !isMe && f.team === mine.team;
+      const opt = {
+        characterId: f.characterId,
+        level: f.level,
+        team: f.team,
+        combat: this.combat,
+        // gli avversari tutti dello stesso colore, così si riconosce la squadra; gli amici della mia squadra col loro colore
+        variant: isMe ? ('base' as const) : !ally ? ('rosso' as const) : isBot ? ('base' as const) : SEAT_VARIANTS[f.id % SEAT_VARIANTS.length],
+        name: isMe ? undefined : isBot && ally ? `${f.name} (amico)` : f.name,
+        ally,
+      };
+      let p: Player;
+      if (isMe) p = new Player(this, f.x, f.y, { ...opt, isHuman: true });
+      else if (isBot && this.authority) p = new Bot(this, f.x, f.y, opt, level, (b) => new SoccerBrain(b, this.combat, level, world));
+      else p = new Player(this, f.x, f.y, opt);
+      if (isMe) this.player = p;
+      this.fighters.push(p);
+      this.ids.set(p, f.id);
+      this.byId.set(f.id, p);
+    }
     for (const f of this.fighters) {
-      this.physics.add.collider(f, this.view.walls);
+      if (f === this.player || f instanceof Bot) this.physics.add.collider(f, this.view.walls);
       f.on(DEFEATED_EVENT, (who: Player) => this.onDefeated(who));
     }
 
@@ -134,11 +224,113 @@ export class SoccerScene extends Phaser.Scene {
     // la palla fuori dallo schermo: una pallina sul bordo indica dov'è
     this.ballMarker = this.add.image(0, 0, TEX.palla).setScrollFactor(0).setDepth(DEPTH.ui).setScale(0.8).setVisible(false);
     addFpsMeter(this);
-
     // mentre si mira con la palla: una linea dorata mostra dove andrà il tiro
     this.controls.aimPreview = (_angle, strength) => this.kickPreview(strength);
+
+    if (s) {
+      const others = new Map<number, Player>();
+      for (const [id, p] of this.byId) if (p !== this.player) others.set(id, p);
+      this.netFighters = new NetFighters(this, {
+        session: s,
+        me: this.player,
+        others,
+        local: s.isHost ? [...this.byId.keys()].filter((id) => id >= FIRST_BOT_ID) : [],
+        removeOnLeave: false,
+        respawnSpot: (id) => {
+          const team = this.byId.get(id)?.team ?? 0;
+          return Phaser.Utils.Array.GetRandom(team === 0 ? RESPAWN : RESPAWN.map(mirror));
+        },
+        respawnSeconds: SOCCER.respawnSeconds,
+        onRespawn: (p) => {
+          if (p === this.player && !this.over && this.pause <= 0 && !this.intro) this.controls.setEnabled(true);
+        },
+        onLeft: (m) => {
+          showToast(this, `${m.name} è uscito`);
+          if (s.isHost) this.byId.get(m.seat)?.forceDefeat();
+        },
+      });
+    }
     // qualche secondo per prepararsi e vedere le due squadre, poi "VIA!"
     this.startTruce(MATCH_INTRO.seconds, true);
+  }
+
+  // ------------------------------------------------------------------ amici (multiplayer)
+
+  private listenNet(s: NetSession): void {
+    this.unsubscribe.push(
+      s.events.on('msg', (msg, from) => {
+        if (s.isHost) {
+          // un amico ha calciato: vale se ha davvero la palla
+          if (msg.t === 'calcia') {
+            const p = this.byId.get(from);
+            if (p && this.ball?.holder === p && this.pause <= 0 && !this.over) this.ball.kick(msg.a, msg.sp);
+          }
+          return;
+        }
+        switch (msg.t) {
+          case 'partita':
+            this.startFromSetup(msg);
+            break;
+          case 'pallone': {
+            if (!this.ball) break;
+            const [x, y, vx, vy, holder] = msg.b;
+            this.ball.netState(x, y, vx, vy, holder >= 0 ? (this.byId.get(holder) ?? null) : null);
+            this.timeLeft = msg.time;
+            if (msg.score[0] !== this.score[0] || msg.score[1] !== this.score[1]) {
+              this.score = msg.score;
+              this.updateScore();
+            }
+            break;
+          }
+          case 'gol':
+            this.score = msg.score;
+            this.updateScore();
+            this.celebrateGoal(msg.team);
+            break;
+          case 'inizio':
+            for (const [id, x, y] of msg.spots) {
+              if (this.byId.get(id) === this.player) {
+                if (this.player.isAlive()) {
+                  this.player.body.reset(x, y);
+                  this.player.setPosition(x, y);
+                } else this.player.respawn(x, y);
+              } else this.netFighters?.placeAt(id, x, y);
+            }
+            this.pause = 0;
+            this.startTruce(msg.first ? MATCH_INTRO.seconds : SOCCER.kickoffTruce, msg.first);
+            break;
+          case 'fischio':
+            this.score = msg.score;
+            this.updateScore();
+            this.endMatch();
+            break;
+        }
+      }),
+      s.events.on('closed', (why) => {
+        if (!why || this.leaving) return;
+        showToast(this, `${PROBLEM_TEXT[why]}\nSi torna alla Lobby.`, 2.5);
+        this.leaving = true;
+        this.time.delayedCall(2500, () => goTo(this, 'Lobby'));
+      }),
+    );
+  }
+
+  /** Capo stanza: ogni tanto manda palla, tempo e gol a tutti. */
+  private sendBall(dt: number): void {
+    const s = this.net;
+    if (!s?.isHost || s.closed) return;
+    this.sendTimer -= dt;
+    if (this.sendTimer > 0) return;
+    this.sendTimer = 1 / NET.sendRate;
+    const b = this.ball;
+    const v = b.body.velocity;
+    const holder = b.holder ? (this.ids.get(b.holder) ?? -1) : -1;
+    s.send({
+      t: 'pallone',
+      b: [Math.round(b.x), Math.round(b.y), Math.round(v.x), Math.round(v.y), holder],
+      time: Math.round(this.timeLeft * 10) / 10,
+      score: this.score,
+    });
   }
 
   /**
@@ -259,24 +451,32 @@ export class SoccerScene extends Phaser.Scene {
   /** Il giocatore usa il colpo: se ha la palla la calcia (tocco veloce = verso la porta o a un compagno). */
   private humanKick(angle: number | null, strength: number): boolean {
     const me = this.player;
-    if (this.ball.holder !== me || this.pause > 0 || this.over) return false;
-    if (angle !== null) {
-      this.ball.kick(angle, SOCCER.ball.shotSpeed * (0.55 + 0.45 * strength));
-      return true;
+    if (this.ball.holder !== me || this.pause > 0 || this.over || this.intro) return false;
+    const k = this.chooseKick(angle, strength);
+    if (this.authority) this.ball.kick(k.angle, k.speed);
+    else {
+      // un amico: la palla parte subito sul suo telefono, e il capo stanza fa lo stesso calcio
+      this.ball.netKick(k.angle, k.speed);
+      this.net?.send({ t: 'calcia', a: Math.round(k.angle * 1000) / 1000, sp: Math.round(k.speed) });
     }
-    const goal = this.goalCenter(1);
-    const d = Phaser.Math.Distance.Between(me.x, me.y, goal.x, goal.y);
-    if (d < SOCCER.ball.autoShotRange) {
-      this.ball.kick(Phaser.Math.Angle.Between(me.x, me.y, goal.x, goal.y), SOCCER.ball.shotSpeed);
-      return true;
-    }
-    // lontano dalla porta: passaggio al compagno più avanti, altrimenti un calcio in avanti
-    const mate = this.fighters
-      .filter((f) => f !== me && f.team === me.team && f.isAlive() && f.x > me.x + 100)
-      .sort((a, b) => b.x - a.x)[0];
-    if (mate) this.ball.kick(Phaser.Math.Angle.Between(me.x, me.y, mate.x, mate.y), SOCCER.ball.passSpeed);
-    else this.ball.kick(Phaser.Math.Angle.Between(me.x, me.y, goal.x, goal.y), SOCCER.ball.shotSpeed);
     return true;
+  }
+
+  /** Dove e quanto forte calciare: mirato, oppure tocco veloce (tiro in porta da vicino, passaggio da lontano). */
+  private chooseKick(angle: number | null, strength: number): { angle: number; speed: number } {
+    const me = this.player;
+    if (angle !== null) return { angle, speed: SOCCER.ball.shotSpeed * (0.55 + 0.45 * strength) };
+    const goal = this.goalCenter(1 - me.team);
+    const d = Phaser.Math.Distance.Between(me.x, me.y, goal.x, goal.y);
+    const toGoal = Phaser.Math.Angle.Between(me.x, me.y, goal.x, goal.y);
+    if (d < SOCCER.ball.autoShotRange) return { angle: toGoal, speed: SOCCER.ball.shotSpeed };
+    // lontano dalla porta: passaggio al compagno più avanti, altrimenti un calcio in avanti
+    const fwd = me.team === 0 ? 1 : -1;
+    const mate = this.fighters
+      .filter((f) => f !== me && f.team === me.team && f.isAlive() && (f.x - me.x) * fwd > 100)
+      .sort((a, b) => (b.x - a.x) * fwd)[0];
+    if (mate) return { angle: Phaser.Math.Angle.Between(me.x, me.y, mate.x, mate.y), speed: SOCCER.ball.passSpeed };
+    return { angle: toGoal, speed: SOCCER.ball.shotSpeed };
   }
 
   /** Chi tocca la palla libera la prende (il più vicino). */
@@ -328,6 +528,17 @@ export class SoccerScene extends Phaser.Scene {
     this.score[team]++;
     this.updateScore();
     if (this.ball.holder) this.ball.drop();
+    this.net?.send({ t: 'gol', team, score: this.score });
+    this.celebrateGoal(team);
+    if (this.score[team] >= SOCCER.goalsToWin) {
+      this.time.delayedCall(900, () => this.endMatch());
+      return;
+    }
+    this.time.delayedCall(SOCCER.goalPause * 1000, () => this.kickoff());
+  }
+
+  /** Gol: palla ferma, pausa, scritta e suono (per chi ha segnato o per gli avversari). */
+  private celebrateGoal(team: number): void {
     this.ball.frozen = true;
     this.pause = SOCCER.goalPause;
     this.controls.setEnabled(false);
@@ -336,26 +547,27 @@ export class SoccerScene extends Phaser.Scene {
     this.bigText(mine ? 'GOL!' : 'Gol degli avversari!', mine);
     playSfx(mine ? 'goal' : 'denied');
     if (mine) vibrate('goal');
-    if (this.score[team] >= SOCCER.goalsToWin) {
-      this.time.delayedCall(900, () => this.endMatch());
-      return;
-    }
-    this.time.delayedCall(SOCCER.goalPause * 1000, () => this.kickoff());
   }
 
   /** Tutti al proprio posto e palla al centro. */
   private kickoff(): void {
     if (this.over) return;
     const count = [0, 0];
+    const spots: [number, number, number][] = [];
     for (const f of this.fighters) {
       const spot = this.kickoffSpot(f.team, count[f.team]++);
-      if (f.isAlive()) {
+      const id = this.ids.get(f) ?? 0;
+      spots.push([id, spot.x, spot.y]);
+      if (this.netFighters && f !== this.player && !(f instanceof Bot)) this.netFighters.placeAt(id, spot.x, spot.y);
+      else if (f.isAlive()) {
         f.body.reset(spot.x, spot.y);
         f.setPosition(spot.x, spot.y);
       } else {
         f.respawn(spot.x, spot.y);
       }
     }
+    // con gli amici: ognuno va al suo posto anche sul suo telefono
+    this.net?.send({ t: 'inizio', spots, first: false });
     const c = this.centerSpot();
     this.ball.placeAt(c.x, c.y);
     this.pause = 0;
@@ -372,6 +584,8 @@ export class SoccerScene extends Phaser.Scene {
       this.controls.setEnabled(false);
       showToast(this, `Riappari tra ${SOCCER.respawnSeconds} secondi!`);
     }
+    // con gli amici la ricomparsa la decide il capo stanza (e la dice a tutti)
+    if (this.net) return;
     this.time.delayedCall(SOCCER.respawnSeconds * 1000, () => {
       if (this.over || who.isAlive()) return;
       const spots = who.team === 0 ? RESPAWN : RESPAWN.map(mirror);
@@ -384,7 +598,9 @@ export class SoccerScene extends Phaser.Scene {
   // ------------------------------------------------------------------ punteggio e fine
 
   private updateScore(): void {
-    this.hud.setTitle(`Noi ${this.score[0]} – ${this.score[1]} Loro`);
+    if (!this.hud || !this.player) return;
+    const mine = this.player.team;
+    this.hud.setTitle(`Noi ${this.score[mine]} – ${this.score[1 - mine]} Loro`);
   }
 
   private bigText(text: string, good: boolean): void {
@@ -410,7 +626,9 @@ export class SoccerScene extends Phaser.Scene {
     if (this.over) return;
     this.over = true;
     this.controls.setEnabled(false);
-    const [mine, theirs] = this.score;
+    if (this.net?.isHost) this.net.send({ t: 'fischio', score: this.score });
+    const mine = this.score[this.player.team];
+    const theirs = this.score[1 - this.player.team];
     const place = mine > theirs ? 1 : mine === theirs ? 2 : 3;
     const reward = SaveManager.recordMatch(this.player.stats.id, place, trophiesForPlace(place, 'calcio'));
     const title = place === 1 ? 'VITTORIA!' : place === 2 ? 'Pareggio!' : 'Sconfitta';
@@ -418,7 +636,7 @@ export class SoccerScene extends Phaser.Scene {
     this.time.delayedCall(2800, () => {
       this.cameras.main.fadeOut(300, 20, 33, 61);
       this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () =>
-        this.scene.start('Results', { ...reward, mode: 'calcio', playerCount: 2, score: [mine, theirs] }),
+        this.scene.start('Results', { ...reward, mode: 'calcio', playerCount: 2, score: [mine, theirs], net: !!this.net } satisfies ResultsData),
       );
     });
   }
@@ -463,6 +681,9 @@ export class SoccerScene extends Phaser.Scene {
 
   update(_time: number, delta: number): void {
     const dt = delta / 1000;
+    if (!this.player || !this.fighters.length) return; // un amico che aspetta la partita
+    this.netFighters?.update(dt);
+    if (this.authority) this.sendBall(dt);
     this.view.update(dt, this.cameras.main);
     this.updateHideouts(dt);
     this.updateBallMarker();
@@ -471,13 +692,16 @@ export class SoccerScene extends Phaser.Scene {
       this.pause -= dt;
       return;
     }
-    this.pickUpBall(dt);
-    this.checkGoal();
+    if (this.authority) {
+      this.pickUpBall(dt);
+      this.checkGoal();
+    }
     this.controls.update(dt);
 
-    this.timeLeft -= dt;
+    // il tempo: con gli amici lo decide il capo stanza (gli altri lo ricevono con la palla)
+    if (this.authority) this.timeLeft -= dt;
     const t = Math.max(0, Math.ceil(this.timeLeft));
     this.hud.setStorm(`${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`, t <= 10);
-    if (this.timeLeft <= 0) this.endMatch();
+    if (this.timeLeft <= 0 && this.authority) this.endMatch();
   }
 }

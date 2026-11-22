@@ -56,9 +56,12 @@ export interface MembersMsg {
 }
 
 /** Cosa si gioca con gli amici. */
-export type FriendsMode = 'allenamento' | 'solo' | 'duo';
+export type FriendsMode = 'allenamento' | 'solo' | 'duo' | 'calcio';
 
-/** Capo stanza → tutti: cosa ha scelto di giocare (e, nel Duo, chi sta in squadra con chi: liste di posti). */
+/**
+ * Capo stanza → tutti: cosa ha scelto di giocare e chi sta in squadra con chi (liste di posti).
+ * Duo: squadre da 2. Calcio: due liste, la squadra di sinistra e quella di destra.
+ */
 export interface ChoiceMsg {
   t: 'scelta';
   mode: FriendsMode;
@@ -93,7 +96,7 @@ export interface FighterSetup {
 /** Capo stanza → tutti: com'è fatta la battaglia (mappa e personaggi). */
 export interface SetupMsg {
   t: 'partita';
-  mode: 'solo' | 'duo';
+  mode: 'solo' | 'duo' | 'calcio';
   map: string;
   fighters: FighterSetup[];
 }
@@ -154,6 +157,41 @@ export interface RespawnMsg {
   y: number;
 }
 
+/** Capo stanza → tutti, nel Calcio: palla (x, y, velocità, chi la porta: -1 = nessuno), tempo rimasto e gol. */
+export interface BallMsg {
+  t: 'pallone';
+  b: [x: number, y: number, vx: number, vy: number, holder: number];
+  time: number;
+  score: [number, number];
+}
+
+/** Un amico → capo stanza, nel Calcio: ho calciato la palla (direzione e velocità). */
+export interface KickMsg {
+  t: 'calcia';
+  a: number;
+  sp: number;
+}
+
+/** Capo stanza → tutti: gol della squadra `team` (0 = sinistra). */
+export interface GoalMsg {
+  t: 'gol';
+  team: number;
+  score: [number, number];
+}
+
+/** Capo stanza → tutti: calcio d'inizio, ognuno al suo posto ([numero, x, y]) e tregua. */
+export interface KickoffMsg {
+  t: 'inizio';
+  spots: [id: number, x: number, y: number][];
+  first: boolean;
+}
+
+/** Capo stanza → tutti: fischio finale. */
+export interface FinalWhistleMsg {
+  t: 'fischio';
+  score: [number, number];
+}
+
 /** Capo stanza → tutti: si torna nella stanza (per esempio quando esce dall'Allenamento). */
 export interface RoomMsg {
   t: 'stanza';
@@ -187,6 +225,11 @@ export type NetMessage =
   | GemsMsg
   | PlaceMsg
   | RoomMsg
+  | BallMsg
+  | KickMsg
+  | GoalMsg
+  | KickoffMsg
+  | FinalWhistleMsg
   | PingMsg
   | ByeMsg;
 

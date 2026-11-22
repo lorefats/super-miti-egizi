@@ -339,6 +339,11 @@ con sconosciuti, niente chat, niente account.
   Risultati e prende le coppe sul suo telefono come in una partita normale; se il capo stanza viene sconfitto
   prima degli amici, resta a guardarli finché finiscono. Dai Risultati si torna nella stanza; il capo stanza può
   ripartire quando tutti sono tornati.
+- **Calcio del Nilo con gli amici:** il capo stanza lo può scegliere se ha sbloccato il Calcio (220 coppe). Con
+  "Cambia squadre" gli amici giocano insieme o uno contro l'altro (3 posti per squadra, i liberi sono bot).
+  Palla, gol, tregua, tempo e punteggio li decide il capo stanza; chi porta la palla la vede ai suoi piedi e quando
+  la calcia parte subito sul suo telefono (poi si allinea a quella del capo stanza). Il punteggio si legge sempre
+  "Noi – Loro" dal punto di vista di chi guarda.
 - **Versione:** se un amico ha una versione vecchia del gioco, gli si dice di chiuderlo e riaprirlo per aggiornarlo.
 - **Se qualcuno esce:** sparisce per gli altri; se esce il capo stanza, la stanza si chiude e si torna alla Lobby.
 - **Progressi:** coppe e premi restano sul telefono di ognuno, come nelle partite contro i bot.

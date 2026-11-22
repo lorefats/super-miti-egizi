@@ -6,6 +6,7 @@ import { FONT_FAMILY } from '../config';
 import { getCharacter, isPlayable } from '../data/characters';
 import { NET, SEAT_VARIANTS } from '../data/net';
 import { SaveManager } from '../save/SaveManager';
+import { SOCCER } from '../data/soccer';
 import { NetSession, PROBLEM_TEXT, getSession, type Me, type NetProblem } from '../net/Session';
 import type { FriendsMode, Member } from '../net/protocol';
 import { createGoldButton } from '../ui/GoldButton';
@@ -198,9 +199,9 @@ export class FriendsScene extends Phaser.Scene {
     this.drawRoom(s);
   }
 
-  /** Capo stanza: le squadre del Duo vanno rifatte se qualcuno entra o esce. */
+  /** Capo stanza: le squadre (Duo e Calcio) vanno rifatte se qualcuno entra o esce, o se cambia cosa si gioca. */
   private fixTeams(s: NetSession): void {
-    const options = duoPairings(s.members.map((m) => m.seat));
+    const options = teamOptions(s.choice.mode, s.members.map((m) => m.seat));
     const same = (a: number[][], b: number[][]) => JSON.stringify(a) === JSON.stringify(b);
     const still = options.find((o) => same(o, s.choice.teams));
     s.setChoice(s.choice.mode, still ?? options[0]);
@@ -217,7 +218,7 @@ export class FriendsScene extends Phaser.Scene {
 
     // le squadre del Duo: numero di squadra per ogni posto
     const teamOf = new Map<number, number>();
-    if (mode === 'duo') s.choice.teams.forEach((t, i) => t.forEach((seat) => teamOf.set(seat, i)));
+    if (mode === 'duo' || mode === 'calcio') s.choice.teams.forEach((t, i) => t.forEach((seat) => teamOf.set(seat, i)));
 
     const cardW = 190;
     const gap = 22;
@@ -235,23 +236,31 @@ export class FriendsScene extends Phaser.Scene {
       ['allenamento', 'Allenamento'],
       ['solo', 'Battaglia Solo'],
       ['duo', 'Battaglia Duo'],
+      ['calcio', 'Calcio del Nilo'],
     ];
     const rowY = H - 168;
     if (s.isHost) {
+      const step = Math.min(250, (W - 40) / modes.length);
       modes.forEach(([m, label], i) => {
-        const b = this.modeButton(W / 2 + (i - 1) * 250, rowY, label, m === mode, () => {
+        const b = this.modeButton(W / 2 + (i - (modes.length - 1) / 2) * step, rowY, label, m === mode, () => {
           if (m === s.choice.mode) return;
-          s.setChoice(m, s.choice.teams);
+          // il Calcio con gli amici si sblocca con le coppe del capo stanza, come da soli
+          if (m === 'calcio' && SaveManager.getTotalTrophies() < SOCCER.unlockTrophies) {
+            showToast(this, `Il Calcio del Nilo si sblocca\na ${SOCCER.unlockTrophies} coppe!`);
+            return;
+          }
+          s.setChoice(m, []);
+          this.fixTeams(s);
           this.drawRoom(s);
-        });
+        }, step - 16);
         this.ui.add(b);
       });
-      if (mode === 'duo' && duoPairings(s.members.map((x) => x.seat)).length > 1) {
+      if (teamOptions(mode, s.members.map((x) => x.seat)).length > 1) {
         this.ui.add(
           createGoldButton(this, W - 150, 470, 'Cambia squadre', () => {
-            const options = duoPairings(s.members.map((x) => x.seat));
+            const options = teamOptions(s.choice.mode, s.members.map((x) => x.seat));
             const i = options.findIndex((o) => JSON.stringify(o) === JSON.stringify(s.choice.teams));
-            s.setChoice('duo', options[(i + 1) % options.length]);
+            s.setChoice(s.choice.mode, options[(i + 1) % options.length]);
             this.drawRoom(s);
           }, 240, 56, 24),
         );
@@ -278,8 +287,7 @@ export class FriendsScene extends Phaser.Scene {
   }
 
   /** Pulsante per scegliere cosa giocare: quello scelto è d'oro, gli altri blu. */
-  private modeButton(x: number, y: number, label: string, on: boolean, onPress: () => void): Phaser.GameObjects.Container {
-    const w = 230;
+  private modeButton(x: number, y: number, label: string, on: boolean, onPress: () => void, w = 230): Phaser.GameObjects.Container {
     const h = 60;
     const c = this.add.container(x, y);
     const g = this.add.graphics();
@@ -288,6 +296,7 @@ export class FriendsScene extends Phaser.Scene {
     const t = this.add
       .text(0, -1, label, { fontFamily: FONT_FAMILY, fontSize: '26px', color: on ? css(PALETTE.bluNotte) : '#FFFFFF' })
       .setOrigin(0.5);
+    if (t.width > w - 16) t.setScale((w - 16) / t.width);
     c.add([g, t]);
     makePressable(c, w, h, onPress);
     return c;
@@ -338,7 +347,8 @@ export class FriendsScene extends Phaser.Scene {
     if (this.goingToMatch) return;
     this.goingToMatch = true;
     playSfx('go');
-    goTo(this, mode === 'allenamento' ? 'Training' : 'Match', { net: true });
+    const scene = mode === 'allenamento' ? 'Training' : mode === 'calcio' ? 'Soccer' : 'Match';
+    goTo(this, scene, { net: true });
   }
 
   private leave(): void {
@@ -369,4 +379,28 @@ export function duoPairings(seats: number[]): number[][][] {
     [[s[0], s[2]], [s[1], s[3]]],
     [[s[0], s[3]], [s[1], s[2]]],
   ];
+}
+
+/**
+ * Calcio: tutti i modi di dividere gli amici tra la squadra di sinistra e quella di destra (3 posti per parte,
+ * i posti liberi sono bot). Esempio con 2 amici: insieme, oppure uno contro l'altro.
+ */
+export function calcioSplits(seats: number[]): number[][][] {
+  const s = [...seats].sort((a, b) => a - b);
+  if (s.length <= 1) return [[s, []]];
+  if (s.length === 2) return [[s, []], [[s[0]], [s[1]]]];
+  if (s.length === 3) return [[s, []], [[s[0], s[1]], [s[2]]], [[s[0], s[2]], [s[1]]], [[s[1], s[2]], [s[0]]]];
+  return [
+    [[s[0], s[1]], [s[2], s[3]]],
+    [[s[0], s[2]], [s[1], s[3]]],
+    [[s[0], s[3]], [s[1], s[2]]],
+    [[s[0], s[1], s[2]], [s[3]]],
+  ];
+}
+
+/** Le squadre possibili per cosa si gioca (Allenamento e Solo: nessuna). */
+function teamOptions(mode: FriendsMode, seats: number[]): number[][][] {
+  if (mode === 'duo') return duoPairings(seats);
+  if (mode === 'calcio') return calcioSplits(seats);
+  return [[]];
 }

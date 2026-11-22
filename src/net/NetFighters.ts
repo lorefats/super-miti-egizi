@@ -141,8 +141,33 @@ export class NetFighters {
 
   /** Capo stanza: un effetto da mandare agli altri al prossimo invio (la corrente: solo l'ultima). */
   private queueEffect(seat: number, e: NetEffect): void {
-    if (e[0] === 'corrente') this.flows.set(seat, e);
-    else this.effects.push([seat, e]);
+    if (e[0] === 'corrente') {
+      this.flows.set(seat, e);
+      return;
+    }
+    // cambi di velocità e di ritmo ripetuti a ogni fotogramma (es. chi porta la palla): basta l'ultimo
+    if (e[0] === 'velocita' || e[0] === 'ritmo') {
+      const i = this.effects.findIndex(([s2, e2]) => s2 === seat && e2[0] === e[0] && e2[1] === e[1]);
+      if (i >= 0) {
+        this.effects[i] = [seat, e];
+        return;
+      }
+    }
+    this.effects.push([seat, e]);
+  }
+
+  /** Sposta subito un personaggio in (x, y) (calcio d'inizio): dimentica le posizioni vecchie arrivate dalla rete. */
+  placeAt(id: number, x: number, y: number): void {
+    const p = this.players.get(id);
+    if (!p) return;
+    this.motions.get(id)?.clear();
+    this.last.delete(id);
+    if (!p.isAlive()) {
+      p.respawn(x, y);
+      return;
+    }
+    p.body.reset(x, y);
+    p.setPosition(x, y);
   }
 
   /** Capo stanza: fa riapparire un giocatore sconfitto e lo dice a tutti. */

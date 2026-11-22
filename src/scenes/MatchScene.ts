@@ -159,7 +159,7 @@ export class MatchScene extends Phaser.Scene {
 
   /** Un amico: è arrivata la partita dal capo stanza. */
   private startFromSetup(setup: SetupMsg): void {
-    if (this.fighters.length) return; // già costruita
+    if (this.fighters.length || setup.mode === 'calcio') return; // già costruita (o non è una battaglia)
     this.waitText?.destroy();
     this.waitText = null;
     this.buildWorld(setup.map, setup.mode);

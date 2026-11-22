@@ -4,6 +4,7 @@ import { TEX } from '../art';
 import { dustPuff } from '../art/effects';
 import { SOCCER } from '../data/soccer';
 import type { Player } from './Player';
+import { RemoteMotion } from '../net/RemoteMotion';
 
 const B = SOCCER.ball;
 
@@ -30,6 +31,17 @@ export class SoccerBall extends Phaser.GameObjects.Container {
   private spin = 0;
   /** Da che parte dei piedi sta la palla mentre la si porta (gira piano, non scatta). */
   private carryAngle = 0;
+  /**
+   * Multiplayer: sul telefono del capo stanza (authority) la palla fa tutto da sola; sugli altri telefoni
+   * segue i messaggi del capo stanza (`netState`) e chi la calcia la vede partire subito (`netKick`).
+   */
+  net: { authority: boolean } | null = null;
+  private readonly netMotion = new RemoteMotion();
+  /** secondi in cui la palla calciata da me rotola da sola su questo telefono, prima di seguire di nuovo la rete */
+  private netLocal = 0;
+  /** chi l'ha appena calciata da questo telefono: per un attimo i messaggi vecchi "ce l'ha lui" non valgono */
+  private netKicker: Player | null = null;
+  private netKickerUntil = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -129,9 +141,79 @@ export class SoccerBall extends Phaser.GameObjects.Container {
     this.body.enable = false;
   }
 
+  // ------------------------------------------------------------------ multiplayer (non capo stanza)
+
+  /** Com'è la palla secondo il capo stanza: dove, quanto veloce e chi la porta. */
+  netState(x: number, y: number, vx: number, vy: number, holder: Player | null): void {
+    // ho appena calciato io: i messaggi partiti prima del mio calcio dicono ancora "ce l'ha lui"
+    if (holder && holder === this.netKicker && this.scene.time.now < this.netKickerUntil) holder = null;
+    if (holder !== this.holder) {
+      if (holder) {
+        this.holder = holder;
+        this.carryAngle = Phaser.Math.Angle.Between(holder.x, holder.y, this.x, this.y);
+        this.body.enable = false;
+        this.netLocal = 0;
+      } else {
+        this.holder = null;
+        this.netMotion.clear();
+      }
+    }
+    this.netMotion.push(x, y, vx, vy);
+  }
+
+  /** Calcio fatto da questo telefono: la palla parte subito qui (poi si allinea a quella del capo stanza). */
+  netKick(angle: number, speed: number): void {
+    const from = this.holder;
+    if (!from) return;
+    this.netKicker = from;
+    this.netKickerUntil = this.scene.time.now + 700;
+    this.kick(angle, speed);
+    this.netLocal = 0.45;
+  }
+
+  private netUpdate(dt: number): void {
+    const h = this.holder;
+    if (h) {
+      if (!h.isAlive()) return;
+      this.carry(h, dt);
+      return;
+    }
+    if (this.netLocal > 0) {
+      this.netLocal -= dt;
+      this.roll(dt);
+      return;
+    }
+    const at = this.netMotion.sample();
+    if (!at) return;
+    this.body.enable = false;
+    this.setPosition(at.x, at.y);
+    this.spin += (at.vx / B.radius) * dt;
+    this.sprite.setRotation(this.spin);
+    this.setDepth(this.y);
+  }
+
+  /** Davanti ai piedi di chi la porta, dalla parte dove si cammina: quando si gira, la palla gira piano attorno ai piedi. */
+  private carry(h: Player, dt: number): void {
+    const moving = h.body.velocity.lengthSq() > 400 || h.isMovingByNetwork();
+    const v = h.isMovingByNetwork() ? h.netVelocity : h.body.velocity;
+    if (moving && v.lengthSq() > 400) {
+      const target = Math.atan2(v.y, v.x);
+      this.carryAngle = Phaser.Math.Angle.RotateTo(this.carryAngle, target, B.carryTurnRate * dt);
+    }
+    const a = this.carryAngle;
+    this.setPosition(h.x + Math.cos(a) * B.carryOffset, h.y + Math.sin(a) * B.carryOffset * 0.6 + 4);
+    if (moving) this.spin += dt * 12 * Math.sign(Math.cos(a) || 1);
+    this.sprite.setRotation(this.spin);
+    this.setDepth(this.y + 1);
+  }
+
   preUpdate(_t: number, delta: number): void {
     const dt = delta / 1000;
     this.kickerWait -= dt;
+    if (this.net && !this.net.authority) {
+      this.netUpdate(dt);
+      return;
+    }
     const h = this.holder;
     if (h) {
       // chi la porta la perde se viene colpito, sconfitto, stordito o va sotto terra
@@ -140,21 +222,16 @@ export class SoccerBall extends Phaser.GameObjects.Container {
       } else {
         this.holderHealth = h.health;
         h.changeSpeed('palla', 0.2, SOCCER.carrierSpeedFactor);
-        // davanti ai piedi, dalla parte dove si cammina: quando si gira, la palla gira piano attorno ai piedi
-        const moving = h.body.velocity.lengthSq() > 400;
-        if (moving) {
-          const target = Math.atan2(h.body.velocity.y, h.body.velocity.x);
-          this.carryAngle = Phaser.Math.Angle.RotateTo(this.carryAngle, target, B.carryTurnRate * dt);
-        }
-        const a = this.carryAngle;
-        this.setPosition(h.x + Math.cos(a) * B.carryOffset, h.y + Math.sin(a) * B.carryOffset * 0.6 + 4);
-        if (moving) this.spin += dt * 12 * Math.sign(Math.cos(a) || 1);
-        this.sprite.setRotation(this.spin);
-        this.setDepth(this.y + 1);
+        this.carry(h, dt);
         return;
       }
     }
+    this.roll(dt);
+  }
 
+  /** La palla libera rotola, rallenta e si fa trascinare dalla corrente del fiume. */
+  private roll(dt: number): void {
+    this.body.enable = true;
     // libera: la velocità vera è quella dopo gli urti, meno la corrente aggiunta prima
     this.vel.set(this.body.velocity.x - this.drift.x, this.body.velocity.y - this.drift.y);
     const flow = this.flowAt(this.x, this.y);

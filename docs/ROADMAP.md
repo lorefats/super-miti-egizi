@@ -124,7 +124,7 @@ niente sconosciuti, niente chat.
 - [x] **M3 — Battaglia con gli amici (Solo e Duo)**
   > Partita vera sulla mappa con amici + bot che riempiono i posti: tempesta, bauli, gioielli, bot gestiti
   > dal capo stanza. In Duo si sceglie con chi fare squadra. Risultati e coppe sul telefono di ognuno.
-- [ ] **M4 — Calcio del Nilo con gli amici**
+- [x] **M4 — Calcio del Nilo con gli amici**
   > Palla, gol, tregua e punteggio uguali per tutti; amici nella stessa squadra o contro.
 - [ ] **M5 — Rifinitura del multiplayer**
   > Riprovare il collegamento se cade per un attimo, nomi scelti dal giocatore, prove con reti diverse

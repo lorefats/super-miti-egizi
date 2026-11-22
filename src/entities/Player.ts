@@ -160,6 +160,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   /** Mosso da un altro telefono (multiplayer): niente fisica, la posizione arriva dalla rete. */
   private netDriven = false;
   private readonly netDir = new Phaser.Math.Vector2();
+  private readonly netVel = new Phaser.Math.Vector2();
   /** Stelline che girano sulla testa quando è stordito. */
   private dizzy: Phaser.GameObjects.Container | null = null;
   private weaponWindup = WEAPON_WINDUP;
@@ -488,10 +489,21 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     // durante un salto della super lo muove il salto (rifatto qui uguale), poi torna a seguire la rete
     if (this.dashing || !this.isAlive()) return;
     this.setPosition(x, y);
+    this.netVel.set(vx, vy);
     const speed = Math.hypot(vx, vy);
     if (speed > 30) this.netDir.set(vx / speed, vy / speed);
     else this.netDir.set(0, 0);
     this.move(this.netDir);
+  }
+
+  /** Multiplayer: è mosso dalla rete (un amico o un bot visto da un altro telefono)? */
+  isMovingByNetwork(): boolean {
+    return this.netDriven;
+  }
+
+  /** Multiplayer: la velocità arrivata dalla rete (per chi è mosso dalla rete). */
+  get netVelocity(): Phaser.Math.Vector2 {
+    return this.netVel;
   }
 
   /** Multiplayer, non capo stanza: danni ed effetti dei colpi qui non contano (li decide il capo stanza). */
