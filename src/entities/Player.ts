@@ -13,6 +13,7 @@ import type { CharacterModule } from '../characters/types';
 import type { Attacker, Combat, Damageable, StunStyle } from './Combat';
 import { HealthBar } from '../ui/HealthBar';
 import { showDamageNumber } from '../ui/DamageNumber';
+import type { NetEffect } from '../net/protocol';
 
 /** Suono dell'attacco base per ogni tipo di arma. */
 const WEAPON_SOUND: Record<WeaponKind, SfxName> = { ventaglio: 'swing', linea: 'shoot', lancio: 'throw' };
@@ -61,6 +62,19 @@ export interface FighterOptions {
   level?: number;
   /** È il compagno di squadra del giocatore (Duo)? La sua barra è azzurra. */
   ally?: boolean;
+}
+
+/**
+ * Multiplayer con gli amici. Il **capo stanza** decide danni ed effetti su tutti i personaggi (authority = true)
+ * e li racconta agli altri telefoni con `onEffect`; sugli altri telefoni (authority = false) danni ed effetti
+ * arrivati dai colpi non fanno niente: arrivano dal capo stanza con `netSync` e `applyNetEffect`.
+ */
+export interface PlayerNet {
+  authority: boolean;
+  /** capo stanza: a questo personaggio è appena successo qualcosa da raccontare agli altri */
+  onEffect?: (e: NetEffect) => void;
+  /** chi comanda questo personaggio da questo telefono ha appena iniziato un colpo (da raccontare agli altri) */
+  onSwing?: (angle: number, distance: number, isSuper: boolean) => void;
 }
 
 /** Evento emesso quando il personaggio viene sconfitto. */
@@ -136,6 +150,13 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   private undergroundTime = 0;
   /** Sta saltando o si sta tuffando (lo muove la super, non il giocatore). */
   private dashing = false;
+  /** Multiplayer (null = partita normale, tutto come prima). */
+  net: PlayerNet | null = null;
+  /** sta applicando un effetto arrivato dalla rete (allora non va bloccato) */
+  private applyingNet = false;
+  /** corrente arrivata dalla rete (tornado): la si applica per un attimo, fino al prossimo messaggio */
+  private readonly netFlow = new Phaser.Math.Vector2();
+  private netFlowTime = 0;
   /** Mosso da un altro telefono (multiplayer): niente fisica, la posizione arriva dalla rete. */
   private netDriven = false;
   private readonly netDir = new Phaser.Math.Vector2();
@@ -319,10 +340,11 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Cambia la velocità per qualche secondo (0.7 = più lento, 1.3 = più veloce). Si rinnova se arriva di nuovo. */
   changeSpeed(name: string, seconds: number, factor: number): void {
-    if (!this.isAlive()) return;
+    if (!this.isAlive() || this.netBlocked()) return;
     if (factor < 1 && !this.isTargetable()) return; // i rallentamenti non arrivano a chi non si può colpire
     const old = this.speedMods.get(name);
     this.speedMods.set(name, { left: Math.max(old?.left ?? 0, seconds), factor });
+    this.netTell(['velocita', name, seconds, factor]);
   }
 
   /** Moltiplicatore della velocità dato da tutti i cambi di velocità attivi. */
@@ -334,10 +356,11 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Cambia la rapidità degli attacchi e della ricarica per qualche secondo (0.4 = al rallentatore, 2 = il doppio). */
   changeAttackRate(name: string, seconds: number, factor: number): void {
-    if (!this.isAlive()) return;
+    if (!this.isAlive() || this.netBlocked()) return;
     if (factor < 1 && !this.isTargetable()) return;
     const old = this.rateMods.get(name);
     this.rateMods.set(name, { left: Math.max(old?.left ?? 0, seconds), factor });
+    this.netTell(['ritmo', name, seconds, factor]);
   }
 
   /** Moltiplicatore della rapidità degli attacchi. */
@@ -349,9 +372,10 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Spaventato: per qualche secondo scappa lontano dal punto (x, y) e non lo si comanda. */
   scare(x: number, y: number, seconds: number): void {
-    if (!this.isTargetable()) return;
+    if (!this.isTargetable() || this.netBlocked()) return;
     this.scaredFrom.set(x, y);
     this.addBuff('paura', seconds);
+    this.netTell(['paura', Math.round(x), Math.round(y), seconds]);
   }
 
   healthFraction(): number {
@@ -360,7 +384,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Mette la vita a una frazione della vita massima (la Bilancia di Maat). */
   setHealthFraction(f: number): void {
-    if (!this.isTargetable()) return;
+    if (!this.isTargetable() || this.netBlocked()) return;
     this.health = Phaser.Math.Clamp(f, 0.01, 1) * this.maxHealth;
   }
 
@@ -393,20 +417,22 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Vede solo vicino a sé per qualche secondo (tempesta di sabbia di Seth). */
   blind(seconds: number): void {
-    if (!this.isTargetable()) return;
+    if (!this.isTargetable() || this.netBlocked()) return;
     this.addBuff('accecato', seconds);
+    this.netTell(['cieco', seconds]);
   }
 
   /** Confuso per qualche secondo: si muove a caso (il giocatore o il bot non lo comandano). */
   confuse(seconds: number): void {
-    if (!this.isTargetable()) return;
+    if (!this.isTargetable() || this.netBlocked()) return;
     if (!this.hasBuff('confuso')) this.confusedTimer = 0;
     this.addBuff('confuso', seconds);
+    this.netTell(['confuso', seconds]);
   }
 
   /** Chiamato da Combat quando i colpi di questo personaggio vanno a segno: carica la super. */
   onDealtDamage(amount: number): void {
-    if (this.attackIsSuper) return;
+    if (this.attackIsSuper || this.netBlocked()) return;
     const wasReady = this.superCharge >= 1;
     this.superCharge = Math.min(1, this.superCharge + amount / this.stats.super.chargeDamage);
     if (this.isHuman && !wasReady && this.superCharge >= 1) {
@@ -459,11 +485,110 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
       this.netDriven = true;
       this.body.moves = false;
     }
+    // durante un salto della super lo muove il salto (rifatto qui uguale), poi torna a seguire la rete
+    if (this.dashing || !this.isAlive()) return;
     this.setPosition(x, y);
     const speed = Math.hypot(vx, vy);
     if (speed > 30) this.netDir.set(vx / speed, vy / speed);
     else this.netDir.set(0, 0);
     this.move(this.netDir);
+  }
+
+  /** Multiplayer, non capo stanza: danni ed effetti dei colpi qui non contano (li decide il capo stanza). */
+  private netBlocked(): boolean {
+    return !!this.net && !this.net.authority && !this.applyingNet;
+  }
+
+  /** Multiplayer, capo stanza: racconta agli altri telefoni un effetto appena applicato. */
+  private netTell(e: NetEffect): void {
+    if (this.net?.authority && !this.applyingNet) this.net.onEffect?.(e);
+  }
+
+  /** Multiplayer: applica un effetto deciso dal capo stanza. */
+  applyNetEffect(e: NetEffect): void {
+    this.applyingNet = true;
+    try {
+      switch (e[0]) {
+        case 'stordito':
+          this.stun(e[1], e[2]);
+          break;
+        case 'spinta':
+          this.push(e[1], e[2]);
+          break;
+        case 'corrente':
+          this.netFlow.set(e[1], e[2]);
+          this.netFlowTime = e[3];
+          break;
+        case 'scivola':
+          this.slip(e[1]);
+          break;
+        case 'velocita':
+          this.changeSpeed(e[1], e[2], e[3]);
+          break;
+        case 'confuso':
+          this.confuse(e[1]);
+          break;
+        case 'paura':
+          this.scare(e[1], e[2], e[3]);
+          break;
+        case 'ritmo':
+          this.changeAttackRate(e[1], e[2], e[3]);
+          break;
+        case 'cieco':
+          this.blind(e[1]);
+          break;
+        case 'risorge':
+          if (this.isAlive() && !this.reviving) this.revive();
+          break;
+      }
+    } finally {
+      this.applyingNet = false;
+    }
+  }
+
+  /**
+   * Multiplayer, non capo stanza: vita e super come le ha decise il capo stanza.
+   * Se la vita scende si vede il colpo (numero, lampo, suono); se arriva a zero, il personaggio è sconfitto.
+   */
+  netSync(health: number, superCharge: number): void {
+    if (!this.isAlive()) return; // aspetta "riappare"
+    const was = this.health;
+    if (health < was - 0.5) {
+      this.showHurt(was - health);
+      this.health = Math.max(0, health);
+      if (this.health <= 0 && !this.reviving) this.defeat();
+    } else if (health > was + 0.5) {
+      const gain = health - was;
+      this.health = health;
+      if (gain > this.maxHealth * 0.03 && this.revealed && !this.reviving) {
+        showDamageNumber(this.scene, this.x, this.y - BAR_OFFSET_Y + 20, gain, '#7CF29A', '+');
+      }
+    }
+    const wasReady = this.superCharge >= 1;
+    this.superCharge = superCharge;
+    if (this.isHuman && !wasReady && superCharge >= 1) {
+      playSfx('superReady');
+      vibrate('superReady');
+    }
+  }
+
+  /**
+   * Multiplayer: rifà il colpo che un altro telefono ha deciso (stessa direzione e distanza), così tutti
+   * vedono proiettili ed effetti. Non controlla munizioni e ricarica: le controlla chi l'ha deciso.
+   */
+  netSwing(angle: number, distance: number, isSuper: boolean): void {
+    if (!this.canAct()) return;
+    if (isSuper) {
+      this.superCharge = 0;
+      this.attackDistance = Phaser.Math.Clamp(distance, 0, this.stats.super.range);
+      this.startSwing(angle, true, false);
+      if (this.revealed) playSfxAt(this.scene, this.x, this.y, 'super');
+      this.superGlow();
+    } else {
+      this.attackDistance = Phaser.Math.Clamp(distance, 0, this.stats.weapon.range);
+      this.startSwing(angle, false, false);
+      if (this.revealed) playSfxAt(this.scene, this.x, this.y, WEAPON_SOUND[this.stats.weapon.kind], 0.7);
+    }
   }
 
   /** Attacca nella direzione `angle` (radianti). Restituisce false se non ci sono colpi pronti. */
@@ -491,11 +616,15 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.startSwing(angle, true);
     if (this.revealed) playSfxAt(this.scene, this.x, this.y, 'super');
     if (this.isHuman) vibrate('super');
-    // luce dorata sulla testa mentre lancia la super
+    this.superGlow();
+    return true;
+  }
+
+  /** Luce dorata sulla testa mentre lancia la super. */
+  private superGlow(): void {
     const glow = this.scene.add.image(this.facing * 20, -120, TEX.bagliore).setTint(0xffd27a).setBlendMode(Phaser.BlendModes.ADD).setScale(0.4);
     this.add(glow);
     this.scene.tweens.add({ targets: glow, scale: 1.1, alpha: { from: 1, to: 0 }, duration: 450, onComplete: () => glow.destroy() });
-    return true;
   }
 
   /** Super automatica verso il nemico più vicino. */
@@ -506,7 +635,9 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     return this.tryUseSuper(angle, distance);
   }
 
-  private startSwing(angle: number, isSuper: boolean): void {
+  private startSwing(angle: number, isSuper: boolean, tell = true): void {
+    // multiplayer: chi comanda questo personaggio lo racconta agli altri telefoni (che lo rifanno uguale)
+    if (tell) this.net?.onSwing?.(angle, this.attackDistance, isSuper);
     this.sinceCombat = 0;
     this.revealedUntil = this.scene.time.now + BUSH.revealAfterAttack * 1000;
     this.attackTime = 0;
@@ -521,7 +652,8 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
    * "sarcofago" = chiuso nel sarcofago di Anubi, "stelle" = stelline che girano sulla testa.
    */
   stun(seconds: number, style: StunStyle = 'sarcofago'): void {
-    if (!this.isAlive() || this.reviving || this.dashing || this.isUnderground()) return;
+    if (!this.isAlive() || this.reviving || this.dashing || this.isUnderground() || this.netBlocked()) return;
+    this.netTell(['stordito', seconds, style]);
     this.stunTime = Math.max(this.stunTime, seconds);
     this.attackTime = -1;
     this.body.setVelocity(0, 0);
@@ -550,19 +682,23 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Spinta improvvisa (vento, acqua, onde) che poi si smorza. */
   push(vx: number, vy: number): void {
-    if (!this.isTargetable()) return;
+    if (!this.isTargetable() || this.netBlocked()) return;
     this.impulse.add({ x: vx, y: vy });
+    this.netTell(['spinta', Math.round(vx), Math.round(vy)]);
   }
 
   /** Corrente che lo trascina solo per questo fotogramma (il risucchio del tornado). */
   addFlow(vx: number, vy: number): void {
-    if (!this.isTargetable()) return;
+    if (!this.isTargetable() || this.netBlocked()) return;
     this.flow.add({ x: vx, y: vy });
+    // la corrente vale un fotogramma: agli altri telefoni la si manda come "corrente per un attimo"
+    this.netTell(['corrente', Math.round(vx), Math.round(vy), 0.12]);
   }
 
   /** Scivola per qualche secondo: fermarsi e girare diventa difficile. */
   slip(seconds: number): void {
-    if (!this.isTargetable()) return;
+    if (!this.isTargetable() || this.netBlocked()) return;
+    this.netTell(['scivola', seconds]);
     this.slipTime = Math.max(this.slipTime, seconds);
   }
 
@@ -638,7 +774,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
   /** Cura una frazione della vita massima (con numero verde). */
   heal(fraction: number): void {
-    if (!this.isAlive() || this.reviving) return;
+    if (!this.isAlive() || this.reviving || this.netBlocked()) return;
     const amount = Math.min(this.maxHealth - this.health, this.maxHealth * fraction);
     this.health += amount;
     if (amount > 0 && this.revealed) showDamageNumber(this.scene, this.x, this.y - BAR_OFFSET_Y + 20, amount, '#7CF29A', '+');
@@ -674,8 +810,17 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
   }
 
   takeDamage(amount: number): void {
-    if (!this.isTargetable()) return;
+    if (!this.isTargetable() || this.netBlocked()) return;
     this.health = Math.max(0, this.health - amount);
+    this.showHurt(amount);
+    if (this.health <= 0) {
+      if (this.extraLives > 0) this.revive();
+      else this.defeat();
+    }
+  }
+
+  /** Come si vede un colpo ricevuto: numero del danno, lampo bianco, suono (e vibrazione per il giocatore). */
+  private showHurt(amount: number): void {
     this.sinceCombat = 0;
     if (this.revealed) {
       showDamageNumber(this.scene, this.x, this.y - BAR_OFFSET_Y + 20, amount, this.isHuman ? '#FFB3B8' : '#FFFFFF');
@@ -690,14 +835,11 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     this.scene.time.delayedCall(70, () => {
       if (this.isAlive()) this.sprite.clearTint();
     });
-    if (this.health <= 0) {
-      if (this.extraLives > 0) this.revive();
-      else this.defeat();
-    }
   }
 
   /** Invece di essere sconfitto, resuscita dal suo sarcofago con parte della vita. */
   private revive(): void {
+    this.netTell(['risorge']);
     this.clearDizzy();
     this.extraLives -= 1;
     this.bar.setExtraLife(this.extraLives > 0);
@@ -834,6 +976,10 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
     }
     // spinte e correnti (vento, acqua, tornado)
     const decay = Math.exp(-PUSH.decayPerSecond * dt);
+    if (this.netFlowTime > 0) {
+      this.netFlowTime -= dt;
+      this.flow.add(this.netFlow);
+    }
     const pushX = this.impulse.x + this.flow.x;
     const pushY = this.impulse.y + this.flow.y;
     this.impulse.scale(decay);
@@ -875,7 +1021,7 @@ export class Player extends Phaser.GameObjects.Container implements Damageable, 
 
     // rigenerazione lenta se lontano dai combattimenti
     this.sinceCombat += dt;
-    if (this.sinceCombat > REGEN.delaySeconds && this.health < this.maxHealth) {
+    if (this.sinceCombat > REGEN.delaySeconds && this.health < this.maxHealth && !this.netBlocked()) {
       this.health = Math.min(this.maxHealth, this.health + this.maxHealth * REGEN.fractionPerSecond * dt);
     }
 

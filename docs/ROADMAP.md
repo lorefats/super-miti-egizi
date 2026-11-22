@@ -118,7 +118,7 @@ niente sconosciuti, niente chat.
   > nel campo di Allenamento: ognuno vede gli altri dèi camminare con il loro nome. Avvisi semplici se la
   > stanza non esiste, è piena, manca internet o qualcuno ha una versione vecchia del gioco; se qualcuno
   > esce, gli altri lo vedono sparire.
-- [ ] **M2 — Combattere insieme**
+- [x] **M2 — Combattere insieme**
   > Attacchi e super si vedono su tutti i telefoni; il capo stanza decide chi viene colpito, vita,
   > sconfitte e ricomparse. Allenamento "uno contro uno" tra amici per provarlo.
 - [ ] **M3 — Battaglia con gli amici (Solo e Duo)**

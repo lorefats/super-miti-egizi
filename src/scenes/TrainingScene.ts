@@ -5,11 +5,11 @@ import { ROSTER, getCharacter, isPlayable } from '../data/characters';
 import { MAPPA_ALLENAMENTO, TRAINING } from '../data/training';
 import { NET, SEAT_VARIANTS } from '../data/net';
 import { PROBLEM_TEXT, getSession, type NetSession } from '../net/Session';
-import { RemoteMotion } from '../net/RemoteMotion';
-import type { Member, MotionTuple } from '../net/protocol';
+import { NetFighters } from '../net/NetFighters';
+import type { Member } from '../net/protocol';
 import { SaveManager } from '../save/SaveManager';
 import { Combat } from '../entities/Combat';
-import { Player } from '../entities/Player';
+import { DEFEATED_EVENT, Player } from '../entities/Player';
 import { Target } from '../entities/Target';
 import { addFpsMeter } from '../ui/FpsMeter';
 import { createGoldButton } from '../ui/GoldButton';
@@ -28,15 +28,6 @@ interface TargetSlot {
   wait: number;
 }
 
-/** Un amico nel multiplayer: il suo dio sulla mappa e le sue ultime posizioni arrivate. */
-interface Friend {
-  member: Member;
-  player: Player;
-  motion: RemoteMotion;
-  /** l'ultima posizione arrivata (il capo stanza la gira agli altri) */
-  last: MotionTuple | null;
-}
-
 /** Dove parte ogni posto della stanza, attorno al punto di partenza della mappa. */
 const SEAT_OFFSETS = [
   { x: 0, y: 0 },
@@ -48,7 +39,8 @@ const SEAT_OFFSETS = [
 /**
  * Allenamento (sezione 2): mappa piccola con bersagli fermi, per provare i personaggi.
  * Niente bot, niente tempesta, niente coppe. In alto a destra si cambia dio e si carica la super al volo.
- * Con gli amici (multiplayer, passo M1): ognuno vede gli altri dèi camminare sulla stessa mappa.
+ * Con gli amici (multiplayer): ognuno vede gli altri dèi e ci si può sfidare (tutti contro tutti);
+ * chi viene sconfitto riappare dopo qualche secondo.
  */
 export class TrainingScene extends Phaser.Scene {
   private player!: Player;
@@ -59,8 +51,7 @@ export class TrainingScene extends Phaser.Scene {
   private characterId = '';
   /** la stanza degli amici (null = Allenamento da soli) */
   private net: NetSession | null = null;
-  private friends = new Map<number, Friend>();
-  private sendTimer = 0;
+  private fighters: NetFighters | null = null;
   private unsubscribe: (() => void)[] = [];
 
   constructor() {
@@ -89,7 +80,8 @@ export class TrainingScene extends Phaser.Scene {
     this.player = new Player(this, map.spawn.x + off.x, map.spawn.y + off.y, {
       characterId: this.characterId,
       level: SaveManager.getLevel(this.characterId),
-      team: 0,
+      // con gli amici ognuno ha la sua squadra: tutti contro tutti
+      team: this.teamOf(this.net?.mySeat ?? 0),
       combat: this.combat,
       isHuman: true,
     });
@@ -107,7 +99,7 @@ export class TrainingScene extends Phaser.Scene {
     const hud = new MatchHud(this);
     if (this.net) {
       hud.setTitle(`Allenamento con gli amici — stanza ${this.net.code}`);
-      hud.setStorm('Andate a trovarvi!', false);
+      hud.setStorm('Sfidatevi! Chi è sconfitto riappare', false);
     } else {
       hud.setTitle(`Allenamento — ${getCharacter(this.characterId).name}`);
       hud.setStorm('Colpisci i bersagli!', false);
@@ -115,9 +107,8 @@ export class TrainingScene extends Phaser.Scene {
     if (map.name) hud.showZone(map.name);
     this.drawButtons();
     addFpsMeter(this);
-    this.friends = new Map();
+    this.fighters = null;
     this.unsubscribe = [];
-    this.sendTimer = 0;
     if (this.net) this.startNet(this.net);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       for (const u of this.unsubscribe) u();
@@ -127,20 +118,34 @@ export class TrainingScene extends Phaser.Scene {
 
   // ------------------------------------------------------------------ amici (multiplayer)
 
+  /** Squadra di un posto della stanza (con gli amici: ognuno la sua; da soli: 0). */
+  private teamOf(seat: number): number {
+    return this.net ? 10 + seat : 0;
+  }
+
+  private spotOf(seat: number): { x: number; y: number } {
+    const map = MAPPA_ALLENAMENTO;
+    const off = SEAT_OFFSETS[seat % SEAT_OFFSETS.length];
+    return { x: map.spawn.x + off.x, y: map.spawn.y + off.y };
+  }
+
   private startNet(s: NetSession): void {
-    for (const m of s.members) if (m.seat !== s.mySeat) this.addFriend(m);
+    this.fighters = new NetFighters(this, {
+      session: s,
+      me: this.player,
+      makeFriend: (m) => this.addFriend(m),
+      respawnSpot: (seat) => this.spotOf(seat),
+      respawnSeconds: NET.trainingRespawnSeconds,
+      onRespawn: (p) => {
+        if (p === this.player) this.controls.setEnabled(true);
+      },
+      onLeft: (m) => showToast(this, `${m.name} è uscito`),
+    });
+    this.player.on(DEFEATED_EVENT, () => {
+      this.controls.setEnabled(false);
+      showToast(this, `Riappari tra ${NET.trainingRespawnSeconds} secondi!`);
+    });
     this.unsubscribe.push(
-      s.events.on('msg', (msg) => {
-        if (msg.t === 'mossa') this.onMotion(msg.m);
-        else if (msg.t === 'mosse') for (const m of msg.all) this.onMotion(m);
-      }),
-      s.events.on('left', (m) => {
-        const f = this.friends.get(m.seat);
-        if (!f) return;
-        this.friends.delete(m.seat);
-        f.player.destroy();
-        showToast(this, `${m.name} è uscito`);
-      }),
       s.events.on('closed', (why) => {
         if (!why) return;
         showToast(this, `${PROBLEM_TEXT[why]}\nSi torna alla Lobby.`, 2.5);
@@ -150,53 +155,18 @@ export class TrainingScene extends Phaser.Scene {
   }
 
   /** Mette sulla mappa il dio di un amico. Lo muovono i messaggi che arrivano dal suo telefono. */
-  private addFriend(m: Member): void {
-    const map = MAPPA_ALLENAMENTO;
-    const off = SEAT_OFFSETS[m.seat % SEAT_OFFSETS.length];
-    const player = new Player(this, map.spawn.x + off.x, map.spawn.y + off.y, {
+  private addFriend(m: Member): Player {
+    const spot = this.spotOf(m.seat);
+    const player = new Player(this, spot.x, spot.y, {
       characterId: isPlayable(m.characterId) ? m.characterId : 'horus',
       level: m.level,
-      team: 0,
+      team: this.teamOf(m.seat),
       combat: this.combat,
       variant: SEAT_VARIANTS[m.seat % SEAT_VARIANTS.length],
       name: m.name,
-      ally: true,
     });
-    // per ora (passo M1) gli amici non si colpiscono: i colpi arriveranno con il passo M2
-    this.combat.remove(player);
-    this.friends.set(m.seat, { member: m, player, motion: new RemoteMotion(), last: null });
-  }
-
-  private onMotion(m: MotionTuple): void {
-    const f = this.friends.get(m[0]);
-    if (!f) return;
-    f.last = m;
-    f.motion.push(m[1], m[2], m[3], m[4]);
-  }
-
-  /** Ogni fotogramma: gli amici dove dice la rete; ogni tanto si manda la propria posizione. */
-  private updateNet(dt: number): void {
-    const s = this.net;
-    if (!s || s.closed) return;
-    const now = performance.now();
-    for (const f of this.friends.values()) {
-      const p = f.motion.sample(now);
-      if (p) f.player.driveFromNetwork(p.x, p.y, p.vx, p.vy);
-    }
-    this.sendTimer -= dt;
-    if (this.sendTimer > 0) return;
-    this.sendTimer = 1 / NET.sendRate;
-    const me = this.player;
-    const v = me.body.velocity;
-    const mine: MotionTuple = [s.mySeat, Math.round(me.x), Math.round(me.y), Math.round(v.x), Math.round(v.y)];
-    if (s.isHost) {
-      // il capo stanza manda a tutti dove sono tutti (lui compreso)
-      const all: MotionTuple[] = [mine];
-      for (const f of this.friends.values()) if (f.last) all.push(f.last);
-      s.send({ t: 'mosse', all });
-    } else {
-      s.send({ t: 'mossa', m: mine });
-    }
+    // niente muri per lui: dove sta lo decide il suo telefono (che i muri li ha già)
+    return player;
   }
 
   /** Mette un bersaglio nuovo nel suo posto (con il "pop" quando torna su). */
@@ -223,6 +193,8 @@ export class TrainingScene extends Phaser.Scene {
     // con gli amici il dio è quello scelto entrando nella stanza
     change.setVisible(!this.net);
     const charge = createGoldButton(this, 0, 126, 'Super carica', () => this.fillSuper(), 220, 60, 28);
+    // con gli amici la super si carica solo colpendo (la carica la decide il capo stanza)
+    charge.setVisible(!this.net);
     charge.setDepth(DEPTH.ui + 10);
     // se lo schermo cambia misura (telefono girato, schermo intero) restano attaccati al bordo destro
     const layout = () => {
@@ -274,6 +246,6 @@ export class TrainingScene extends Phaser.Scene {
       if (s.wait <= 0) this.placeTarget(s);
     }
     this.controls.update(dt);
-    this.updateNet(dt);
+    this.fighters?.update(dt);
   }
 }

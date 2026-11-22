@@ -218,6 +218,7 @@ export class NetSession {
         }
         // nessuno può parlare a nome di un altro
         if (data.t === 'mossa') data.m[0] = seat;
+        if (data.t === 'colpo') data.seat = seat;
         this.events.emit('msg', data, seat);
       });
       conn.on('close', () => {
@@ -313,6 +314,11 @@ export class NetSession {
     if (this.closedFlag) return;
     if (this.isHost) this.broadcast(msg);
     else if (this.hostConn?.open) this.hostConn.send(msg);
+  }
+
+  /** Capo stanza: gira a tutti gli altri un messaggio arrivato dal posto `from`. */
+  relay(msg: NetMessage, from: number): void {
+    if (this.isHost && !this.closedFlag) this.broadcast(msg, from);
   }
 
   /** Capo stanza: manda a tutti (tranne, se indicato, il posto `except`). */

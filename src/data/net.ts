@@ -5,7 +5,7 @@ export const NET = {
    * Versione dei messaggi tra telefoni: si aumenta quando cambia il modo di parlarsi.
    * Se due telefoni hanno versioni diverse, chi entra viene avvisato di aggiornare il gioco.
    */
-  protocol: 1,
+  protocol: 2,
   /** giocatori al massimo in una stanza (capo stanza compreso) */
   maxPlayers: 4,
   /** cifre del codice stanza */
@@ -24,6 +24,8 @@ export const NET = {
   connectTimeoutSeconds: 12,
   /** quanti codici prova il capo stanza se quello pescato è già usato */
   codeAttempts: 5,
+  /** dopo quanti secondi riappare chi viene sconfitto nell'Allenamento con gli amici */
+  trainingRespawnSeconds: 3,
 };
 
 /**

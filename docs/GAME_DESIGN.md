@@ -325,6 +325,12 @@ con sconosciuti, niente chat, niente account.
   scattante); il **capo stanza** decide colpi, vita, sconfitte, bot, tempesta, bauli e palla, e manda a tutti
   com'è la partita circa 15 volte al secondo. Gli altri telefoni mostrano i movimenti in modo morbido
   (interpolazione), con un piccolo ritardo che non si nota.
+- **Colpi:** chi attacca lo dice agli altri e ogni telefono rifà lo stesso colpo (stessa direzione e distanza), così
+  tutti vedono proiettili e super. Se il colpo prende qualcuno lo decide il telefono del capo stanza, che poi manda
+  vita, carica della super ed effetti (stordito, spinto, rallentato, confuso...) a tutti. Funziona per ogni dio
+  senza toccare i moduli dei personaggi.
+- **Allenamento con gli amici:** tutti contro tutti sul campo d'allenamento (più i bersagli); chi è sconfitto
+  riappare dopo 3 secondi al suo posto. La super si carica solo colpendo (niente pulsante "Super carica").
 - **Versione:** se un amico ha una versione vecchia del gioco, gli si dice di chiuderlo e riaprirlo per aggiornarlo.
 - **Se qualcuno esce:** sparisce per gli altri; se esce il capo stanza, la stanza si chiude e si torna alla Lobby.
 - **Progressi:** coppe e premi restano sul telefono di ognuno, come nelle partite contro i bot.

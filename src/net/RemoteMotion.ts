@@ -22,6 +22,11 @@ export class RemoteMotion {
     if (this.buf.length > 30) this.buf.shift();
   }
 
+  /** Dimentica le posizioni vecchie (per esempio quando riappare da un'altra parte). */
+  clear(): void {
+    this.buf.length = 0;
+  }
+
   get hasData(): boolean {
     return this.buf.length > 0;
   }
