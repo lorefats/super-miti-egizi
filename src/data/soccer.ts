@@ -14,19 +14,29 @@ export const SOCCER = {
   respawnSeconds: 4,
   /** pausa dopo un gol prima di ricominciare dal centro (secondi) */
   goalPause: 2.2,
-  /** chi porta la palla va un po' più piano */
-  carrierSpeedFactor: 0.9,
+  /** tregua prima di ogni calcio d'inizio (anche dopo un gol): tutti fermi, conto alla rovescia (secondi) */
+  kickoffTruce: 5,
+  /** chi porta la palla va appena un po' più piano */
+  carrierSpeedFactor: 0.95,
   ball: {
     radius: 24,
     /** quanto rallenta da sola sull'erba e nell'acqua (più alto = si ferma prima) */
-    drag: 1.2,
+    drag: 1.5,
     waterDrag: 2.4,
     /** quanto rimbalza su muri e bordi (1 = senza perdere velocità) */
     bounce: 0.7,
     /** distanza davanti ai piedi di chi la porta (pixel) */
     carryOffset: 38,
     /** entro questa distanza dai piedi la si prende (pixel) */
-    pickupRadius: 48,
+    pickupRadius: 64,
+    /** "calamita": una palla lenta più vicina di così scivola verso i piedi di chi è lì (pixel) */
+    magnetRadius: 130,
+    /** sotto questa velocità la calamita funziona (pixel al secondo) */
+    magnetMaxSpeed: 520,
+    /** forza della calamita (pixel al secondo verso i piedi) */
+    magnetPull: 420,
+    /** quanto in fretta la palla gira attorno ai piedi quando si cambia direzione (più alto = più svelta) */
+    carryTurnRate: 14,
     /** velocità di un tiro (pixel al secondo) con la mira al massimo; con la mira corta parte più piano */
     shotSpeed: 1100,
     /** velocità di un passaggio a un compagno */

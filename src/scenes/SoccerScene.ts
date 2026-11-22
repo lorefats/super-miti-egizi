@@ -135,23 +135,46 @@ export class SoccerScene extends Phaser.Scene {
     this.ballMarker = this.add.image(0, 0, TEX.palla).setScrollFactor(0).setDepth(DEPTH.ui).setScale(0.8).setVisible(false);
     addFpsMeter(this);
 
+    // mentre si mira con la palla: una linea dorata mostra dove andrà il tiro
+    this.controls.aimPreview = (_angle, strength) => this.kickPreview(strength);
     // qualche secondo per prepararsi e vedere le due squadre, poi "VIA!"
+    this.startTruce(MATCH_INTRO.seconds, true);
+  }
+
+  /**
+   * Tregua: tutti fermi, palla bloccata al centro e conto alla rovescia, poi "VIA!".
+   * All'inizio (con le schede delle squadre) e prima di ogni calcio d'inizio dopo un gol.
+   */
+  private startTruce(seconds: number, firstTime: boolean): void {
     this.intro = true;
     this.ball.frozen = true;
     this.controls.setEnabled(false);
     const bots = this.fighters.filter((f): f is Bot => f instanceof Bot);
-    for (const b of bots) b.frozen = true;
+    for (const b of bots) {
+      b.frozen = true;
+      b.move(new Phaser.Math.Vector2(0, 0));
+    }
     showMatchIntro(this, {
-      seconds: MATCH_INTRO.seconds,
+      seconds,
       me: this.player,
       fighters: this.fighters,
+      cards: firstTime,
+      hint: firstTime ? 'Preparati!' : 'Tregua! Tutti fermi',
       onGo: () => {
         this.intro = false;
+        if (this.over) return;
         this.ball.frozen = false;
         for (const b of bots) b.frozen = false;
-        if (!this.over) this.controls.setEnabled(this.player.isAlive());
+        this.controls.setEnabled(this.player.isAlive());
       },
     });
+  }
+
+  /** Lunghezza della linea di mira per un calcio con questa forza (circa dove si fermerà la palla). */
+  private kickPreview(strength: number): { length: number; width: number } | null {
+    if (this.ball.holder !== this.player) return null;
+    const speed = SOCCER.ball.shotSpeed * (0.55 + 0.45 * strength);
+    return { length: Math.min(900, (speed / SOCCER.ball.drag) * 0.8), width: SOCCER.ball.radius * 2 };
   }
 
   // ------------------------------------------------------------------ campo
@@ -257,7 +280,7 @@ export class SoccerScene extends Phaser.Scene {
   }
 
   /** Chi tocca la palla libera la prende (il più vicino). */
-  private pickUpBall(): void {
+  private pickUpBall(dt: number): void {
     const ball = this.ball;
     if (ball.holder) return;
     let best: Player | null = null;
@@ -270,7 +293,23 @@ export class SoccerScene extends Phaser.Scene {
         best = f;
       }
     }
-    if (best) ball.take(best);
+    if (best) {
+      ball.take(best);
+      return;
+    }
+    // "calamita": una palla lenta lì vicino scivola verso i piedi di chi le è più vicino
+    if (ball.frozen || ball.speed > SOCCER.ball.magnetMaxSpeed) return;
+    let near: Player | null = null;
+    let nearD = SOCCER.ball.magnetRadius;
+    for (const f of this.fighters) {
+      if (!ball.canBeTakenBy(f)) continue;
+      const d = Phaser.Math.Distance.Between(f.x, f.y, ball.x, ball.y);
+      if (d < nearD) {
+        nearD = d;
+        near = f;
+      }
+    }
+    if (near) ball.pullToward(near.x, near.y, SOCCER.ball.magnetPull, dt);
   }
 
   /** La palla è entrata in una porta? */
@@ -319,9 +358,9 @@ export class SoccerScene extends Phaser.Scene {
     }
     const c = this.centerSpot();
     this.ball.placeAt(c.x, c.y);
-    this.ball.frozen = false;
     this.pause = 0;
-    this.controls.setEnabled(this.player.isAlive());
+    // tregua prima di ripartire: nessuno si muove finché non arriva il "VIA!"
+    this.startTruce(SOCCER.kickoffTruce, false);
   }
 
   // ------------------------------------------------------------------ sconfitte
@@ -338,7 +377,7 @@ export class SoccerScene extends Phaser.Scene {
       const spots = who.team === 0 ? RESPAWN : RESPAWN.map(mirror);
       const spot = Phaser.Utils.Array.GetRandom(spots);
       who.respawn(spot.x, spot.y);
-      if (who === this.player && this.pause <= 0) this.controls.setEnabled(true);
+      if (who === this.player && this.pause <= 0 && !this.intro) this.controls.setEnabled(true);
     });
   }
 
@@ -432,7 +471,7 @@ export class SoccerScene extends Phaser.Scene {
       this.pause -= dt;
       return;
     }
-    this.pickUpBall();
+    this.pickUpBall(dt);
     this.checkGoal();
     this.controls.update(dt);
 

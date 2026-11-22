@@ -28,6 +28,8 @@ export class SoccerBall extends Phaser.GameObjects.Container {
   private kicker: Player | null = null;
   private kickerWait = 0;
   private spin = 0;
+  /** Da che parte dei piedi sta la palla mentre la si porta (gira piano, non scatta). */
+  private carryAngle = 0;
 
   constructor(
     scene: Phaser.Scene,
@@ -99,9 +101,28 @@ export class SoccerBall extends Phaser.GameObjects.Container {
     return p.canAct() && !p.isUnderground() && !p.isInvisible();
   }
 
+  /** Velocità della palla libera (pixel al secondo, senza la corrente). */
+  get speed(): number {
+    return this.vel.length();
+  }
+
+  /** "Calamita": la palla libera scivola un po' verso (x, y). */
+  pullToward(x: number, y: number, pull: number, dt: number): void {
+    if (this.holder || this.frozen) return;
+    // spinta verso i piedi, senza mai farla andare più veloce di prima (o di `pull`)
+    const before = Math.max(pull, this.vel.length());
+    const a = Phaser.Math.Angle.Between(this.x, this.y, x, y);
+    this.vel.x += Math.cos(a) * pull * dt * 4;
+    this.vel.y += Math.sin(a) * pull * dt * 4;
+    if (this.vel.length() > before) this.vel.setLength(before);
+    this.body.setVelocity(this.vel.x + this.drift.x, this.vel.y + this.drift.y);
+  }
+
   /** `p` prende la palla. */
   take(p: Player): void {
     this.holder = p;
+    // resta dalla parte da cui è arrivata, poi gira piano verso dove si cammina
+    this.carryAngle = Phaser.Math.Angle.Between(p.x, p.y, this.x, this.y);
     this.holderHealth = p.health;
     this.vel.set(0, 0);
     this.body.stop();
@@ -119,9 +140,13 @@ export class SoccerBall extends Phaser.GameObjects.Container {
       } else {
         this.holderHealth = h.health;
         h.changeSpeed('palla', 0.2, SOCCER.carrierSpeedFactor);
-        // davanti ai piedi, dalla parte dove guarda; rotola mentre cammina
+        // davanti ai piedi, dalla parte dove si cammina: quando si gira, la palla gira piano attorno ai piedi
         const moving = h.body.velocity.lengthSq() > 400;
-        const a = moving ? Math.atan2(h.body.velocity.y, h.body.velocity.x) : h.facingSign > 0 ? 0 : Math.PI;
+        if (moving) {
+          const target = Math.atan2(h.body.velocity.y, h.body.velocity.x);
+          this.carryAngle = Phaser.Math.Angle.RotateTo(this.carryAngle, target, B.carryTurnRate * dt);
+        }
+        const a = this.carryAngle;
         this.setPosition(h.x + Math.cos(a) * B.carryOffset, h.y + Math.sin(a) * B.carryOffset * 0.6 + 4);
         if (moving) this.spin += dt * 12 * Math.sign(Math.cos(a) || 1);
         this.sprite.setRotation(this.spin);

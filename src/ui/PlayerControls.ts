@@ -32,6 +32,8 @@ export class PlayerControls {
   private enabled = true;
   /** Nel Calcio: chi ha la palla calcia invece di attaccare. */
   attackOverride: AttackOverride | null = null;
+  /** Nel Calcio: mentre si mira con la palla, una linea dorata al posto del mirino dell'arma (null = mirino normale). */
+  aimPreview: ((angle: number, strength: number) => { length: number; width: number } | null) | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -133,7 +135,9 @@ export class PlayerControls {
         this.aimIndicator.showLine(me.x, me.y, a, sup.range, sup.aimWidth);
       }
     } else if (this.aimStick.engaged) {
-      this.aimIndicator.show(me.x, me.y, this.aimStick.angle, me.stats.weapon, me.ammo >= 1, this.aimStick.strength);
+      const kick = this.aimPreview?.(this.aimStick.angle, this.aimStick.strength);
+      if (kick) this.aimIndicator.showLine(me.x, me.y, this.aimStick.angle, kick.length, kick.width);
+      else this.aimIndicator.show(me.x, me.y, this.aimStick.angle, me.stats.weapon, me.ammo >= 1, this.aimStick.strength);
     } else {
       this.aimIndicator.hide();
     }

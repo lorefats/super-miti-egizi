@@ -91,6 +91,11 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
   > al posto della copia della super nemica. 5 secondi di preparazione a inizio partita con gli avversari
   > in vista. Cammino delle Coppe più lungo: dopo Rà continua fino a 15000 coppe.
 
+- [x] **Calcio: tregua e controllo della palla**
+  > Prima di ogni calcio d'inizio (anche dopo un gol) 5 secondi di tregua con conto alla rovescia.
+  > Palla più facile da controllare: gira piano attorno ai piedi, "calamita" per prenderla, linea dorata
+  > che mostra dove va il tiro mentre si mira.
+
 ## Fase 5 — Rifinitura e pubblicazione
 
 - [x] Suoni ed effetti (generati o file gratuiti), musica in lobby, vibrazione del telefono

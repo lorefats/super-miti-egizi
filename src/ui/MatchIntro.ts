@@ -18,7 +18,16 @@ const CARD_GAP = 12;
  */
 export function showMatchIntro(
   scene: Phaser.Scene,
-  opt: { seconds: number; me: Player; fighters: Player[]; onGo: () => void },
+  opt: {
+    seconds: number;
+    me: Player;
+    fighters: Player[];
+    onGo: () => void;
+    /** mostrare le schede di compagni e avversari (di solito sì; no per la tregua dopo un gol) */
+    cards?: boolean;
+    /** la scritta sopra il conto alla rovescia */
+    hint?: string;
+  },
 ): void {
   const { width, height } = scene.scale;
   const parts: Phaser.GameObjects.GameObject[] = [];
@@ -27,6 +36,7 @@ export function showMatchIntro(
   const veil = scene.add.rectangle(0, 0, width, height, PALETTE.bluNotte, 0.35).setOrigin(0).setScrollFactor(0).setDepth(DEPTH.ui + 150);
   parts.push(veil);
 
+  const showCards = opt.cards ?? true;
   const allies = opt.fighters.filter((f) => f !== opt.me && f.team === opt.me.team);
   const enemies = opt.fighters.filter((f) => f.team !== opt.me.team);
   const row = [...allies.map((f) => ({ f, ally: true })), ...enemies.map((f) => ({ f, ally: false }))];
@@ -43,6 +53,7 @@ export function showMatchIntro(
     .setScrollFactor(0)
     .setDepth(DEPTH.ui + 152);
   parts.push(title);
+  title.setVisible(showCards);
 
   // la fila di schede: se non ci sta nello schermo si rimpicciolisce
   const rowW = row.length * CARD_W + (row.length - 1) * CARD_GAP;
@@ -50,6 +61,7 @@ export function showMatchIntro(
   const cards = scene.add.container(width / 2, height * 0.5 + 40 + (CARD_H * scale) / 2).setScrollFactor(0).setDepth(DEPTH.ui + 151);
   cards.setScale(scale);
   parts.push(cards);
+  cards.setVisible(showCards);
   row.forEach(({ f, ally }, i) => {
     const x = -rowW / 2 + CARD_W / 2 + i * (CARD_W + CARD_GAP);
     cards.add(makeCard(scene, x, f, ally));
@@ -74,7 +86,7 @@ export function showMatchIntro(
     .setScrollFactor(0)
     .setDepth(DEPTH.ui + 153);
   const hint = scene.add
-    .text(width / 2, height * 0.27 - 90, 'Preparati!', {
+    .text(width / 2, height * 0.27 - 90, opt.hint ?? 'Preparati!', {
       fontFamily: FONT_FAMILY,
       fontSize: '34px',
       color: css(PALETTE.oro),

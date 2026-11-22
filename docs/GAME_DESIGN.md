@@ -23,6 +23,9 @@ Sotto, la scritta **SUPER MITI EGIZI** in lettere spesse color oro con contorno 
   Prima di 220 coppe il pulsante della modalità ha il lucchetto.
   Chi tocca la palla la porta davanti ai piedi (e va un po' più piano); con il colpo la calcia (tocco veloce:
   tiro in porta da vicino, passaggio al compagno da lontano). Chi viene colpito perde la palla.
+  Prima di ogni calcio d'inizio (anche dopo un gol) c'è una **tregua di 5 secondi**: tutti fermi e conto alla rovescia.
+  La palla portata gira piano attorno ai piedi quando si cambia direzione; una palla lenta lì vicino
+  scivola verso i piedi ("calamita"); mentre si mira con la palla, una linea dorata mostra dove andrà il tiro.
   Partita di 2 minuti e mezzo. Coppe: vinta +8, pareggio +2, persa −2 (numeri in `src/data/soccer.ts`
   e `src/data/progression.ts`).
 
