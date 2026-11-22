@@ -103,6 +103,8 @@ Per ogni gruppo usate: `/nuovo-personaggio Nome`
 - [ ] Bilanciamento: far giocare il cugino e annotare chi è troppo forte o troppo debole
 - [x] PWA: icona, schermata di avvio, funziona offline, "Aggiungi a Home"
 - [x] Pubblicazione gratuita (GitHub Pages o Netlify) — online su https://lorefats.github.io/super-miti-egizi/
+- [x] **Profilo del giocatore** (richiesta del cugino): scheda in alto a sinistra nella Lobby con ritratto, nome,
+  prestigi e dio più vicino al prestigio; pannello Profilo con "Cambia nome". Il nome si usa anche con gli amici.
 
 ## Fase 6 — Multiplayer con gli amici (ognuno a casa sua)
 

@@ -10,6 +10,7 @@ import { LOBBY_POSE_EVERY, timeOfDayAt } from '../data/lobby';
 import { SARCOPHAGI, type GameMode, type SarcophagusTier } from '../data/progression';
 import { SOCCER } from '../data/soccer';
 import { SaveManager } from '../save/SaveManager';
+import { ProfileCard } from '../ui/Profile';
 import { createCharacterPose, type CharacterPose } from '../ui/CharacterPose';
 import { fullscreenOnFirstTap } from '../ui/fullscreen';
 import { showToast } from '../ui/Toast';
@@ -272,7 +273,10 @@ export class LobbyScene extends Phaser.Scene {
   // ------------------------------------------------------------ interfaccia
 
   /** In alto: coppe totali, scarabei d'oro, polvere di stelle. */
+  /** In alto: a sinistra la scheda del giocatore (Profilo), a destra coppe totali, scarabei e polvere di stelle. */
   private drawTopBar(): void {
+    new ProfileCard(this, 16, 14);
+    const W = this.scale.width;
     const money = SaveManager.getCurrencies();
     const items: [string, number, number][] = [
       [TEX.coppa, SaveManager.getTotalTrophies(), 0.62],
@@ -280,11 +284,12 @@ export class LobbyScene extends Phaser.Scene {
       [TEX.polvereStelle, money.stardust, 0.7],
     ];
     items.forEach(([tex, value, scale], i) => {
-      const x = 24 + i * 186;
+      const w = 150;
+      const x = W - 20 - w - (items.length - 1 - i) * (w + 12);
       const y = 22;
       const g = this.add.graphics();
-      g.fillStyle(PALETTE.bluNotte, 0.85).fillRoundedRect(x, y, 170, 50, 25);
-      g.lineStyle(3, PALETTE.oro, 1).strokeRoundedRect(x, y, 170, 50, 25);
+      g.fillStyle(PALETTE.bluNotte, 0.85).fillRoundedRect(x, y, w, 50, 25);
+      g.lineStyle(3, PALETTE.oro, 1).strokeRoundedRect(x, y, w, 50, 25);
       this.add.image(x + 30, y + 25, tex).setScale(scale);
       this.add
         .text(x + 60, y + 25, String(value), { fontFamily: FONT_FAMILY, fontSize: '30px', color: '#FFFFFF' })

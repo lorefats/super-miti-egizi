@@ -59,7 +59,9 @@ export class FriendsScene extends Phaser.Scene {
   private me(): Me {
     const id = SaveManager.getSelectedCharacter();
     const characterId = isPlayable(id) ? id : 'horus';
-    return { name: getCharacter(characterId).name, characterId, level: SaveManager.getLevel(characterId) };
+    // il nome scelto nel Profilo (se non c'è: il nome del dio)
+    const name = SaveManager.hasPlayerName() ? SaveManager.getPlayerName() : getCharacter(characterId).name;
+    return { name, characterId, level: SaveManager.getLevel(characterId) };
   }
 
   // ------------------------------------------------------------------ le schermate

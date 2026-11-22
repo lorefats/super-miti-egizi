@@ -9,6 +9,7 @@ import { SOCCER } from '../data/soccer';
 import {
   MAX_LEVEL,
   PRESTIGE_TROPHIES,
+  PROFILE,
   ROAD_CHARACTERS,
   SARCOPHAGI,
   SARCOPHAGI_PER_VICTORY,
@@ -21,7 +22,7 @@ import {
 } from '../data/progression';
 
 const STORAGE_KEY = 'super-miti-egizi:salvataggio';
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 /** Il personaggio che hanno tutti fin dall'inizio. */
 const STARTER = 'anubi';
 /**
@@ -60,6 +61,8 @@ export interface SaveData {
   sarcophagusQueue: SarcophagusTier[];
   /** Impostazioni: suoni, musica e vibrazione accesi o spenti */
   settings: Settings;
+  /** nome scelto dal giocatore (vuoto = non l'ha ancora scelto) */
+  playerName: string;
 }
 
 export interface Settings {
@@ -100,6 +103,7 @@ function emptySave(): SaveData {
     roadClaimed: [],
     sarcophagusQueue: [],
     settings: { sound: true, music: true, vibration: true },
+    playerName: '',
   };
 }
 
@@ -145,10 +149,22 @@ function migrate(raw: unknown): SaveData {
       if (typeof r.settings[k] === 'boolean') data.settings[k] = r.settings[k];
     }
   }
+  // Versione 3 → 4: arriva il nome del giocatore (se manca: nessun nome, si mostra "Giocatore")
+  if (typeof r.playerName === 'string') data.playerName = cleanName(r.playerName);
   if (r.mode === 'duo' || r.mode === 'calcio' || r.mode === 'allenamento') data.mode = r.mode;
   const sel = r.selectedCharacter;
   if (typeof sel === 'string' && data.unlocked.includes(sel) && isPlayable(sel)) data.selectedCharacter = sel;
   return data;
+}
+
+/** Pulisce un nome: niente spazi doppi o ai lati, solo lettere, numeri e pochi segni, al massimo PROFILE.nameMaxLength. */
+export function cleanName(raw: string): string {
+  return raw
+    .replace(/[^\p{L}\p{N} _.!-]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, PROFILE.nameMaxLength)
+    .trim();
 }
 
 class SaveManagerImpl {
@@ -232,6 +248,34 @@ class SaveManagerImpl {
   setSetting(key: keyof Settings, on: boolean): void {
     this.data.settings[key] = on;
     this.save();
+  }
+
+  /** Il nome del giocatore (se non l'ha scelto: "Giocatore"). */
+  getPlayerName(): string {
+    return this.data.playerName || PROFILE.defaultName;
+  }
+
+  /** Il giocatore ha già scelto un nome? */
+  hasPlayerName(): boolean {
+    return this.data.playerName.length > 0;
+  }
+
+  setPlayerName(name: string): void {
+    this.data.playerName = cleanName(name);
+    this.save();
+  }
+
+  /**
+   * Prestigi per il profilo: i dèi che hanno il Prestigio 1 e quelli sbloccati più vicini (più coppe massime prima).
+   */
+  getPrestigeSummary(): { prestiges: string[]; closest: { id: string; best: number }[] } {
+    const mine = ROSTER.map((c) => c.id).filter((id) => isPlayable(id) && this.isUnlocked(id));
+    const prestiges = mine.filter((id) => this.hasPrestige(id));
+    const closest = mine
+      .filter((id) => !this.hasPrestige(id))
+      .map((id) => ({ id, best: this.getBestTrophies(id) }))
+      .sort((a, b) => b.best - a.best);
+    return { prestiges, closest };
   }
 
   getStats(): Readonly<SaveData['stats']> {

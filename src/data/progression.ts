@@ -146,6 +146,16 @@ export function levelMultiplier(level: number): number {
 /** Coppe di un personaggio per arrivare al Prestigio 1 (il massimo, per ora). */
 export const PRESTIGE_TROPHIES = 1000;
 
+/** Profilo del giocatore (scheda in alto a sinistra nella Lobby). */
+export const PROFILE = {
+  /** nome di chi non l'ha ancora scelto */
+  defaultName: 'Giocatore',
+  /** lettere al massimo nel nome */
+  nameMaxLength: 14,
+  /** quanti dèi "vicini al prestigio" mostrare nel pannello del profilo */
+  closestShown: 3,
+};
+
 // ---------------------------------------------------------------- cammino delle coppe (sezione 6)
 
 export type RoadReward =

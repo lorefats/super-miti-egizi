@@ -109,7 +109,11 @@ cornice dorata attorno all'icona, effetto luminoso sul personaggio in lobby e un
 - **Sfondo:** sala del trono di un tempio, colonne ai lati, e dietro un'apertura con le Piramidi al tramonto.
   Lo sfondo cambia con l'ora reale: alba, giorno, tramonto, notte stellata.
 - **Centro:** il personaggio scelto su un piedistallo di pietra, con la sua animazione di attesa.
-- **In alto:** coppe totali, scarabei d'oro, polvere di stelle.
+- **In alto a sinistra:** la scheda del giocatore: ritratto del dio scelto (cornice d'oro se ha il Prestigio),
+  nome del giocatore, quanti prestigi ha e il dio più vicino al prossimo prestigio con la sua barra.
+  Toccandola si apre il **Profilo**: "Cambia nome" (al massimo 14 lettere; è il nome che vedono gli amici nel
+  multiplayer), coppe totali, partite e vittorie, dèi trovati, tutti i dèi con il Prestigio e i 3 più vicini.
+- **In alto a destra:** coppe totali, scarabei d'oro, polvere di stelle.
 - **A destra:** grande pulsante **GIOCA** a forma di cartiglio dorato; sopra, la scelta Solo / Duo.
 - **A sinistra:** pila dei sarcofagi da aprire (con numerino), Cammino delle Coppe.
 - **In basso:** barra con Personaggi, Sarcofagi, Coppe, Amici, Impostazioni (icone a geroglifico).
